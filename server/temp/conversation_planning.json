@@ -1,0 +1,45 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "question": "Please provide your initial request.",
+      "response": "write lettr"
+    },
+    {
+      "id": 2,
+      "question": "What is the main message or content you would like to include in the letter?",
+      "response": "travel"
+    },
+    {
+      "id": 3,
+      "question": "Can you specify the purpose of your travel in the letter?",
+      "response": "with mom & friends"
+    },
+    {
+      "id": 4,
+      "question": "Is there a specific date or time frame for your upcoming travel with your mom and friends that you'd like to mention in the letter?",
+      "response": "next week"
+    },
+    {
+      "id": 5,
+      "question": "Do you have a preference for the tone of the letter? For example, formal or informal?",
+      "response": "informal"
+    },
+    {
+      "id": 6,
+      "question": "Would you like to include any specific details about the destination or activities planned for your upcoming trip with your mom and friends?",
+      "response": "no"
+    },
+    {
+      "id": 7,
+      "question": "Do you need to mention any particular destinations you will be visiting during your upcoming trip with your mom and friends?",
+      "response": "no"
+    },
+    {
+      "id": 8,
+      "question": "Do you have any specific names or titles you would like to address in the letter?",
+      "response": ""
+    }
+  ],
+  "followup_needed": true
+}

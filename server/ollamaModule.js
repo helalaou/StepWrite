@@ -11,16 +11,20 @@ const openai = new OpenAI({
 
 export async function generateQuestion(conversationPlanning) {
   const prompt = `
+
+You are an assistant helping a person with cognitive disabilities who struggles with complex information and benefits from clear, simple language and step-by-step guidance.
 Given the conversation planning JSON and the current state of the conversation, generate the next relevant question to ask the user. 
 - If sufficient context has been collected to proceed with generating the final output, set "followup_needed" to false and do not generate additional questions. 
 - Ensure the question is simple, clear, and directly relevant to completing the task.
 - Use the previous responses and the initial request to inform the next question. 
 - If a clarification is needed, focus on resolving ambiguity or filling gaps in the collected information.
+- Try to minimize the number of questions you ask while still getting all the necessary information to produce the final output.
+- Before every question generation, make sure that you read the previous questions and responses and that you understand the whole context of the conversation.
+- Do not ask the user for confirmation about the final draft.
 - Return ONLY a JSON object with two fields:
   - "question": the next question to ask
-  - "followup_needed": boolean indicating if more questions are needed
+  - "followup_needed": boolean indicating if more questions are needed (true if more questions are needed, false if the final output is ready to be generated)
 
-You are an assistant helping a person with cognitive disabilities who struggles with complex information and benefits from clear, simple language and step-by-step guidance.
 
 Conversation Planning: ${JSON.stringify(conversationPlanning)}
 

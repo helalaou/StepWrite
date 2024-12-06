@@ -59,8 +59,9 @@ function ChatInterface({
         alignItems: 'center', 
         gap: 2,
         width: '100%',
-        maxWidth: '800px',
-        justifyContent: 'space-between'
+        maxWidth: '1700px',
+        justifyContent: 'space-between',
+        padding: '0 20px'
       }}>
         <IconButton 
           onClick={handlePrevQuestion} 
@@ -77,7 +78,7 @@ function ChatInterface({
         <Typography 
           variant="h4" 
           gutterBottom 
-          sx={{ fontSize: '36pt' }}
+          sx={{ fontSize: '42pt' }}
         >
           {currentActiveQuestion}
         </Typography>
@@ -113,7 +114,7 @@ function ChatInterface({
           sx={{ 
             marginRight: 2, 
             '& .MuiInputBase-input': { 
-              fontSize: '1.8rem', 
+              fontSize: '2rem', 
               padding: '15px'
             } 
           }}

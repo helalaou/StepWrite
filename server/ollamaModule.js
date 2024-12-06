@@ -31,8 +31,7 @@ Response:`;
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
       messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: prompt },
+        { role: 'system', content: prompt},
       ],
       max_tokens: 150,
       temperature: 0.7,
@@ -64,9 +63,10 @@ Response:`;
 }
 
 export async function generateOutput(conversationPlanning) {
-  const prompt = `Given the collected information in the conversation planning JSON, generate a coherent, simple response to satisfy the user's initial request. 
+  const prompt = `Given the collected information in the conversation planning JSON, generate a coherent, simple response to satisfy the user's request (whether its writing an email, a letter, a report, a document, etc). Use the collected information to write that for them.
 - Use clear, concise language that is easy for someone with cognitive disabilities to understand.
 - Break down the information into logical steps if needed.
+- Keep the questions concise as the person you are helping has cognitive disabilities and benefits from concise language and short questions, meaning you can't ask them to do a lot at once, but you can ask them to do one thing at a time.
 - Focus on directly addressing the key points of the initial request.
 
 Conversation Planning: ${JSON.stringify(conversationPlanning)}
@@ -78,8 +78,7 @@ Final Output:`;
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
       messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: prompt },
+        { role: 'system', content: prompt },
       ],
       max_tokens: 500,
       temperature: 0.7,

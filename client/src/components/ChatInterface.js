@@ -95,7 +95,13 @@ function ChatInterface({
         </IconButton>
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: '600px' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        width: '100%', 
+        maxWidth: '800px'
+      }}>
         <TextField
           fullWidth
           variant="outlined"
@@ -104,7 +110,13 @@ function ChatInterface({
           onKeyDown={handleKeyPress}
           placeholder={currentResponse ? '' : "Type your answer..."}
           disabled={isLoading}
-          sx={{ marginRight: 2, '& .MuiInputBase-input': { fontSize: '1.5rem' } }}
+          sx={{ 
+            marginRight: 2, 
+            '& .MuiInputBase-input': { 
+              fontSize: '1.8rem', 
+              padding: '15px'
+            } 
+          }}
         />
         <Button
           variant="contained"
@@ -112,8 +124,9 @@ function ChatInterface({
           onClick={handleSubmit}
           disabled={isLoading}
           size="large"
+          sx={{ height: '64px' }}
         >
-          {isLoading ? <CircularProgress size={24} /> : 'Send'}
+          {isLoading ? <CircularProgress size={24} /> : 'NEXT'}
         </Button>
       </Box>
     </Box>

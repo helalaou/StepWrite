@@ -7,7 +7,7 @@ export function useChatLogic() {
     questions: [
       {
         id: 1,
-        question: 'Please provide your initial request.',
+        question: 'What would you like to write?',
         response: '', 
       },
     ],

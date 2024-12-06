@@ -73,15 +73,16 @@ export function useChatLogic() {
   // Submit the user's response to a question
   const submitAnswer = async (questionId, newResponse = null) => {
     return new Promise(async (resolve, reject) => {
-      if ((newResponse && newResponse.trim()) || input.trim()) {
+      const responseToSubmit = newResponse || input.trim();
+      
+      if (responseToSubmit) {
         setIsLoading(true);
         try {
-          const currentResponse = input.trim();
           const updatedConversationPlanning = {
             ...conversationPlanning,
             questions: conversationPlanning.questions.map((q) =>
               q.id === (questionId || conversationPlanning.questions.length) 
-                ? { ...q, response: currentResponse } 
+                ? { ...q, response: responseToSubmit } 
                 : q
             ),
           };
@@ -117,5 +118,8 @@ export function useChatLogic() {
     isLoading,
     output,
     submitAnswer,
+    addQuestion,
+    editQuestion,
+    fetchNextQuestion
   };
 }

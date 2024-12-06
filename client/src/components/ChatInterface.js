@@ -52,11 +52,25 @@ function ChatInterface({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <Box sx={{ textAlign: 'center', mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ 
+        textAlign: 'center', 
+        mb: 4, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        width: '100%',
+        maxWidth: '800px',
+        justifyContent: 'space-between'
+      }}>
         <IconButton 
           onClick={handlePrevQuestion} 
           disabled={currentQuestionIndex === 0}
-          sx={{ fontSize: '2rem' }}
+          sx={{ 
+            '& .MuiSvgIcon-root': {
+              fontSize: '2.5rem',
+              color: currentQuestionIndex === 0 ? 'action.disabled' : 'primary.main'
+            }
+          }}
         >
           <ArrowBackIcon />
         </IconButton>
@@ -70,7 +84,12 @@ function ChatInterface({
         <IconButton 
           onClick={handleNextQuestion} 
           disabled={currentQuestionIndex === questions.length - 1}
-          sx={{ fontSize: '2rem' }}
+          sx={{ 
+            '& .MuiSvgIcon-root': {
+              fontSize: '2.5rem',
+              color: currentQuestionIndex === questions.length - 1 ? 'action.disabled' : 'primary.main'
+            }
+          }}
         >
           <ArrowForwardIcon />
         </IconButton>

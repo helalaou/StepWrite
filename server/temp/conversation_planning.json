@@ -3,43 +3,68 @@
     {
       "id": 1,
       "question": "Please provide your initial request.",
-      "response": "write lettr"
+      "response": "write an email"
     },
     {
       "id": 2,
-      "question": "What is the main message or content you would like to include in the letter?",
-      "response": "travel"
+      "question": "Who is the recipient of the email?",
+      "response": "josh"
     },
     {
       "id": 3,
-      "question": "Can you specify the purpose of your travel in the letter?",
-      "response": "with mom & friends"
+      "question": "What is the subject of the email you would like to write to Josh?",
+      "response": "going to beach"
     },
     {
       "id": 4,
-      "question": "Is there a specific date or time frame for your upcoming travel with your mom and friends that you'd like to mention in the letter?",
-      "response": "next week"
+      "question": "What message would you like to convey in the email about going to the beach?",
+      "response": "lol"
     },
     {
       "id": 5,
-      "question": "Do you have a preference for the tone of the letter? For example, formal or informal?",
-      "response": "informal"
+      "question": "Is there any specific date or time you want to mention in the email about going to the beach?",
+      "response": "no"
     },
     {
       "id": 6,
-      "question": "Would you like to include any specific details about the destination or activities planned for your upcoming trip with your mom and friends?",
+      "question": "Would you like to add any specific details or special requests for your email to Josh about going to the beach?",
       "response": "no"
     },
     {
       "id": 7,
-      "question": "Do you need to mention any particular destinations you will be visiting during your upcoming trip with your mom and friends?",
-      "response": "no"
+      "question": "Do you have any specific preferences for the tone or formality of the email to Josh about going to the beach?",
+      "response": "formal"
     },
     {
       "id": 8,
-      "question": "Do you have any specific names or titles you would like to address in the letter?",
+      "question": "Do you have any particular salutations or greetings you'd like to include in the email to Josh about going to the beach?",
+      "response": "no"
+    },
+    {
+      "id": 9,
+      "question": "Do you want to include any closing remarks or wishes in the email to Josh about going to the beach?",
+      "response": "no"
+    },
+    {
+      "id": 10,
+      "question": "Do you have any specific attachments or files you want to include in the email to Josh about going to the beach?",
+      "response": "no"
+    },
+    {
+      "id": 11,
+      "question": "Would you like to review the email draft before finalizing it?",
+      "response": "yes"
+    },
+    {
+      "id": 12,
+      "question": "Would you like to make any changes or additions to the email draft before finalizing it?",
+      "response": "no"
+    },
+    {
+      "id": 13,
+      "question": "Would you like to proceed with finalizing the email draft to Josh about going to the beach?",
       "response": ""
     }
   ],
-  "followup_needed": true
+  "followup_needed": false
 }

@@ -49,7 +49,7 @@ app.post('/submit-answer', async (req, res) => {
     } else {
       console.log('Generating final output...');
       const output = await generateOutput(conversationPlanning);
-      console.log('Sending output response:', output);
+     
       res.json({ output });
     }
   } catch (error) {

@@ -72,7 +72,8 @@ export async function generateOutput(conversationPlanning) {
 - Break down the information into logical steps if needed.
 - Keep the questions concise as the person you are helping has cognitive disabilities and benefits from concise language and short questions, meaning you can't ask them to do a lot at once, but you can ask them to do one thing at a time.
 - Focus on directly addressing the key points of the initial request.
-
+- Use one short sentence at a time when asking for information and if need be, ask for clarification in a subsequent question.
+- If the user has skipped a question more than 2 times, do not ask that specific question again.
 Conversation Planning: ${JSON.stringify(conversationPlanning)}
 
 Final Output:`;

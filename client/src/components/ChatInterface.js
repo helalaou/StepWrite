@@ -46,6 +46,7 @@ function ChatInterface({
             [currentQuestionIndex]: { type: 'answered', answer: input }
           });
           setCurrentQuestionIndex(newLength - 1);
+          setInput('');
         }
       })
       .catch((error) => {
@@ -111,7 +112,18 @@ function ChatInterface({
 
   const handleSkip = () => {
     if (questionStatus[currentQuestionIndex]?.type !== 'skipped') {
-      const skipMessage = "user skipped this question";
+      const skipMessage = "user has skipped this question";
+      
+      const updatedQuestions = [...currentQuestion.questions];
+      updatedQuestions[currentQuestionIndex] = {
+        ...updatedQuestions[currentQuestionIndex],
+        response: skipMessage
+      };
+
+      const updatedConversationPlanning = {
+        ...currentQuestion,
+        questions: updatedQuestions
+      };
       
       setInput(skipMessage);
       
@@ -127,7 +139,12 @@ function ChatInterface({
         [currentQuestionIndex]: { type: 'skipped', answer: skipMessage }
       });
 
-      submitAnswer(currentQuestion.questions[currentQuestionIndex].id, skipMessage)
+      submitAnswer(
+        currentQuestion.questions[currentQuestionIndex].id, 
+        skipMessage,
+        currentQuestionIndex,
+        updatedConversationPlanning
+      )
         .then((newLength) => {
           if (newLength) {
             setCurrentQuestionIndex(newLength - 1);

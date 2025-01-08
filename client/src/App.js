@@ -11,8 +11,19 @@ function App() {
     submitAnswer,
   } = useChatLogic();
 
-  const handleSendMessage = async () => {
-    return submitAnswer();
+  const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
+    try {
+      const result = await submitAnswer(
+        updatedConversationPlanning.questions[changedIndex].id, 
+        input,
+        changedIndex,
+        updatedConversationPlanning
+      );
+      return result;
+    } catch (error) {
+      console.error('Error in handleSendMessage:', error);
+      throw error;
+    }
   };
 
   return (

@@ -22,8 +22,13 @@ app.use(express.json());
 // Submit Answer Route
 app.post('/submit-answer', async (req, res) => {
   try {
-    const { conversationPlanning } = req.body;
+    const { conversationPlanning, changedIndex } = req.body;
     console.log('Received request to submit answer with conversation planning:', conversationPlanning);
+
+    // If a response was changed, remove subsequent questions
+    if (typeof changedIndex === 'number') {
+      conversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
+    }
 
     // Save conversation planning to local file
     const tempDir = path.join(__dirname, 'temp');

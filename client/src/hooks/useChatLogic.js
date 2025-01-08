@@ -71,44 +71,27 @@ export function useChatLogic() {
   };
 
   // Submit the user's response to a question
-  const submitAnswer = async (questionId, newResponse = null) => {
-    return new Promise(async (resolve, reject) => {
-      const responseToSubmit = newResponse || input.trim();
-      
-      if (responseToSubmit) {
-        setIsLoading(true);
-        try {
-          const updatedConversationPlanning = {
-            ...conversationPlanning,
-            questions: conversationPlanning.questions.map((q) =>
-              q.id === (questionId || conversationPlanning.questions.length) 
-                ? { ...q, response: responseToSubmit } 
-                : q
-            ),
-          };
-          setConversationPlanning(updatedConversationPlanning);
-          
-          const response = await axios.post(`${config.serverUrl}/submit-answer`, {
-            conversationPlanning: updatedConversationPlanning,
-          });
-          
-          if (response.data.conversationPlanning) {
-            setConversationPlanning(response.data.conversationPlanning);
-            resolve(response.data.conversationPlanning.questions.length);
-          } else {
-            resolve(null);
-          }
-          setInput('');
-        } catch (error) {
-          console.error('Error submitting answer:', error);
-          reject(error);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        resolve(null);
+  const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${config.serverUrl}/submit-answer`, {
+        conversationPlanning: updatedConversationPlanning || conversationPlanning,
+        changedIndex,
+        answer
+      });
+
+      if (response.data.conversationPlanning) {
+        setConversationPlanning(response.data.conversationPlanning);
+        return response.data.conversationPlanning.questions.length;
       }
-    });
+      
+      return null;
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {

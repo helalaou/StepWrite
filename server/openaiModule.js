@@ -10,10 +10,18 @@ const openai = new OpenAI({
 });
 
 export async function generateQuestion(conversationPlanning) {
+  // here we onvert JSON to Q&A format
+  const qaFormat = conversationPlanning.questions
+    .map(q => `Q: ${q.question}; A: ${q.response}`)
+    .join('\n');
+
   const prompt = `
 You are an assistant helping a person with cognitive disabilities who struggles with complex information and benefits from clear, simple language and step-by-step guidance.
 
-Given the conversation planning JSON and the current state of the conversation, generate the next relevant question to ask the user. 
+Given the conversation history and the current state of the conversation, generate the next relevant question to ask the user. 
+
+Previous conversation:
+${qaFormat}
 
 Guidelines:
 - If sufficient context has been collected to proceed with generating the final output, set "followup_needed" to false and do not generate additional questions. 
@@ -31,9 +39,7 @@ Return JSON format:
 {
   "question": "your question here",
   "followup_needed": boolean
-}
-
-Conversation Planning: ${JSON.stringify(conversationPlanning)}`;
+}`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -95,8 +101,16 @@ Conversation Planning: ${JSON.stringify(conversationPlanning)}`;
 }
 
 export async function generateOutput(conversationPlanning) {
+  // here we onvert JSON to Q&A format
+  const qaFormat = conversationPlanning.questions
+    .map(q => `Q: ${q.question}; A: ${q.response}`)
+    .join('\n');
+
   const prompt = `
-Generate a coherent, simple response based on the collected information in the conversation planning JSON.
+Generate a coherent, simple response based on the collected information from the conversation.
+
+Previous conversation:
+${qaFormat}
 
 Guidelines:
 - Use clear, concise language suitable for cognitive disabilities
@@ -104,8 +118,7 @@ Guidelines:
 - Keep sentences short and simple
 - Focus on directly addressing the key points
 - Use collected information to write the requested content (email, letter, report, etc.)
-
-Conversation Planning: ${JSON.stringify(conversationPlanning)}`;
+`;
 
   try {
     const completion = await openai.chat.completions.create({

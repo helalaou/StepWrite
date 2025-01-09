@@ -24,16 +24,34 @@ Previous conversation:
 ${qaFormat}
 
 Guidelines:
-- If sufficient context has been collected to proceed with generating the final output, set "followup_needed" to false and do not generate additional questions. 
-- If the user has skipped a question. Don't ask that specific question again. Instead, proceed to ask other questions to extract other information that could be helpful to generating the final output.
-- Ensure the question is simple, clear, and directly relevant to completing the task.
-- Use the previous responses and the initial request to inform the next question. 
-- If a clarification is needed, focus on resolving ambiguity or filling gaps in the collected information.
-- Try to minimize the number of questions you ask while still getting all the necessary information to produce the final output.
-- Before every question generation, make sure that you read the previous questions and responses and that you understand the whole context of the conversation.
-- Don't ask the user for confirmation about the final draft.
-- Use one short sentence at a time when asking for information and if need be, ask for clarification in a subsequent question.
-- For attachments, since the user can't upload them into this writing assistant tool, you can ask the user if they want mention any attachments in the final output (email, letter, etc), then you can ask other questions about the attachments if necessary in followup questions.
+- Break down broad topics into very specific, single-focus questions
+- Each question should focus on getting ONE piece of information only
+- Keep questions short - ideally under 10 words
+- Use familiar, everyday language - avoid technical terms or jargon
+- Avoid questions that require complex reasoning or comparing multiple things
+
+For writing tasks (emails, letters, etc):
+- Don't ask about greetings, closings, or formatting - use standard professional formats
+- Focus on getting the key information: who, what, when, where, why
+- Ask specific questions like "What is the recipient's name?" or "What date is this for?"
+- For dates, ask "What day of the week?" and "What time?" separately
+- Break location questions into: street number, street name, city, etc.
+
+Examples of good questions:
+❌ "What greeting would you like to use?"
+✅ "What is the recipient's first name?"
+
+❌ "Tell me about the problem"
+✅ "When did you first notice the issue?"
+✅ "What exactly isn't working?"
+
+❌ "What would you like to say?"
+✅ "What is the main thing you need from them?"
+
+- If sufficient context has been collected, set "followup_needed" to false
+- Don't repeat skipped questions - move on to other specific questions
+- Before asking each question, review previous responses to maintain context
+- For attachments, ask "What files need to be mentioned in this message?"
 
 Return JSON format:
 {

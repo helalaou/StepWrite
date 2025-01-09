@@ -41,6 +41,10 @@ Return JSON format:
   "followup_needed": boolean
 }`;
 
+  console.log('\n=== SENDING TO OPENAI (Question Generation) ===');
+  console.log('Prompt:', prompt);
+  console.log('================================================\n');
+
   try {
     const completion = await openai.chat.completions.create({
       model: config.openai.question_generation_settings.model,
@@ -48,6 +52,10 @@ Return JSON format:
       max_tokens: config.openai.question_generation_settings.maxTokens,
       temperature: config.openai.question_generation_settings.temperature,
     });
+
+    console.log('\n=== OPENAI RESPONSE (Question Generation) ===');
+    console.log('Raw response:', completion.choices[0].message.content);
+    console.log('============================================\n');
 
     const responseText = completion.choices[0].message.content.trim();
     console.log('Raw OpenAI response:', responseText);
@@ -120,6 +128,10 @@ Guidelines:
 - Use collected information to write the requested content (email, letter, report, etc.)
 `;
 
+  console.log('\n=== SENDING TO OPENAI (Output Generation) ===');
+  console.log('Prompt:', prompt);
+  console.log('=============================================\n');
+
   try {
     const completion = await openai.chat.completions.create({
       model: config.openai.output_generation_settings.model,
@@ -129,7 +141,11 @@ Guidelines:
     });
 
     const output = completion.choices[0].message.content.trim();
-    console.log('\nGenerated final output:', output, '\n');
+    
+    console.log('\n=== OPENAI RESPONSE (Output Generation) ===');
+    console.log('Generated output:', output);
+    console.log('==========================================\n');
+
     return output;
   } catch (error) {
     console.error('Failed to generate output:', error);

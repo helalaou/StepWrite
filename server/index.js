@@ -18,7 +18,10 @@ const OLLAMA_API_URL = config.server.ollamaApiUrl;
 // Function to call Ollama LLM with a timeout
 async function runOllama(prompt, timeout = config.llm.timeout) {
   try {
-    console.log('Starting Ollama request with prompt:', prompt);
+    console.log('\n=== SENDING TO OLLAMA ===');
+    console.log('Prompt:', prompt);
+    console.log('=======================\n');
+
     const response = await axios.post(
       OLLAMA_API_URL,
       {
@@ -28,10 +31,17 @@ async function runOllama(prompt, timeout = config.llm.timeout) {
       },
       { timeout: timeout }
     );
-    console.log('Ollama response received:', response.data.response);
+
+    console.log('\n=== OLLAMA RESPONSE ===');
+    console.log('Raw response:', response.data);
+    console.log('Generated text:', response.data.response.trim());
+    console.log('=====================\n');
+
     return response.data.response.trim();
   } catch (error) {
-    console.error('Error in runOllama:', error.message);
+    console.error('\n=== OLLAMA ERROR ===');
+    console.error('Error details:', error);
+    console.error('===================\n');
     throw error;
   }
 }

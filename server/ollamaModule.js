@@ -27,7 +27,6 @@ Given the conversation planning JSON and the current state of the conversation, 
 - Return ONLY a JSON object with two fields:
   - "question": the next question to ask
   - "followup_needed": boolean indicating if more questions are needed (true if more questions are needed, false if the final output is ready to be generated)
-
 Conversation Planning: ${JSON.stringify(conversationPlanning)}
 
 Response:`;
@@ -35,11 +34,11 @@ Response:`;
   try {
     console.log('Generating question with prompt:', prompt);
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         { role: 'system', content: prompt},
       ],
-      max_tokens: 150,
+      max_tokens: 5000,
       temperature: 0.7,
     });
     const responseText = completion.choices[0].message.content.trim();
@@ -82,11 +81,11 @@ Final Output:`;
   try {
     console.log('Generating output with prompt:', prompt);
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+      model: process.env.OPENAI_MODEL || 'gpt-4o',
       messages: [
         { role: 'system', content: prompt },
       ],
-      max_tokens: 500,
+      max_tokens: 5000,
       temperature: 0.7,
     });
     const responseText = completion.choices[0].message.content.trim();

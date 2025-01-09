@@ -10,7 +10,7 @@ const config = {
     version: '1.0.0',
   },
   openai: {
-    model: 'gpt-4',
+    model: 'gpt-4o',
     timeout: 70000, //    70 seconds
   },
 };

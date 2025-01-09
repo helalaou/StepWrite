@@ -16,7 +16,7 @@ fi
 if [ -d "server" ]; then
     echo "Installing server dependencies..."
     cd server || exit
-    npm install express cors
+    npm install express cors dotenv openai
     cd ..
 else
     echo "Server directory not found! Skipping server installation."

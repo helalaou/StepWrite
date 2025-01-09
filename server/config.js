@@ -14,7 +14,7 @@ const config = {
     defaultModel: 'gpt-4o',
     question_generation_settings: {
       model: 'gpt-4o',
-      temperature: 0.5,
+      temperature: 0.7,
       maxTokens: 5000,
     },
     output_generation_settings: {

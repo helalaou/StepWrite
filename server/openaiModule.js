@@ -34,7 +34,7 @@ Conversation Planning: ${JSON.stringify(conversationPlanning)}`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || config.openai.question_generation_settings.model,
+      model: config.openai.question_generation_settings.model,
       messages: [{ role: 'system', content: prompt }],
       max_tokens: config.openai.question_generation_settings.maxTokens,
       temperature: config.openai.question_generation_settings.temperature,
@@ -77,7 +77,7 @@ Conversation Planning: ${JSON.stringify(conversationPlanning)}`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || config.openai.output_generation_settings.model,
+      model: config.openai.output_generation_settings.model,
       messages: [{ role: 'system', content: prompt }],
       max_tokens: config.openai.output_generation_settings.maxTokens,
       temperature: config.openai.output_generation_settings.temperature,

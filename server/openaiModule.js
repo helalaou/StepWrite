@@ -31,7 +31,7 @@ Guidelines:
 - Use familiar, everyday language - avoid technical terms or jargon
 - Avoid questions that require complex reasoning or comparing multiple things
 - Avoid asking questions that are already answered in the conversation history
-- Avoid ask questions that the user has marked as skipped
+- Avoid asking questions that the user has marked as skipped
 
 For writing tasks (emails, letters, etc):
 - Don't ask about greetings, closings, or formatting - use standard professional formats

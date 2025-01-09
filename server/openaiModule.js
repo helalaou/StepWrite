@@ -52,6 +52,7 @@ Examples of good questions:
 - Don't repeat skipped questions - move on to other specific questions
 - Before asking each question, review previous responses to maintain context
 - For attachments, ask "What files need to be mentioned in this message?"
+- if the user skipped 6 questions in a row, set "followup_needed" to false
 
 Return JSON format:
 {

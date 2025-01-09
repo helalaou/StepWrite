@@ -11,7 +11,6 @@ const config = {
   },
   openai: {
     timeout: 70000, // 70 seconds
-    defaultModel: 'gpt-4o',
     question_generation_settings: {
       model: 'gpt-4o',
       temperature: 0.7,

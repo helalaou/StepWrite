@@ -1,7 +1,7 @@
 {
-  "name": "chat-app-server",
+  "name": "genassist-server",
   "version": "1.0.0",
-  "description": "Server for chat application",
+  "description": "Server component for the GenAssist system",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -10,7 +10,8 @@
   "dependencies": {
     "axios": "^1.6.2",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "openai": "^4.76.0"
+    "openai": "^4.77.4"
   }
 }

@@ -49,7 +49,10 @@ app.post('/submit-answer', async (req, res) => {
         followup_needed: true 
       });
     } else {
+      console.log('\nFinal output:');
+      console.log('\n----------------------------------');
       const output = await generateOutput(conversationPlanning);
+      console.log('\n----------------------------------');
       res.json({ output });
     }
   } catch (error) {

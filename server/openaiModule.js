@@ -10,7 +10,7 @@ const openai = new OpenAI({
 });
 
 export async function generateQuestion(conversationPlanning) {
-  // here we onvert JSON to Q&A format
+  // convert JSON to Q&A format
   const qaFormat = conversationPlanning.questions
     .map(q => `Q: ${q.question}; A: ${q.response}`)
     .join('\n');
@@ -131,7 +131,6 @@ Return JSON format:
 }
 
 export async function generateOutput(conversationPlanning) {
-  // here we onvert JSON to Q&A format
   const qaFormat = conversationPlanning.questions
     .map(q => `Q: ${q.question}; A: ${q.response}`)
     .join('\n');

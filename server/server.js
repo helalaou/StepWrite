@@ -53,7 +53,10 @@ app.post('/submit-answer', async (req, res) => {
       console.log('\n----------------------------------');
       const output = await generateOutput(conversationPlanning);
       console.log('\n----------------------------------');
-      res.json({ output });
+      res.json({ 
+        output,
+        followup_needed: false 
+      });
     }
   } catch (error) {
     console.error('Error processing submission:', error);

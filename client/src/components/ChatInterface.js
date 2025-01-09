@@ -9,10 +9,11 @@ function ChatInterface({
   setInput,
   isLoading,
   sendMessage,
-  submitAnswer
+  submitAnswer,
+  questionStatus,
+  setQuestionStatus
 }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [questionStatus, setQuestionStatus] = useState({});
   
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -143,7 +144,8 @@ function ChatInterface({
         currentQuestion.questions[currentQuestionIndex].id, 
         skipMessage,
         currentQuestionIndex,
-        updatedConversationPlanning
+        updatedConversationPlanning,
+        updatedQuestionStatus
       )
         .then((newLength) => {
           if (newLength) {

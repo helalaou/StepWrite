@@ -14,12 +14,12 @@ const config = {
     question_generation_settings: {
       model: 'gpt-4o',
       temperature: 0.7,
-      maxTokens: 5000,
+      maxTokens: 10000,
     },
     output_generation_settings: {
       model: 'gpt-4o',
       temperature: 0.7,
-      maxTokens: 5000,
+      maxTokens: 10000,
     }
   },
 };

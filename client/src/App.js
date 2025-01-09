@@ -1,5 +1,6 @@
 import React from 'react';
 import ChatInterface from './components/ChatInterface';
+import TextEditor from './components/TextEditor';
 import { useChatLogic } from './hooks/useChatLogic';
 
 function App() {
@@ -8,7 +9,12 @@ function App() {
     input,
     setInput,
     isLoading,
+    showEditor,
+    finalOutput,
     submitAnswer,
+    handleBackToQuestions,
+    questionStatus,
+    setQuestionStatus
   } = useChatLogic();
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
@@ -28,14 +34,23 @@ function App() {
 
   return (
     <div className="App">
-      <ChatInterface
-        currentQuestion={conversationPlanning}
-        input={input}
-        setInput={setInput}
-        isLoading={isLoading}
-        sendMessage={handleSendMessage}
-        submitAnswer={submitAnswer}
-      />
+      {showEditor ? (
+        <TextEditor 
+          initialContent={finalOutput}
+          onBack={handleBackToQuestions}
+        />
+      ) : (
+        <ChatInterface
+          currentQuestion={conversationPlanning}
+          input={input}
+          setInput={setInput}
+          isLoading={isLoading}
+          sendMessage={handleSendMessage}
+          submitAnswer={submitAnswer}
+          questionStatus={questionStatus}
+          setQuestionStatus={setQuestionStatus}
+        />
+      )}
     </div>
   );
 }

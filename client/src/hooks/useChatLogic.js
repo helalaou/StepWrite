@@ -16,6 +16,10 @@ export function useChatLogic() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [output, setOutput] = useState('');
+  const [showEditor, setShowEditor] = useState(false);
+  const [finalOutput, setFinalOutput] = useState('');
+  const [conversationHistory, setConversationHistory] = useState(null);
+  const [questionStatus, setQuestionStatus] = useState({});
 
   // Add a question and its response to the conversationPlanning JSON
   const addQuestion = (question, response = '') => {
@@ -80,8 +84,16 @@ export function useChatLogic() {
         answer
       });
 
+      if (response.data.output) {
+        setFinalOutput(response.data.output);
+        setShowEditor(true);
+        setConversationHistory({ conversationPlanning, questionStatus });
+        return null;
+      }
+
       if (response.data.conversationPlanning) {
         setConversationPlanning(response.data.conversationPlanning);
+        setConversationHistory({ conversationPlanning: response.data.conversationPlanning, questionStatus });
         return response.data.conversationPlanning.questions.length;
       }
       
@@ -94,13 +106,27 @@ export function useChatLogic() {
     }
   };
 
+  const handleBackToQuestions = () => {
+    setShowEditor(false);
+    if (conversationHistory) {
+      setConversationPlanning(conversationHistory.conversationPlanning);
+      setQuestionStatus(conversationHistory.questionStatus);
+    }
+  };
+
   return {
     conversationPlanning,
     input,
     setInput,
     isLoading,
     output,
+    showEditor,
+    finalOutput,
+    conversationHistory,
+    questionStatus,
+    setQuestionStatus,
     submitAnswer,
+    handleBackToQuestions,
     addQuestion,
     editQuestion,
     fetchNextQuestion

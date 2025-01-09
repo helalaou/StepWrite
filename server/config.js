@@ -10,8 +10,18 @@ const config = {
     version: '1.0.0',
   },
   openai: {
-    model: 'gpt-4o',
-    timeout: 70000, //    70 seconds
+    timeout: 70000, // 70 seconds
+    defaultModel: 'gpt-4o',
+    question_generation_settings: {
+      model: 'gpt-4o',
+      temperature: 0.5,
+      maxTokens: 5000,
+    },
+    output_generation_settings: {
+      model: 'gpt-4o',
+      temperature: 0.7,
+      maxTokens: 5000,
+    }
   },
 };
 

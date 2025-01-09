@@ -1,17 +1,16 @@
 import express from 'express';
 import cors from 'cors';
 import config from './config.js';
-import { generateQuestion, generateOutput } from './ollamaModule.js';
+import { generateQuestion, generateOutput } from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const app = express();
-const port = config.server.port;
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Middleware
 app.use(cors({
   origin: `http://localhost:${config.client.port}`,
   methods: ['GET', 'POST'],
@@ -23,47 +22,43 @@ app.use(express.json());
 app.post('/submit-answer', async (req, res) => {
   try {
     const { conversationPlanning, changedIndex } = req.body;
-    console.log('Received request to submit answer with conversation planning:', conversationPlanning);
+    console.log('Processing submission with conversation planning:', conversationPlanning);
 
     // If a response was changed, remove subsequent questions
     if (typeof changedIndex === 'number') {
       conversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
     }
 
-    // Save conversation planning to local file
+    // Save conversation state
     const tempDir = path.join(__dirname, 'temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir);
     }
 
     if (conversationPlanning.followup_needed) {
-      console.log('Generating next question...');
-      const response = await generateQuestion(conversationPlanning);
-      const { question, conversationPlanning: updatedConversationPlanning } = response;
+      const { question, conversationPlanning: updatedPlanning } = await generateQuestion(conversationPlanning);
       
       fs.writeFileSync(
         path.join(tempDir, 'conversation_planning.json'), 
-        JSON.stringify(updatedConversationPlanning, null, 2)
+        JSON.stringify(updatedPlanning, null, 2)
       );
-      console.log('Sending question response:', question);
+
       res.json({ 
         question, 
-        conversationPlanning: updatedConversationPlanning,
+        conversationPlanning: updatedPlanning,
         followup_needed: true 
       });
     } else {
-      console.log('Generating final output...');
       const output = await generateOutput(conversationPlanning);
-     
       res.json({ output });
     }
   } catch (error) {
-    console.error('Error in /submit-answer route:', error);
-    res.status(500).json({ error: 'An error occurred while submitting the answer.' });
+    console.error('Error processing submission:', error);
+    res.status(500).json({ error: 'Failed to process submission' });
   }
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`${config.app.name} server v${config.app.version} running at http://localhost:${port}`);
+// Start server
+app.listen(config.server.port, () => {
+  console.log(`${config.app.name} server v${config.app.version} running at http://localhost:${config.server.port}`);
 });

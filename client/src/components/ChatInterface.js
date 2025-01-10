@@ -178,6 +178,17 @@ function ChatInterface({
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
+      // Reset editing state if user was editing
+      if (questionStatus[currentQuestionIndex]?.type === 'answering') {
+        setQuestionStatus({
+          ...questionStatus,
+          [currentQuestionIndex]: { 
+            type: 'answered',
+            answer: currentQuestion.questions[currentQuestionIndex].response 
+          }
+        });
+      }
+
       const newIndex = currentQuestionIndex - 1;
       setCurrentQuestionIndex(newIndex);
       
@@ -190,6 +201,17 @@ function ChatInterface({
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < currentQuestion.questions.length - 1) {
+      // Reset editing state if user was editing
+      if (questionStatus[currentQuestionIndex]?.type === 'answering') {
+        setQuestionStatus({
+          ...questionStatus,
+          [currentQuestionIndex]: { 
+            type: 'answered',
+            answer: currentQuestion.questions[currentQuestionIndex].response 
+          }
+        });
+      }
+
       const newIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(newIndex);
       

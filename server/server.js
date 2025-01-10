@@ -51,16 +51,34 @@ app.post('/submit-answer', async (req, res) => {
         JSON.stringify(updatedPlanning, null, 2)
       );
 
+      // If the question generation indicates no more questions needed
+      if (!updatedPlanning.followup_needed) {
+        console.log('\nNo more questions needed. Generating final output...');
+        console.log('----------------------------------');
+        const output = await generateOutput(updatedPlanning);
+        console.log('Generated output:', output);
+        console.log('----------------------------------\n');
+        
+        res.json({ 
+          output,
+          followup_needed: false 
+        });
+        return;
+      }
+
       res.json({ 
         question, 
         conversationPlanning: updatedPlanning,
         followup_needed: true 
       });
     } else {
-      console.log('\nFinal output:');
-      console.log('\n----------------------------------');
+      // If followup_needed is false, generate the final output
+      console.log('\nGenerating final output...');
+      console.log('----------------------------------');
       const output = await generateOutput(conversationPlanning);
-      console.log('\n----------------------------------');
+      console.log('Generated output:', output);
+      console.log('----------------------------------\n');
+      
       res.json({ 
         output,
         followup_needed: false 

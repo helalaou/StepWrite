@@ -55,34 +55,27 @@ export function useChatLogic() {
     });
   };
 
-  // Fetch the next question or generate the final output from the server
-  const fetchNextQuestion = async () => {
-    try {
-      const response = await axios.post(`${config.serverUrl}/submit-answer`, {
-        conversationPlanning,
-      });
-      if (response.data.followup_needed && response.data.question) {
-        setConversationPlanning(response.data.conversationPlanning);
-      } else if (response.data.output) {
-        console.log('Final output:', response.data.output);
-        setOutput(response.data.output);
-      } else {
-        console.error('Unexpected server response:', response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching next question:', error);
-    }
-  };
-
   // Submit the user's response to a question
   const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning, updatedQuestionStatus) => {
     setIsLoading(true);
     try {
-      const conversationPlanningToSubmit = {
-        ...updatedConversationPlanning,
-        // Only force followup_needed to true if we're coming back from editor
-        followup_needed: showEditor ? true : updatedConversationPlanning.followup_needed
-      };
+      // If we're updating an existing answer, truncate subsequent questions
+      let conversationPlanningToSubmit = { ...updatedConversationPlanning };
+      
+      if (typeof changedIndex === 'number') {
+        // Update the response for the changed question
+        conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
+          .slice(0, changedIndex + 1)
+          .map((q, idx) => {
+            if (idx === changedIndex) {
+              return { ...q, response: answer };
+            }
+            return q;
+          });
+        
+        // Force followup_needed to true when editing a response
+        conversationPlanningToSubmit.followup_needed = true;
+      }
 
       const response = await axios.post(`${config.serverUrl}/submit-answer`, {
         conversationPlanning: conversationPlanningToSubmit,
@@ -98,16 +91,25 @@ export function useChatLogic() {
           conversationPlanning: conversationPlanningToSubmit, 
           questionStatus: updatedQuestionStatus || questionStatus 
         });
+        setConversationPlanning(prev => ({
+          ...prev,
+          followup_needed: false
+        }));
         return null;
       }
 
       if (response.data.conversationPlanning) {
-        setConversationPlanning(response.data.conversationPlanning);
+        const updatedPlanning = {
+          ...response.data.conversationPlanning,
+          followup_needed: response.data.followup_needed
+        };
+        
+        setConversationPlanning(updatedPlanning);
         setConversationHistory({ 
-          conversationPlanning: response.data.conversationPlanning, 
+          conversationPlanning: updatedPlanning, 
           questionStatus: updatedQuestionStatus || questionStatus 
         });
-        return response.data.conversationPlanning.questions.length;
+        return updatedPlanning.questions.length;
       }
       
       return null;
@@ -122,10 +124,8 @@ export function useChatLogic() {
   const handleBackToQuestions = () => {
     setShowEditor(false);
     if (conversationHistory) {
-      // Reset conversation planning to the saved state
       setConversationPlanning(conversationHistory.conversationPlanning);
       
-      // Initialize question status for all questions
       const initialStatus = {};
       conversationHistory.conversationPlanning.questions.forEach((question, index) => {
         if (question.response) {
@@ -139,7 +139,6 @@ export function useChatLogic() {
       setQuestionStatus(initialStatus);
       setInput(conversationHistory.conversationPlanning.questions[0].response || '');
       
-      // Reset followup_needed to true so the flow can continue
       setConversationPlanning(prev => ({
         ...prev,
         followup_needed: true
@@ -162,6 +161,5 @@ export function useChatLogic() {
     handleBackToQuestions,
     addQuestion,
     editQuestion,
-    fetchNextQuestion
   };
 }

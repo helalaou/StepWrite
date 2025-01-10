@@ -59,11 +59,10 @@ export function useChatLogic() {
   const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning, updatedQuestionStatus) => {
     setIsLoading(true);
     try {
-      // If we're updating an existing answer, truncate subsequent questions
       let conversationPlanningToSubmit = { ...updatedConversationPlanning };
       
       if (typeof changedIndex === 'number') {
-        // Update the response for the changed question
+        // Update the response for the changed question and truncate subsequent questions
         conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
           .slice(0, changedIndex + 1)
           .map((q, idx) => {
@@ -72,6 +71,23 @@ export function useChatLogic() {
             }
             return q;
           });
+        
+        // Clear all question statuses after the edited index (including the edited index)
+        const updatedStatus = {};
+        Object.keys(questionStatus).forEach(key => {
+          const index = parseInt(key);
+          if (index < changedIndex) {
+            updatedStatus[index] = questionStatus[index];
+          }
+        });
+        
+        // Add the new status only for the edited question
+        updatedStatus[changedIndex] = {
+          type: answer === "user has skipped this question" ? 'skipped' : 'answered',
+          answer: answer
+        };
+        
+        setQuestionStatus(updatedStatus);
         
         // Force followup_needed to true when editing a response
         conversationPlanningToSubmit.followup_needed = true;
@@ -139,7 +155,16 @@ export function useChatLogic() {
         }
       });
       
-      setQuestionStatus(initialStatus);
+      // Clear UI state for all questions after the edited index
+      const updatedQuestionStatus = { ...initialStatus };
+      Object.keys(updatedQuestionStatus).forEach(key => {
+        const index = parseInt(key);
+        if (index > conversationHistory.conversationPlanning.questions.length - 1) {
+          delete updatedQuestionStatus[key];
+        }
+      });
+      
+      setQuestionStatus(updatedQuestionStatus);
       setInput(conversationHistory.conversationPlanning.questions[0].response || '');
       
       // Reset the conversation planning to continue asking questions

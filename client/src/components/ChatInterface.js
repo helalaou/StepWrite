@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography, IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -15,6 +15,30 @@ function ChatInterface({
 }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   
+  useEffect(() => {
+    if (currentQuestion?.questions) {
+      const questions = currentQuestion.questions;
+      
+      const initialStatus = {};
+      questions.forEach((question, index) => {
+        if (question.response) {
+          initialStatus[index] = {
+            type: question.response === "user has skipped this question" ? 'skipped' : 'answered',
+            answer: question.response
+          };
+        }
+      });
+      
+      if (Object.keys(initialStatus).length > Object.keys(questionStatus).length) {
+        setQuestionStatus(initialStatus);
+        
+        if (currentQuestionIndex === 0 && initialStatus[0]) {
+          setInput(initialStatus[0].answer);
+        }
+      }
+    }
+  }, [currentQuestion, setQuestionStatus, currentQuestionIndex, setInput]);
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -65,16 +89,24 @@ function ChatInterface({
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-      const prevAnswer = questionStatus[currentQuestionIndex - 1]?.answer || '';
+      const newIndex = currentQuestionIndex - 1;
+      setCurrentQuestionIndex(newIndex);
+      
+      const prevAnswer = questionStatus[newIndex]?.answer || 
+                        currentQuestion.questions[newIndex]?.response || 
+                        '';
       setInput(prevAnswer);
     }
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      const nextAnswer = questionStatus[currentQuestionIndex + 1]?.answer || '';
+    if (currentQuestionIndex < currentQuestion.questions.length - 1) {
+      const newIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(newIndex);
+      
+      const nextAnswer = questionStatus[newIndex]?.answer || 
+                        currentQuestion.questions[newIndex]?.response || 
+                        '';
       setInput(nextAnswer);
     }
   };

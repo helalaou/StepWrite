@@ -109,8 +109,24 @@ export function useChatLogic() {
   const handleBackToQuestions = () => {
     setShowEditor(false);
     if (conversationHistory) {
+      // First set the conversation planning
       setConversationPlanning(conversationHistory.conversationPlanning);
-      setQuestionStatus(conversationHistory.questionStatus);
+      
+      // Initialize question status for all questions immediately
+      const initialStatus = {};
+      conversationHistory.conversationPlanning.questions.forEach((question, index) => {
+        if (question.response) {
+          initialStatus[index] = {
+            type: question.response === "user has skipped this question" ? 'skipped' : 'answered',
+            answer: question.response
+          };
+        }
+      });
+      
+      // Set initial status and current question index
+      setQuestionStatus(initialStatus);
+      // Reset to first question
+      setInput(conversationHistory.conversationPlanning.questions[0].response || '');
     }
   };
 

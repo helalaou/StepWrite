@@ -115,10 +115,9 @@ function ChatInterface({
     }
   });
 
-  // =============================
-  // NEW: Simplified useEffect to rebuild questionStatus from scratch
+  // useEffect to rebuild questionStatus from scratch
   // whenever currentQuestion changes (or currentQuestionIndex changes).
-  // =============================
+   
   useEffect(() => {
     if (!currentQuestion?.questions) return;
     
@@ -496,9 +495,14 @@ function ChatInterface({
                   onClick={handleSubmit}
                   disabled={isLoading}
                   size="large"
-                  sx={{ height: '64px' }}
+                  sx={{ 
+                    height: 'auto',
+                    alignSelf: 'stretch',
+                    width: 'auto',
+                    fontSize: '1.2rem'
+                  }}
                 >
-                  {isLoading ? <CircularProgress size={24} /> : 'SAVE'}
+                  {isLoading ? <CircularProgress size={23} /> : 'SAVE'}
                 </Button>
               )}
             </Box>

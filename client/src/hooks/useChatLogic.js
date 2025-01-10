@@ -75,6 +75,9 @@ export function useChatLogic() {
         
         // Force followup_needed to true when editing a response
         conversationPlanningToSubmit.followup_needed = true;
+
+        // Clear the final output when editing a question
+        setFinalOutput('');
       }
 
       const response = await axios.post(`${config.serverUrl}/submit-answer`, {
@@ -139,10 +142,14 @@ export function useChatLogic() {
       setQuestionStatus(initialStatus);
       setInput(conversationHistory.conversationPlanning.questions[0].response || '');
       
+      // Reset the conversation planning to continue asking questions
       setConversationPlanning(prev => ({
         ...prev,
         followup_needed: true
       }));
+
+      // Clear the final output when going back to questions
+      setFinalOutput('');
     }
   };
 

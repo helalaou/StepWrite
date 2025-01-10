@@ -5,6 +5,7 @@ import { generateQuestion, generateOutput } from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import OpenAI from 'openai';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -17,6 +18,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+
+// Update initialization:
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 // Submit Answer Route
 app.post('/submit-answer', async (req, res) => {

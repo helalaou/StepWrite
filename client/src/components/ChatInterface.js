@@ -126,7 +126,7 @@ function ChatInterface({
         }
       }
     }
-  }, [currentQuestion, setQuestionStatus, currentQuestionIndex, setInput]);
+  }, [currentQuestion, setQuestionStatus, currentQuestionIndex, setInput, questionStatus]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -288,8 +288,6 @@ function ChatInterface({
     }
   };
 
-  const questions = currentQuestion?.questions || [];
-  const currentActiveQuestion = questions[currentQuestionIndex]?.question || '';
   const isAnswered = questionStatus[currentQuestionIndex]?.type === 'answered';
   const isAnswering = questionStatus[currentQuestionIndex]?.type === 'answering';
 

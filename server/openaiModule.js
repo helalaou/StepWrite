@@ -63,7 +63,14 @@ Return JSON format:
 {
   "question": "your question here",
   "followup_needed": boolean
-}`;
+}
+
+if the "followup_needed" is false, return:
+{
+  "question": "",
+  "followup_needed": false
+}
+`
 
   console.log('\n=== SENDING TO OPENAI (Question Generation) ===');
   console.log('Prompt:', prompt);

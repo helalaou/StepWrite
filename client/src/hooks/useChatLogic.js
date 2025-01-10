@@ -20,6 +20,7 @@ export function useChatLogic() {
   const [finalOutput, setFinalOutput] = useState('');
   const [conversationHistory, setConversationHistory] = useState(null);
   const [questionStatus, setQuestionStatus] = useState({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   // Add a question and its response to the conversationPlanning JSON
   const addQuestion = (question, response = '') => {
@@ -62,7 +63,7 @@ export function useChatLogic() {
       let conversationPlanningToSubmit = { ...updatedConversationPlanning };
       
       if (typeof changedIndex === 'number') {
-        // Update the response for the changed question and truncate subsequent questions
+        // Reset everything after the edited index
         conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
           .slice(0, changedIndex + 1)
           .map((q, idx) => {
@@ -72,28 +73,41 @@ export function useChatLogic() {
             return q;
           });
         
-        // Clear all question statuses after the edited index (including the edited index)
-        const updatedStatus = {};
+        // Create a completely new status object with only statuses up to changedIndex
+        const newStatus = {};
         Object.keys(questionStatus).forEach(key => {
           const index = parseInt(key);
           if (index < changedIndex) {
-            updatedStatus[index] = questionStatus[index];
+            newStatus[index] = questionStatus[index];
           }
         });
         
-        // Add the new status only for the edited question
-        updatedStatus[changedIndex] = {
+        // Only add status for the currently edited question
+        newStatus[changedIndex] = {
           type: answer === "user has skipped this question" ? 'skipped' : 'answered',
           answer: answer
         };
         
-        setQuestionStatus(updatedStatus);
+        // Set the new clean status object
+        setQuestionStatus(newStatus);
         
-        // Force followup_needed to true when editing a response
+        // Reset input appropriately
+        if (currentQuestionIndex !== changedIndex) {
+          setInput('');
+        } else {
+          setInput(answer);
+        }
+        
         conversationPlanningToSubmit.followup_needed = true;
-
-        // Clear the final output when editing a question
         setFinalOutput('');
+
+        // Also update the conversation history to match the new state
+        if (conversationHistory) {
+          setConversationHistory({
+            conversationPlanning: conversationPlanningToSubmit,
+            questionStatus: newStatus
+          });
+        }
       }
 
       const response = await axios.post(`${config.serverUrl}/submit-answer`, {
@@ -102,13 +116,12 @@ export function useChatLogic() {
         answer
       });
 
-      // Handle case where LLM decides no more questions are needed
       if (!response.data.followup_needed) {
         setFinalOutput(response.data.output);
         setShowEditor(true);
         setConversationHistory({ 
           conversationPlanning: conversationPlanningToSubmit, 
-          questionStatus: updatedQuestionStatus || questionStatus 
+          questionStatus: questionStatus 
         });
         setConversationPlanning(prev => ({
           ...prev,
@@ -122,12 +135,35 @@ export function useChatLogic() {
           ...response.data.conversationPlanning,
           followup_needed: response.data.followup_needed
         };
-        
+
+      
+        //  Cleanup statuses for truncated or newly added questions
+        const newQuestionStatus = { ...questionStatus };
+
+        // 1. Remove statuses for any questions that no longer exist
+        Object.keys(newQuestionStatus).forEach((key) => {
+          const idx = parseInt(key, 10);
+          if (idx >= updatedPlanning.questions.length) {
+            delete newQuestionStatus[idx];
+          }
+        });
+
+        // 2. Ensure that brand-new question indexes are set to undefined
+        updatedPlanning.questions.forEach((_, index) => {
+          if (!newQuestionStatus.hasOwnProperty(index)) {
+            newQuestionStatus[index] = undefined;
+          }
+        });
+
         setConversationPlanning(updatedPlanning);
+        setQuestionStatus(newQuestionStatus);
+        
+        // Update conversation history with current state
         setConversationHistory({ 
           conversationPlanning: updatedPlanning, 
-          questionStatus: updatedQuestionStatus || questionStatus 
+          questionStatus: newQuestionStatus
         });
+
         return updatedPlanning.questions.length;
       }
       
@@ -143,39 +179,76 @@ export function useChatLogic() {
   const handleBackToQuestions = () => {
     setShowEditor(false);
     if (conversationHistory) {
-      setConversationPlanning(conversationHistory.conversationPlanning);
+      // Restore the entire conversation planning as it was
+      setConversationPlanning({
+        ...conversationHistory.conversationPlanning,
+        followup_needed: true
+      });
       
-      const initialStatus = {};
+      // Restore all question statuses as they were
+      const restoredStatus = {};
       conversationHistory.conversationPlanning.questions.forEach((question, index) => {
         if (question.response) {
-          initialStatus[index] = {
+          restoredStatus[index] = {
             type: question.response === "user has skipped this question" ? 'skipped' : 'answered',
             answer: question.response
           };
         }
       });
       
-      // Clear UI state for all questions after the edited index
-      const updatedQuestionStatus = { ...initialStatus };
-      Object.keys(updatedQuestionStatus).forEach(key => {
-        const index = parseInt(key);
-        if (index > conversationHistory.conversationPlanning.questions.length - 1) {
-          delete updatedQuestionStatus[key];
-        }
-      });
+      setQuestionStatus(restoredStatus);
       
-      setQuestionStatus(updatedQuestionStatus);
-      setInput(conversationHistory.conversationPlanning.questions[0].response || '');
+      // Set input to the current question's response
+      const currentQuestion = conversationHistory.conversationPlanning.questions[currentQuestionIndex];
+      setInput(currentQuestion?.response || '');
       
-      // Reset the conversation planning to continue asking questions
-      setConversationPlanning(prev => ({
-        ...prev,
-        followup_needed: true
-      }));
-
       // Clear the final output when going back to questions
       setFinalOutput('');
     }
+  };
+
+  const handleAnswerClick = (currentIndex) => {
+    // If skipped, immediately switch to answering mode
+    if (questionStatus[currentIndex]?.type === 'skipped') {
+      setInput(''); // Clear the "user has skipped this question" message
+      setQuestionStatus({
+        ...questionStatus,
+        [currentIndex]: { 
+          type: 'answering',
+          answer: '' 
+        }
+      });
+      return;
+    }
+
+    // If already answered, switch to editing mode
+    if (questionStatus[currentIndex]?.type === 'answered') {
+      setQuestionStatus({
+        ...questionStatus,
+        [currentIndex]: { 
+          type: 'answering',
+          answer: questionStatus[currentIndex].answer 
+        }
+      });
+      return;
+    }
+
+    // Remove any subsequent question statuses
+    const updatedQuestionStatus = { ...questionStatus };
+    Object.keys(updatedQuestionStatus).forEach((key) => {
+      if (parseInt(key) > currentIndex) {
+        delete updatedQuestionStatus[key];
+      }
+    });
+
+    // Set current question to answering state
+    setQuestionStatus({
+      ...updatedQuestionStatus,
+      [currentIndex]: { 
+        type: 'answering',
+        answer: questionStatus[currentIndex]?.answer || input 
+      }
+    });
   };
 
   return {
@@ -193,5 +266,7 @@ export function useChatLogic() {
     handleBackToQuestions,
     addQuestion,
     editQuestion,
+    currentQuestionIndex,
+    setCurrentQuestionIndex,
   };
 }

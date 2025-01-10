@@ -70,15 +70,26 @@ function ChatInterface({
     alignItems: 'center',
     justifyContent: isLeft ? 'flex-start' : 'flex-end',
     zIndex: 2,
-    backgroundColor: (isLeft ? currentQuestionIndex === 0 : currentQuestionIndex === currentQuestion.questions.length - 1) 
+    backgroundColor: (
+      isLeft ? currentQuestionIndex === 0 
+             : currentQuestionIndex === currentQuestion.questions.length - 1
+    ) 
       ? 'transparent' 
       : `rgba(0, 0, 0, ${navControls.hover.base})`,
     transition: 'all 0.3s ease',
-    boxShadow: (isLeft ? currentQuestionIndex === 0 : currentQuestionIndex === currentQuestion.questions.length - 1)
+    boxShadow: (
+      isLeft ? currentQuestionIndex === 0 
+             : currentQuestionIndex === currentQuestion.questions.length - 1
+    )
       ? 'none'
-      : `${isLeft ? 'inset -2px' : 'inset 2px'} 0px ${navControls.shadow.intensity * 2}px -${navControls.shadow.intensity}px rgba(0, 0, 0, 0.1)`,
+      : `${isLeft ? 'inset -2px' : 'inset 2px'} 0px ${
+          navControls.shadow.intensity * 2
+        }px -${navControls.shadow.intensity}px rgba(0, 0, 0, 0.1)`,
     '&:hover': {
-      backgroundColor: (isLeft ? currentQuestionIndex === 0 : currentQuestionIndex === currentQuestion.questions.length - 1)
+      backgroundColor: (
+        isLeft ? currentQuestionIndex === 0 
+               : currentQuestionIndex === currentQuestion.questions.length - 1
+      )
         ? 'transparent'
         : `rgba(0, 0, 0, ${navControls.hover.intensity})`,
     },
@@ -104,29 +115,38 @@ function ChatInterface({
     }
   });
 
+  // =============================
+  // NEW: Simplified useEffect to rebuild questionStatus from scratch
+  // whenever currentQuestion changes (or currentQuestionIndex changes).
+  // =============================
   useEffect(() => {
-    if (currentQuestion?.questions) {
-      const questions = currentQuestion.questions;
-      
-      const initialStatus = {};
-      questions.forEach((question, index) => {
-        if (question.response) {
-          initialStatus[index] = {
-            type: question.response === "user has skipped this question" ? 'skipped' : 'answered',
-            answer: question.response
-          };
-        }
-      });
-      
-      if (Object.keys(initialStatus).length > Object.keys(questionStatus).length) {
-        setQuestionStatus(initialStatus);
-        
-        if (currentQuestionIndex === 0 && initialStatus[0]) {
-          setInput(initialStatus[0].answer);
-        }
+    if (!currentQuestion?.questions) return;
+    
+    const questions = currentQuestion.questions;
+    const newStatus = {};
+
+    // Build statuses based on existing question responses
+    questions.forEach((question, index) => {
+      if (question.response && question.response.trim() !== '') {
+        newStatus[index] = {
+          type: question.response === "user has skipped this question" 
+            ? 'skipped' 
+            : 'answered',
+          answer: question.response
+        };
       }
+    });
+
+    setQuestionStatus(newStatus);
+
+    // If the current question has a status, restore that to the input; else clear the input
+    const statusForCurrent = newStatus[currentQuestionIndex];
+    if (statusForCurrent && statusForCurrent.answer) {
+      setInput(statusForCurrent.answer);
+    } else {
+      setInput('');
     }
-  }, [currentQuestion, setQuestionStatus, currentQuestionIndex, setInput, questionStatus]);
+  }, [currentQuestion, currentQuestionIndex, setQuestionStatus, setInput]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -223,74 +243,39 @@ function ChatInterface({
   };
 
   const handleAnswerClick = () => {
-    // If already answered, switch to editing mode
-    if (questionStatus[currentQuestionIndex]?.type === 'answered') {
+    const currentIndex = currentQuestionIndex;
+    
+    // If skipped, immediately switch to answering mode with empty input
+    if (questionStatus[currentIndex]?.type === 'skipped') {
+      setInput('');
       setQuestionStatus({
         ...questionStatus,
-        [currentQuestionIndex]: { 
-          type: 'answering',
-          answer: questionStatus[currentQuestionIndex].answer 
-        }
-      });
-      return;
-    }
-
-    // If skipped, clear the input and switch to answering mode
-    if (questionStatus[currentQuestionIndex]?.type === 'skipped') {
-      setInput(''); // Clear the "user has skipped this question" message
-      
-      // Update the conversation planning JSON
-      const updatedQuestions = [...currentQuestion.questions];
-      updatedQuestions[currentQuestionIndex] = {
-        ...updatedQuestions[currentQuestionIndex],
-        response: '' // Clear the "user has skipped this question" response
-      };
-
-      const updatedConversationPlanning = {
-        ...currentQuestion,
-        questions: updatedQuestions
-      };
-
-      // Update both UI state and underlying JSON
-      setQuestionStatus({
-        ...questionStatus,
-        [currentQuestionIndex]: { 
+        [currentIndex]: { 
           type: 'answering',
           answer: '' 
         }
       });
-
-      // Send the updated JSON to maintain consistency
-      submitAnswer(
-        currentQuestion.questions[currentQuestionIndex].id,
-        '',
-        currentQuestionIndex,
-        updatedConversationPlanning,
-        {
-          ...questionStatus,
-          [currentQuestionIndex]: { 
-            type: 'answering',
-            answer: '' 
-          }
-        }
-      );
       return;
     }
 
-    // Remove any subsequent question statuses
-    const updatedQuestionStatus = { ...questionStatus };
-    Object.keys(updatedQuestionStatus).forEach((key) => {
-      if (parseInt(key) > currentQuestionIndex) {
-        delete updatedQuestionStatus[key];
-      }
-    });
+    // If already answered, switch to editing mode
+    if (questionStatus[currentIndex]?.type === 'answered') {
+      setQuestionStatus({
+        ...questionStatus,
+        [currentIndex]: { 
+          type: 'answering',
+          answer: questionStatus[currentIndex].answer 
+        }
+      });
+      return;
+    }
 
-    // Set current question to answering state
+    // For new or other cases
     setQuestionStatus({
-      ...updatedQuestionStatus,
-      [currentQuestionIndex]: { 
+      ...questionStatus,
+      [currentIndex]: { 
         type: 'answering',
-        answer: questionStatus[currentQuestionIndex]?.answer || input 
+        answer: questionStatus[currentIndex]?.answer || input 
       }
     });
   };
@@ -312,6 +297,7 @@ function ChatInterface({
       
       setInput(skipMessage);
       
+      // Remove statuses for any subsequent questions
       const updatedQuestionStatus = { ...questionStatus };
       Object.keys(updatedQuestionStatus).forEach((key) => {
         if (parseInt(key) > currentQuestionIndex) {
@@ -351,8 +337,10 @@ function ChatInterface({
     }
   };
 
-  const isAnswered = questionStatus[currentQuestionIndex]?.type === 'answered';
   const isAnswering = questionStatus[currentQuestionIndex]?.type === 'answering';
+  const isAnswered = questionStatus[currentQuestionIndex]?.type === 'answered';
+  const isSkipped = questionStatus[currentQuestionIndex]?.type === 'skipped';
+  const isUnanswered = questionStatus[currentQuestionIndex] === undefined;
 
   return (
     <Box sx={{ 
@@ -416,11 +404,14 @@ function ChatInterface({
           maxWidth: '800px',
           margin: '0 auto',
         }}>
-          {questionStatus[currentQuestionIndex]?.type && (
+          {questionStatus[currentQuestionIndex] && (
             <Typography 
               sx={{ 
-                color: questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'warning.main' : 
-                      questionStatus[currentQuestionIndex]?.type === 'answered' ? 'success.main' : 'info.main',
+                color: questionStatus[currentQuestionIndex]?.type === 'skipped' 
+                  ? 'warning.main' 
+                  : questionStatus[currentQuestionIndex]?.type === 'answered' 
+                    ? 'success.main' 
+                    : 'info.main',
                 fontWeight: 'bold',
                 textTransform: 'uppercase',
                 letterSpacing: '1px',
@@ -474,7 +465,7 @@ function ChatInterface({
             )}
           </Box>
 
-          {(isAnswering || isAnswered) && (
+          {(isAnswering || isAnswered) && !isSkipped && (
             <Box sx={{ 
               display: 'flex', 
               width: '100%',
@@ -489,7 +480,7 @@ function ChatInterface({
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
                 placeholder="Type your answer..."
-                disabled={isLoading || (!isAnswering && isAnswered)}
+                disabled={!isAnswering || isLoading}
                 sx={{ 
                   '& .MuiInputBase-input': { 
                     fontSize: '1.5rem', 

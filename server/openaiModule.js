@@ -28,9 +28,9 @@ Guidelines:
 - Break down broad topics into very specific, single-focus questions
 - Each question should focus on getting ONE piece of information only
 - Keep questions short - ideally under 10 words
-- Use familiar, everyday language - avoid technical terms or jargon
 - Pay attention to the context, for example, don't ask for full names if its a casual context, but do ask for full names if its a professional context
-- Avoid using possessive form - ie: "what is your name? instead of what's your name?"
+- Avoid technical terms or jargon - Use familiar, everyday language
+- Avoid using possessive form - use "what is your name?" instead of "what's your name?"
 - Avoid questions that require complex reasoning or comparing multiple things
 - Avoid asking questions that are already answered in the conversation history
 - Avoid asking questions that the user has marked as skipped

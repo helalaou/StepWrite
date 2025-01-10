@@ -33,6 +33,8 @@ app.post('/submit-answer', async (req, res) => {
     // If a response was changed, remove subsequent questions
     if (typeof changedIndex === 'number') {
       conversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
+      // Ensure followup_needed is true when editing responses
+      conversationPlanning.followup_needed = true;
     }
 
     // Save conversation state

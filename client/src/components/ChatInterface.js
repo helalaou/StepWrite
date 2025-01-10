@@ -201,6 +201,7 @@ function ChatInterface({
   };
 
   const handleAnswerClick = () => {
+    // If already answered, switch to editing mode
     if (questionStatus[currentQuestionIndex]?.type === 'answered') {
       setQuestionStatus({
         ...questionStatus,
@@ -212,10 +213,49 @@ function ChatInterface({
       return;
     }
 
+    // If skipped, clear the input and switch to answering mode
     if (questionStatus[currentQuestionIndex]?.type === 'skipped') {
-      setInput('');
+      setInput(''); // Clear the "user has skipped this question" message
+      
+      // Update the conversation planning JSON
+      const updatedQuestions = [...currentQuestion.questions];
+      updatedQuestions[currentQuestionIndex] = {
+        ...updatedQuestions[currentQuestionIndex],
+        response: '' // Clear the "user has skipped this question" response
+      };
+
+      const updatedConversationPlanning = {
+        ...currentQuestion,
+        questions: updatedQuestions
+      };
+
+      // Update both UI state and underlying JSON
+      setQuestionStatus({
+        ...questionStatus,
+        [currentQuestionIndex]: { 
+          type: 'answering',
+          answer: '' 
+        }
+      });
+
+      // Send the updated JSON to maintain consistency
+      submitAnswer(
+        currentQuestion.questions[currentQuestionIndex].id,
+        '',
+        currentQuestionIndex,
+        updatedConversationPlanning,
+        {
+          ...questionStatus,
+          [currentQuestionIndex]: { 
+            type: 'answering',
+            answer: '' 
+          }
+        }
+      );
+      return;
     }
 
+    // Remove any subsequent question statuses
     const updatedQuestionStatus = { ...questionStatus };
     Object.keys(updatedQuestionStatus).forEach((key) => {
       if (parseInt(key) > currentQuestionIndex) {
@@ -223,6 +263,7 @@ function ChatInterface({
       }
     });
 
+    // Set current question to answering state
     setQuestionStatus({
       ...updatedQuestionStatus,
       [currentQuestionIndex]: { 

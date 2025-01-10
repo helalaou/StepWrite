@@ -75,25 +75,38 @@ export function useChatLogic() {
   };
 
   // Submit the user's response to a question
-  const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning) => {
+  const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning, updatedQuestionStatus) => {
     setIsLoading(true);
     try {
+      const conversationPlanningToSubmit = {
+        ...updatedConversationPlanning,
+        // Only force followup_needed to true if we're coming back from editor
+        followup_needed: showEditor ? true : updatedConversationPlanning.followup_needed
+      };
+
       const response = await axios.post(`${config.serverUrl}/submit-answer`, {
-        conversationPlanning: updatedConversationPlanning || conversationPlanning,
+        conversationPlanning: conversationPlanningToSubmit,
         changedIndex,
         answer
       });
 
-      if (response.data.output) {
+      // Handle case where LLM decides no more questions are needed
+      if (!response.data.followup_needed) {
         setFinalOutput(response.data.output);
         setShowEditor(true);
-        setConversationHistory({ conversationPlanning, questionStatus });
+        setConversationHistory({ 
+          conversationPlanning: conversationPlanningToSubmit, 
+          questionStatus: updatedQuestionStatus || questionStatus 
+        });
         return null;
       }
 
       if (response.data.conversationPlanning) {
         setConversationPlanning(response.data.conversationPlanning);
-        setConversationHistory({ conversationPlanning: response.data.conversationPlanning, questionStatus });
+        setConversationHistory({ 
+          conversationPlanning: response.data.conversationPlanning, 
+          questionStatus: updatedQuestionStatus || questionStatus 
+        });
         return response.data.conversationPlanning.questions.length;
       }
       
@@ -109,10 +122,10 @@ export function useChatLogic() {
   const handleBackToQuestions = () => {
     setShowEditor(false);
     if (conversationHistory) {
-      // First set the conversation planning
+      // Reset conversation planning to the saved state
       setConversationPlanning(conversationHistory.conversationPlanning);
       
-      // Initialize question status for all questions immediately
+      // Initialize question status for all questions
       const initialStatus = {};
       conversationHistory.conversationPlanning.questions.forEach((question, index) => {
         if (question.response) {
@@ -123,10 +136,14 @@ export function useChatLogic() {
         }
       });
       
-      // Set initial status and current question index
       setQuestionStatus(initialStatus);
-      // Reset to first question
       setInput(conversationHistory.conversationPlanning.questions[0].response || '');
+      
+      // Reset followup_needed to true so the flow can continue
+      setConversationPlanning(prev => ({
+        ...prev,
+        followup_needed: true
+      }));
     }
   };
 

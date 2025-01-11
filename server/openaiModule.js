@@ -46,7 +46,7 @@ export async function generateQuestion(conversationPlanning) {
     
     6. **Ask for Essential Details (Who, What, When, Where, Why)**
        - For writing tasks like emails or letters, do NOT ask about greetings, closings, or formatting—use standard professional formats.
-       - Ask specific questions when needed (e.g., "What is the recipient’s name?").
+       - Ask specific questions when needed (e.g., "What is the name of the recipient?").
     
     7. **Attachments**
        - For any files, ask: "What files need to be mentioned in this message?"
@@ -60,13 +60,12 @@ export async function generateQuestion(conversationPlanning) {
     10. **Examples of Good Questions**
        - ❌ "Tell me about the problem"
          ✅ "When did you first notice the issue?"
-         ✅ "What exactly isn't working?"
        - ❌ "What would you like to say?"
          ✅ "What is the main thing you need from them?"
        - ❌ "What's your name?'"
          ✅ "What is your name"
-       - ❌ "What files need to be mentioned in this message?"
-         ✅ "Do you want to mention any files that you would attach to this message?"
+       - ❌ "What files need to be mentioned in this email?"
+         ✅ "Are you going to attach any files to this email?"
     
     === OUTPUT FORMAT ===
     Return your result as valid JSON:

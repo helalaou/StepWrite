@@ -198,9 +198,13 @@ export function useChatLogic() {
       
       setQuestionStatus(restoredStatus);
       
-      // Set input to the current question's response
-      const currentQuestion = conversationHistory.conversationPlanning.questions[currentQuestionIndex];
-      setInput(currentQuestion?.response || '');
+      // Set current question index to the last question instead of 0
+      const lastQuestionIndex = conversationHistory.conversationPlanning.questions.length - 1;
+      setCurrentQuestionIndex(lastQuestionIndex);
+      
+      // Set input to the last question's response
+      const lastQuestion = conversationHistory.conversationPlanning.questions[lastQuestionIndex];
+      setInput(lastQuestion?.response || '');
       
       // Clear the final output when going back to questions
       setFinalOutput('');

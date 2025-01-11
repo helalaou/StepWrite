@@ -14,7 +14,9 @@ function App() {
     submitAnswer,
     handleBackToQuestions,
     questionStatus,
-    setQuestionStatus
+    setQuestionStatus,
+    currentQuestionIndex,
+    setCurrentQuestionIndex
   } = useChatLogic();
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
@@ -49,6 +51,8 @@ function App() {
           submitAnswer={submitAnswer}
           questionStatus={questionStatus}
           setQuestionStatus={setQuestionStatus}
+          currentQuestionIndex={currentQuestionIndex}
+          setCurrentQuestionIndex={setCurrentQuestionIndex}
         />
       )}
     </div>

@@ -11,10 +11,10 @@ function ChatInterface({
   sendMessage,
   submitAnswer,
   questionStatus,
-  setQuestionStatus
+  setQuestionStatus,
+  currentQuestionIndex,
+  setCurrentQuestionIndex
 }) {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-
   // Navigation control variables
   const navControls = {
     width: {

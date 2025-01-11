@@ -19,32 +19,32 @@ function ChatInterface({
   const navControls = {
     width: {
       percentage: {
-        xs: '12%',    // xs -- smaller width on mobile
-        sm: '15%'     // sm -- original width on larger screens
+        xs: '15%',     
+        sm: '12%'     
       },
       min: {
-        xs: '15px',    
-        sm: '20px'     
+        xs: '20px',    
+        sm: '25px'     
       },
       max: {
-        xs: '40px',    
-        sm: '70px'    
+        xs: '50px',    
+        sm: '80px'    
       }
     },
     arrow: {
       size: {
-        xs: '1.8rem', 
-        sm: '2.5rem',  
-        md: '3.2rem'  //md -- original size on desktop
+        xs: '2rem', 
+        sm: '2.8rem',  
+        md: '3rem'  
       },
-      scale: 1,
+      scale: 1.1,  
     },
     hover: {
-      intensity: 0.07,
-      base: 0.01
+      intensity: 0.04,
+      base: 0.02
     },
     shadow: {
-      intensity: 1
+      intensity: 2
     }
   };
 
@@ -75,23 +75,16 @@ function ChatInterface({
              : currentQuestionIndex === currentQuestion.questions.length - 1
     ) 
       ? 'transparent' 
-      : `rgba(0, 0, 0, ${navControls.hover.base})`,
-    transition: 'all 0.3s ease',
-    boxShadow: (
-      isLeft ? currentQuestionIndex === 0 
-             : currentQuestionIndex === currentQuestion.questions.length - 1
-    )
-      ? 'none'
-      : `${isLeft ? 'inset -2px' : 'inset 2px'} 0px ${
-          navControls.shadow.intensity * 2
-        }px -${navControls.shadow.intensity}px rgba(0, 0, 0, 0.1)`,
+      : `rgba(255, 255, 255, ${navControls.hover.base})`,
+    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+    backdropFilter: 'blur(8px)',
     '&:hover': {
       backgroundColor: (
         isLeft ? currentQuestionIndex === 0 
                : currentQuestionIndex === currentQuestion.questions.length - 1
       )
         ? 'transparent'
-        : `rgba(0, 0, 0, ${navControls.hover.intensity})`,
+        : `rgba(255, 255, 255, ${navControls.hover.intensity})`,
     },
   });
 
@@ -102,8 +95,9 @@ function ChatInterface({
     borderRadius: 0,
     '&.Mui-disabled': {
       opacity: 0,
+      transform: 'scale(0.95)',
     },
-    transition: 'all 0.3s ease',
+    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     '& .MuiSvgIcon-root': {
       fontSize: {
         xs: navControls.arrow.size.xs,
@@ -111,7 +105,14 @@ function ChatInterface({
         md: navControls.arrow.size.md
       },
       transform: `scale(${navControls.arrow.scale})`,
-      color: isDisabled ? 'action.disabled' : 'primary.main'
+      color: isDisabled ? 'action.disabled' : 'primary.main',
+      transition: 'transform 0.2s ease',
+    },
+    '&:hover .MuiSvgIcon-root': {
+      transform: `scale(${navControls.arrow.scale * 1.1})`,
+    },
+    '&:active .MuiSvgIcon-root': {
+      transform: `scale(${navControls.arrow.scale * 0.95})`,
     }
   });
 

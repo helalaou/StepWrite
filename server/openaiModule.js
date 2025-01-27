@@ -9,7 +9,7 @@ const openai = new OpenAI({
   timeout: config.openai.timeout,
 });
 
-export async function generateQuestion(conversationPlanning) {
+async function generateQuestion(conversationPlanning) {
   // convert JSON to Q&A format
   const qaFormat = conversationPlanning.questions
     .map(q => `Q: ${q.question}; A: ${q.response}`)
@@ -39,7 +39,7 @@ export async function generateQuestion(conversationPlanning) {
        - Keep questions short—ideally under 10 words.
     
     4. **Guidance on Handling Partial or Indirect Answers**
-       - If the user’s response includes relevant details (even if it doesn’t directly answer the question), extract that information so you don’t need to re-ask for it.
+       - If the user's response includes relevant details (even if it doesn't directly answer the question), extract that information so you don't need to re-ask for it.
     
     5. **Avoid Redundant or Unnecessary Questions**
        - If something is already answered in the conversation or marked as skipped, do not ask again.
@@ -151,7 +151,7 @@ export async function generateQuestion(conversationPlanning) {
   }
 }
 
-export async function generateOutput(conversationPlanning) {
+async function generateOutput(conversationPlanning) {
   const qaFormat = conversationPlanning.questions
     .map(q => `Q: ${q.question}; A: ${q.response}`)
     .join('\n');
@@ -193,4 +193,141 @@ Guidelines:
     console.error('Failed to generate output:', error);
     throw error;
   }
-} 
+}
+
+async function generateEditQuestion(originalText, conversationPlanning) {
+  const qaFormat = conversationPlanning.questions
+    .map(q => `Q: ${q.question}; A: ${q.response}`)
+    .join('\n');
+
+  const prompt = `
+You are a text editing tool that helps people with cognitive disabilities who struggle with complex information.
+Your task is to guide the user through editing their text by breaking it down into manageable parts.
+
+Original text to edit:
+${originalText}
+
+Previous conversation:
+${qaFormat}
+
+=== GUIDELINES ===
+1. **Break Down the Editing Process**
+   - Focus on one aspect of editing at a time
+   - Keep questions simple and specific
+   - Avoid overwhelming the user with multiple changes at once
+
+2. **Types of Questions to Ask**
+   - Ask about specific parts that need clarification
+   - Focus on one paragraph or section at a time
+   - Ask about tone, clarity, or specific details that could be improved
+
+3. **Question Progression**
+   - Start with general changes they want to make
+   - Then break down into specific sections
+   - Finally, focus on fine-tuning and clarity
+
+4. **Examples of Good Questions**
+   - "Would you like to make this paragraph shorter?"
+   - "Should we make this sentence clearer?"
+   - "Would you like to change how this part sounds?"
+
+=== OUTPUT FORMAT ===
+Return your result as valid JSON:
+
+{
+  "question": "your question here",
+  "followup_needed": boolean
+}
+`;
+
+  console.log('\n=== SENDING TO OPENAI (Edit Question Generation) ===');
+  console.log('Prompt:', prompt);
+  console.log('================================================\n');
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.question_generation_settings.model,
+      messages: [{ role: 'system', content: prompt }],
+      max_tokens: config.openai.question_generation_settings.maxTokens,
+      temperature: config.openai.question_generation_settings.temperature,
+    });
+
+    const responseText = completion.choices[0].message.content.trim();
+    console.log('Raw OpenAI response:', responseText);
+
+    const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    let parsedResponse;
+    
+    try {
+      parsedResponse = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('Failed to parse cleaned response:', parseError);
+      const questionMatch = cleanedResponse.match(/"question"\s*:\s*"([^"]+)"/);
+      const followupMatch = cleanedResponse.match(/"followup_needed"\s*:\s*(true|false)/);
+      
+      if (questionMatch && followupMatch) {
+        parsedResponse = {
+          question: questionMatch[1],
+          followup_needed: followupMatch[1] === 'true'
+        };
+      } else {
+        throw new Error('Could not parse response into required format');
+      }
+    }
+
+    return parsedResponse;
+  } catch (error) {
+    console.error('Failed to generate edit question:', error);
+    throw error;
+  }
+}
+
+async function generateEditOutput(originalText, conversationPlanning) {
+  const qaFormat = conversationPlanning.questions
+    .map(q => `Q: ${q.question}; A: ${q.response}`)
+    .join('\n');
+
+  const prompt = `
+Edit the following text based on the user's requests. Make the text clearer and easier to understand while maintaining the original meaning.
+
+Original text:
+${originalText}
+
+Editing instructions from conversation:
+${qaFormat}
+
+Guidelines:
+- Make the text clearer and more concise
+- Break down complex sentences
+- Use simple language
+- Maintain the original meaning
+- Apply all the requested changes from the conversation
+`;
+
+  console.log('\n=== SENDING TO OPENAI (Edit Output Generation) ===');
+  console.log('Prompt:', prompt);
+  console.log('=============================================\n');
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.output_generation_settings.model,
+      messages: [{ role: 'system', content: prompt }],
+      max_tokens: config.openai.output_generation_settings.maxTokens,
+      temperature: config.openai.output_generation_settings.temperature,
+    });
+
+    const output = completion.choices[0].message.content.trim();
+    console.log('Generated edit output:', output);
+    return output;
+  } catch (error) {
+    console.error('Failed to generate edit output:', error);
+    throw error;
+  }
+}
+
+export {
+  generateQuestion,
+  generateOutput,
+  generateEditQuestion,
+  generateEditOutput
+}; 

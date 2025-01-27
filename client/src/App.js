@@ -1,9 +1,11 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
 import TextEditor from './components/TextEditor';
 import { useChatLogic } from './hooks/useChatLogic';
 
-function App() {
+function WriteFlow() {
   const {
     conversationPlanning,
     input,
@@ -34,28 +36,35 @@ function App() {
     }
   };
 
+  return showEditor ? (
+    <TextEditor 
+      initialContent={finalOutput}
+      onBack={handleBackToQuestions}
+    />
+  ) : (
+    <ChatInterface
+      currentQuestion={conversationPlanning}
+      input={input}
+      setInput={setInput}
+      isLoading={isLoading}
+      sendMessage={handleSendMessage}
+      submitAnswer={submitAnswer}
+      questionStatus={questionStatus}
+      setQuestionStatus={setQuestionStatus}
+      currentQuestionIndex={currentQuestionIndex}
+      setCurrentQuestionIndex={setCurrentQuestionIndex}
+    />
+  );
+}
+
+function App() {
   return (
-    <div className="App">
-      {showEditor ? (
-        <TextEditor 
-          initialContent={finalOutput}
-          onBack={handleBackToQuestions}
-        />
-      ) : (
-        <ChatInterface
-          currentQuestion={conversationPlanning}
-          input={input}
-          setInput={setInput}
-          isLoading={isLoading}
-          sendMessage={handleSendMessage}
-          submitAnswer={submitAnswer}
-          questionStatus={questionStatus}
-          setQuestionStatus={setQuestionStatus}
-          currentQuestionIndex={currentQuestionIndex}
-          setCurrentQuestionIndex={setCurrentQuestionIndex}
-        />
-      )}
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/write" element={<WriteFlow />} />
+      </Routes>
+    </Router>
   );
 }
 

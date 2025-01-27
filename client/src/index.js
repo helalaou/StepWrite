@@ -10,6 +10,19 @@ const theme = createTheme({
   palette: {
     primary: {
       main: '#a12614',
+      light: '#c44d3f',
+    },
+    background: {
+      default: '#ffffff',
+      paper: '#ffffff',
+    },
+  },
+  typography: {
+    h2: {
+      fontSize: '3rem',
+      '@media (max-width:600px)': {
+        fontSize: '2.5rem',
+      },
     },
   },
 });

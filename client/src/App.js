@@ -4,6 +4,8 @@ import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
 import TextEditor from './components/TextEditor';
 import { useChatLogic } from './hooks/useChatLogic';
+import EditTextInput from './components/EditTextInput';
+import { useEditLogic } from './hooks/useEditLogic';
 
 function WriteFlow() {
   const {
@@ -57,12 +59,71 @@ function WriteFlow() {
   );
 }
 
+function EditFlow() {
+  const {
+    originalText,
+    setOriginalText,
+    conversationPlanning,
+    input,
+    setInput,
+    isLoading,
+    showEditor,
+    finalOutput,
+    submitAnswer,
+    handleBackToQuestions,
+    questionStatus,
+    setQuestionStatus,
+    currentQuestionIndex,
+    setCurrentQuestionIndex,
+  } = useEditLogic();
+
+  const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
+    try {
+      const result = await submitAnswer(
+        updatedConversationPlanning.questions[changedIndex].id, 
+        input,
+        changedIndex,
+        updatedConversationPlanning
+      );
+      return result;
+    } catch (error) {
+      console.error('Error in handleSendMessage:', error);
+      throw error;
+    }
+  };
+
+  if (!originalText) {
+    return <EditTextInput onSubmit={setOriginalText} />;
+  }
+
+  return showEditor ? (
+    <TextEditor 
+      initialContent={finalOutput}
+      onBack={handleBackToQuestions}
+    />
+  ) : (
+    <ChatInterface
+      currentQuestion={conversationPlanning}
+      input={input}
+      setInput={setInput}
+      isLoading={isLoading}
+      sendMessage={handleSendMessage}
+      submitAnswer={submitAnswer}
+      questionStatus={questionStatus}
+      setQuestionStatus={setQuestionStatus}
+      currentQuestionIndex={currentQuestionIndex}
+      setCurrentQuestionIndex={setCurrentQuestionIndex}
+    />
+  );
+}
+
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/write" element={<WriteFlow />} />
+        <Route path="/edit" element={<EditFlow />} />
       </Routes>
     </Router>
   );

@@ -12,6 +12,10 @@ const theme = createTheme({
       main: '#a12614',
       light: '#c44d3f',
     },
+    secondary: {
+      main: '#2b4c7e',  // Deep blue
+      light: '#4676bd',  // Lighter blue
+    },
     background: {
       default: '#ffffff',
       paper: '#ffffff',

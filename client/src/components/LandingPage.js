@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import CreateIcon from '@mui/icons-material/Create';
 import EditNoteIcon from '@mui/icons-material/EditNote';
@@ -12,7 +12,7 @@ function LandingPage() {
   };
 
   const handleEditClick = () => {
-    alert('Edit flow coming soon!');
+    navigate('/edit');
   };
 
   return (
@@ -84,9 +84,13 @@ function LandingPage() {
           cursor: 'pointer',
           '&:hover': {
             flex: 1.2,
-            bgcolor: 'grey.200',
+            bgcolor: 'secondary.light',
+            '& .MuiTypography-h2': {
+              color: 'white',
+            },
             '& .MuiSvgIcon-root': {
               transform: 'scale(1.1)',
+              color: 'white',
             },
           },
         }}
@@ -96,13 +100,14 @@ function LandingPage() {
           fontSize: '4rem', 
           mb: 2,
           transition: 'all 0.3s ease',
-          color: 'text.primary',
+          color: 'secondary.main',
         }} />
         <Typography 
           variant="h2" 
           sx={{ 
             fontWeight: 'bold',
-            color: 'text.primary',
+            color: 'secondary.main',
+            transition: 'all 0.3s ease',
           }}
         >
           EDIT

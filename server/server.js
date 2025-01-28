@@ -106,6 +106,9 @@ app.post('/submit-edit-answer', async (req, res) => {
       updatedConversationPlanning.followup_needed = true;
     }
 
+    // Generate intermediate edited text based on the current conversation
+    const editedText = await generateEditOutput(originalText, updatedConversationPlanning);
+
     if (updatedConversationPlanning.followup_needed) {
       const response = await generateEditQuestion(originalText, updatedConversationPlanning);
       
@@ -114,6 +117,7 @@ app.post('/submit-edit-answer', async (req, res) => {
         const output = await generateEditOutput(originalText, updatedConversationPlanning);
         res.json({ 
           output,
+          editedText,
           followup_needed: false 
         });
         return;
@@ -131,12 +135,14 @@ app.post('/submit-edit-answer', async (req, res) => {
 
       res.json({ 
         conversationPlanning: updatedConversationPlanning,
+        editedText,
         followup_needed: true 
       });
     } else {
       const output = await generateEditOutput(originalText, updatedConversationPlanning);
       res.json({ 
         output,
+        editedText,
         followup_needed: false 
       });
     }

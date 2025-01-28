@@ -4,6 +4,7 @@ import config from '../config.js';
 
 export function useEditLogic() {
   const [originalText, setOriginalText] = useState('');
+  const [editedText, setEditedText] = useState('');
   const [conversationPlanning, setConversationPlanning] = useState({
     questions: [
       {
@@ -30,6 +31,10 @@ export function useEditLogic() {
         changedIndex,
         answer
       });
+
+      if (response.data.editedText) {
+        setEditedText(response.data.editedText);
+      }
 
       if (!response.data.followup_needed) {
         setFinalOutput(response.data.output);
@@ -74,5 +79,7 @@ export function useEditLogic() {
     setQuestionStatus,
     currentQuestionIndex,
     setCurrentQuestionIndex,
+    editedText,
+    setEditedText,
   };
 } 

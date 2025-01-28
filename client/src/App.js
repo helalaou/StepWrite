@@ -6,6 +6,7 @@ import TextEditor from './components/TextEditor';
 import { useChatLogic } from './hooks/useChatLogic';
 import EditTextInput from './components/EditTextInput';
 import { useEditLogic } from './hooks/useEditLogic';
+import SplitScreenEdit from './components/SplitScreenEdit';
 
 function WriteFlow() {
   const {
@@ -75,6 +76,8 @@ function EditFlow() {
     setQuestionStatus,
     currentQuestionIndex,
     setCurrentQuestionIndex,
+    editedText,
+    setEditedText
   } = useEditLogic();
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
@@ -96,13 +99,9 @@ function EditFlow() {
     return <EditTextInput onSubmit={setOriginalText} />;
   }
 
-  return showEditor ? (
-    <TextEditor 
-      initialContent={finalOutput}
-      onBack={handleBackToQuestions}
-    />
-  ) : (
-    <ChatInterface
+  return (
+    <SplitScreenEdit
+      originalText={originalText}
       currentQuestion={conversationPlanning}
       input={input}
       setInput={setInput}
@@ -113,6 +112,8 @@ function EditFlow() {
       setQuestionStatus={setQuestionStatus}
       currentQuestionIndex={currentQuestionIndex}
       setCurrentQuestionIndex={setCurrentQuestionIndex}
+      editedText={editedText}
+      setEditedText={setEditedText}
     />
   );
 }

@@ -201,8 +201,7 @@ async function generateEditQuestion(originalText, conversationPlanning) {
     .join('\n');
 
   const prompt = `
-You are a text editing tool that helps people with cognitive disabilities who struggle with complex information.
-Your task is to guide the user through editing their text by breaking it down into manageable parts.
+You are a text editing assistant helping someone edit their text. The user can see their original text on the left side of the screen, and you're helping them make changes through a series of questions.
 
 Original text to edit:
 ${originalText}
@@ -210,26 +209,37 @@ ${originalText}
 Previous conversation:
 ${qaFormat}
 
-=== GUIDELINES ===
-1. **Break Down the Editing Process**
-   - Focus on one aspect of editing at a time
-   - Keep questions simple and specific
-   - Avoid overwhelming the user with multiple changes at once
+=== GUIDELINES FOR QUESTIONS ===
+1. First Question:
+   - Always start with "What would you like to change in this text?"
+   - This helps identify the user's main concerns
 
-2. **Types of Questions to Ask**
-   - Ask about specific parts that need clarification
-   - Focus on one paragraph or section at a time
-   - Ask about tone, clarity, or specific details that could be improved
+2. Follow-up Questions:
+   - After the user identifies what they want to change, ask specific questions about that part
+   - If they mention a specific section, quote it and ask about the desired changes
+   - Break down complex changes into simple steps
 
-3. **Question Progression**
-   - Start with general changes they want to make
-   - Then break down into specific sections
-   - Finally, focus on fine-tuning and clarity
+3. Question Types Based on Common Responses:
+   - If user says "make it simpler": Ask "Which part is hard to understand?"
+   - If user points to a section: Ask "How would you like to change this part?"
+   - If user wants to add information: Ask "What information would you like to add?"
+   - If user wants to remove something: Ask "Which part would you like to remove?"
 
-4. **Examples of Good Questions**
-   - "Would you like to make this paragraph shorter?"
-   - "Should we make this sentence clearer?"
-   - "Would you like to change how this part sounds?"
+4. Examples of Good Question Flow:
+   User: "I want to make it simpler"
+   Assistant: "Which part is difficult to understand? You can copy and paste the part from the text on the left."
+
+   User: "This paragraph is too long"
+   Assistant: "Would you like to: 1) Break it into smaller paragraphs, 2) Make it shorter, or 3) Both?"
+
+   User: "I want to change the tone"
+   Assistant: "Should the tone be: 1) More formal, 2) More friendly, or 3) More direct?"
+
+5. Keep Questions:
+   - Short and clear
+   - Focused on one change at a time
+   - Easy to understand
+   - Related to specific parts of the text
 
 === OUTPUT FORMAT ===
 Return your result as valid JSON:
@@ -238,6 +248,8 @@ Return your result as valid JSON:
   "question": "your question here",
   "followup_needed": boolean
 }
+
+- Set followup_needed to false when all necessary changes have been addressed
 `;
 
   console.log('\n=== SENDING TO OPENAI (Edit Question Generation) ===');

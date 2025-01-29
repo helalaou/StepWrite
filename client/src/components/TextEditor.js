@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Box, TextField, Button, Typography, IconButton, Tooltip } from '@mui/material';
 import WestIcon from '@mui/icons-material/West';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -9,16 +9,41 @@ import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 
-function TextEditor({ initialContent, onBack, onContentChange, savedContent }) {
-  // Initialize with saved content if available, otherwise use initial content
+function TextEditor({ 
+  initialContent, 
+  onBack, 
+  onContentChange, 
+  savedContent,
+  editorPreferences,
+  onPreferencesChange 
+}) {
   const [contentHistory, setContentHistory] = useState([savedContent || initialContent]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [content, setContent] = useState(savedContent || initialContent);
-  const [oneSentencePerLine, setOneSentencePerLine] = useState(false);
-  // Store original format to restore it correctly
-  const [originalFormat, setOriginalFormat] = useState(initialContent);
-  const [fontSize, setFontSize] = useState(1.2); // 1.1rem is our default size
+  const [fontSize, setFontSize] = useState(editorPreferences.fontSize);
+  const [oneSentencePerLine, setOneSentencePerLine] = useState(editorPreferences.oneSentencePerLine);
+  const [originalFormat, setOriginalFormat] = useState(savedContent || initialContent);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  // Apply formatting on initial load and when preferences change
+  useEffect(() => {
+    if (editorPreferences.oneSentencePerLine) {
+      setOriginalFormat(content);
+      const formattedContent = formatToOneSentencePerLine(content);
+      setContent(formattedContent);
+    } else {
+      setContent(originalFormat);
+    }
+    setOneSentencePerLine(editorPreferences.oneSentencePerLine);
+  }, [editorPreferences.oneSentencePerLine]);
+
+  // Update preferences when they change
+  useEffect(() => {
+    onPreferencesChange({
+      fontSize,
+      oneSentencePerLine
+    });
+  }, [fontSize, oneSentencePerLine, onPreferencesChange]);
 
   // Word counter function
   const getWordCount = useCallback((text) => {
@@ -44,17 +69,23 @@ function TextEditor({ initialContent, onBack, onContentChange, savedContent }) {
   };
 
   const handleToggleFormat = () => {
-    if (!oneSentencePerLine) {
-      // When enabling one-sentence-per-line, store current format
+    const newOneSentencePerLine = !oneSentencePerLine;
+    
+    if (newOneSentencePerLine) {
       setOriginalFormat(content);
       const newContent = formatToOneSentencePerLine(content);
       setContent(newContent);
     } else {
-      // When disabling, restore original format
-      setContent(formatToNormal(content));
+      setContent(originalFormat);
     }
     
-    setOneSentencePerLine(!oneSentencePerLine);
+    setOneSentencePerLine(newOneSentencePerLine);
+    
+    // Update preferences
+    onPreferencesChange({
+      ...editorPreferences,
+      oneSentencePerLine: newOneSentencePerLine
+    });
     
     // Add to history
     const newHistory = contentHistory.slice(0, currentIndex + 1);
@@ -94,11 +125,11 @@ function TextEditor({ initialContent, onBack, onContentChange, savedContent }) {
   };
 
   const handleIncreaseFontSize = () => {
-    setFontSize(prev => Math.min(prev + 0.1, 2.0)); // Max size 2.0rem
+    setFontSize(prev => Math.min(prev + 0.1, 2.0));
   };
 
   const handleDecreaseFontSize = () => {
-    setFontSize(prev => Math.max(prev - 0.1, 0.8)); // Min size 0.8rem
+    setFontSize(prev => Math.max(prev - 0.1, 0.8));
   };
 
   const handleCopyToClipboard = async () => {

@@ -25,7 +25,10 @@ export function useChatLogic() {
   const [hasChanges, setHasChanges] = useState(false);
   const [cameFromEditor, setCameFromEditor] = useState(false);
   const [currentEditorContent, setCurrentEditorContent] = useState('');
-  const [hasEditorChanges, setHasEditorChanges] = useState(false);
+  const [editorPreferences, setEditorPreferences] = useState({
+    fontSize: 1.3,  
+    oneSentencePerLine: false
+  });
 
   // Add a question and its response to the conversationPlanning JSON
   const addQuestion = (question, response = '') => {
@@ -80,9 +83,11 @@ export function useChatLogic() {
 
         if (hasChanged) {
           setHasChanges(true);
-          // Clear stored editor content when questions change
           setCurrentEditorContent('');
-          setHasEditorChanges(false);
+          setEditorPreferences({
+            fontSize: 1.3,   
+            oneSentencePerLine: false
+          });
           
           // Reset everything after the edited index only if content changed
           conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
@@ -215,11 +220,19 @@ export function useChatLogic() {
   const handleBackToEditor = () => {
     setShowEditor(true);
     
-    // If no changes were made to questions, keep the current editor content
+    // If no changes were made to questions, keep the current editor content and preferences
     if (!hasChanges && currentEditorContent) {
       setFinalOutput(currentEditorContent);
     } else if (!hasChanges && lastValidOutput) {
       setFinalOutput(lastValidOutput);
+    }
+
+    // If questions were changed, reset preferences to defaults
+    if (hasChanges) {
+      setEditorPreferences({
+        fontSize: 1.3,   
+        oneSentencePerLine: false
+      });
     }
   };
 
@@ -298,5 +311,7 @@ export function useChatLogic() {
     handleBackToEditor,
     currentEditorContent,
     setCurrentEditorContent,
+    editorPreferences,
+    setEditorPreferences,
   };
 }

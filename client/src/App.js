@@ -28,7 +28,9 @@ function WriteFlow() {
     cameFromEditor,
     handleBackToEditor,
     currentEditorContent,
-    setCurrentEditorContent
+    setCurrentEditorContent,
+    editorPreferences,
+    setEditorPreferences
   } = useChatLogic();
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
@@ -52,6 +54,8 @@ function WriteFlow() {
       onBack={handleBackToQuestions}
       onContentChange={setCurrentEditorContent}
       savedContent={currentEditorContent}
+      editorPreferences={editorPreferences}
+      onPreferencesChange={setEditorPreferences}
     />
   ) : (
     <ChatInterface

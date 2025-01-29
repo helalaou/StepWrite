@@ -130,7 +130,7 @@ function TextEditor({ initialContent, onBack }) {
         </Button>
       </Box>
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <Box sx={{ 
         flex: 1,
         display: 'flex',
@@ -140,110 +140,117 @@ function TextEditor({ initialContent, onBack }) {
         maxWidth: '1200px',
         margin: '0 auto',
         width: '100%',
-        position: 'relative', // Added for absolute positioning of bottom controls
+        position: 'relative',
       }}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          mb: 3,
-          gap: 2
-        }}>
-          <Typography variant="h4">
-            Edit Your Content
-          </Typography>
-        </Box>
+        <Typography variant="h4" sx={{ mb: 3 }}>
+          Edit Your Content
+        </Typography>
 
-        <TextField
-          multiline
-          fullWidth
-          minRows={20}
-          maxRows={40}
-          value={content}
-          onChange={handleContentChange}
-          sx={{
-            flex: 1,
-            '& .MuiInputBase-root': {
-              height: '100%',
-              '& textarea': {
-                height: '100% !important',
-                fontSize: '1.1rem',
-                lineHeight: '1.5',
-                padding: '20px'
-              }
-            }
-          }}
-        />
-
-        {/* Bottom Controls */}
+        {/* Text Editor Container */}
         <Box sx={{ 
-          position: 'absolute',
-          bottom: 40,
-          left: { xs: '120px', sm: '140px' },
+          position: 'relative',
+          flex: 1,
           display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          backgroundColor: 'background.paper',
-          padding: '8px',
-          borderRadius: '4px',
-          boxShadow: 1,
+          flexDirection: 'column',
         }}>
-          {/* Undo/Redo Controls */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Tooltip title="Undo last change">
-              <span>
-                <IconButton 
-                  onClick={handleUndo} 
-                  disabled={currentIndex === 0}
-                  size="small"
-                >
-                  <UndoIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title="Redo last change">
-              <span>
-                <IconButton 
-                  onClick={handleRedo} 
-                  disabled={currentIndex === contentHistory.length - 1}
-                  size="small"
-                >
-                  <RedoIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Box>
-
           <Box sx={{ 
-            height: '20px', 
-            width: '1px', 
-            backgroundColor: 'divider' 
-          }} />
-
-          {/* One Sentence Per Line Toggle */}
-          <Tooltip title={`${oneSentencePerLine ? 'Disable' : 'Enable'} one sentence per line`}>
-            <IconButton
-              onClick={handleToggleFormat}
-              size="small"
-              color={oneSentencePerLine ? 'primary' : 'default'}
+            position: 'relative',
+            flex: 1,
+            '& .MuiTextField-root': {
+              height: '100%',
+            }
+          }}>
+            <TextField
+              multiline
+              fullWidth
+              minRows={20}
+              maxRows={40}
+              value={content}
+              onChange={handleContentChange}
               sx={{
-                transition: 'all 0.2s ease',
-                transform: oneSentencePerLine ? 'scale(1.1)' : 'scale(1)',
+                '& .MuiInputBase-root': {
+                  height: '100%',
+                  '& textarea': {
+                    height: '100% !important',
+                    fontSize: '1.1rem',
+                    lineHeight: '1.5',
+                    padding: '20px',
+                  }
+                }
               }}
-            >
-              <FormatLineSpacingIcon />
-            </IconButton>
-          </Tooltip>
+            />
 
-          <Box sx={{ 
-            height: '20px', 
-            width: '1px', 
-            backgroundColor: 'divider' 
-          }} />
+            {/* Bottom Controls */}
+            <Box sx={{ 
+              position: 'absolute',
+              bottom: '12px',
+              left: '12px',
+              right: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+              zIndex: 1,
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Tooltip title="Undo last change">
+                  <span>
+                    <IconButton 
+                      onClick={handleUndo} 
+                      disabled={currentIndex === 0}
+                      size="small"
+                    >
+                      <UndoIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Redo last change">
+                  <span>
+                    <IconButton 
+                      onClick={handleRedo} 
+                      disabled={currentIndex === contentHistory.length - 1}
+                      size="small"
+                    >
+                      <RedoIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
 
-          {/* Word Counter */}
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Words: {getWordCount(content)}
-          </Typography>
+              <Box sx={{ 
+                height: '20px', 
+                width: '1px', 
+                backgroundColor: 'divider' 
+              }} />
+
+              <Tooltip title={`${oneSentencePerLine ? 'Disable' : 'Enable'} one sentence per line`}>
+                <IconButton
+                  onClick={handleToggleFormat}
+                  size="small"
+                  color={oneSentencePerLine ? 'primary' : 'default'}
+                  sx={{
+                    transition: 'all 0.2s ease',
+                    transform: oneSentencePerLine ? 'scale(1.1)' : 'scale(1)',
+                  }}
+                >
+                  <FormatLineSpacingIcon />
+                </IconButton>
+              </Tooltip>
+
+              <Box sx={{ 
+                height: '20px', 
+                width: '1px', 
+                backgroundColor: 'divider' 
+              }} />
+
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Words: {getWordCount(content)}
+              </Typography>
+            </Box>
+          </Box>
         </Box>
 
         {/* Save Button */}

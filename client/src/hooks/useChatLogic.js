@@ -60,73 +60,45 @@ export function useChatLogic() {
   };
 
   // Submit the user's response to a question
-  const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning, updatedQuestionStatus) => {
+  const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning) => {
     setIsLoading(true);
     try {
       let conversationPlanningToSubmit = { ...updatedConversationPlanning };
       
       if (typeof changedIndex === 'number') {
-        // Log status change
-        console.log('Question Status Change:', {
-          questionIndex: changedIndex,
-          newStatus: answer === "user has skipped this question" ? 'skipped' : 'answered',
-          answer: answer
-        });
-
-        // If the answer is different from what was in the conversation history, mark as changed
+        // If the answer is different from what was in the conversation history
         const originalAnswer = conversationHistory?.conversationPlanning?.questions[changedIndex]?.response;
-        if (originalAnswer !== answer) {
-          setHasChanges(true);
-          console.log('Content Changed:', { 
-            questionIndex: changedIndex,
-            previousAnswer: originalAnswer,
-            newAnswer: answer 
-          });
-        }
-
-        // Reset everything after the edited index
-        conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
-          .slice(0, changedIndex + 1)
-          .map((q, idx) => {
-            if (idx === changedIndex) {
-              return { ...q, response: answer };
-            }
-            return q;
-          });
+        const hasChanged = originalAnswer !== answer;
         
-        // Create a completely new status object with only statuses up to changedIndex
-        const newStatus = {};
-        Object.keys(questionStatus).forEach(key => {
-          const index = parseInt(key);
-          if (index < changedIndex) {
-            newStatus[index] = questionStatus[index];
-          }
+        console.log('Processing answer submission:', {
+          questionIndex: changedIndex,
+          originalAnswer,
+          newAnswer: answer,
+          hasChanged
         });
-        
-        // Only add status for the currently edited question
-        newStatus[changedIndex] = {
-          type: answer === "user has skipped this question" ? 'skipped' : 'answered',
-          answer: answer
-        };
-        
-        // Set the new clean status object
-        setQuestionStatus(newStatus);
-        
-        // Reset input appropriately
-        if (currentQuestionIndex !== changedIndex) {
-          setInput('');
-        } else {
-          setInput(answer);
-        }
-        
-        conversationPlanningToSubmit.followup_needed = true;
-        setFinalOutput('');
 
-        // Also update the conversation history to match the new state
+        if (hasChanged) {
+          setHasChanges(true);
+          
+          // Reset everything after the edited index only if content changed
+          conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
+            .slice(0, changedIndex + 1)
+            .map((q, idx) => {
+              if (idx === changedIndex) {
+                return { ...q, response: answer };
+              }
+              return q;
+            });
+          
+          conversationPlanningToSubmit.followup_needed = true;
+          setFinalOutput('');
+        }
+
+        // Update conversation history to match the new state
         if (conversationHistory) {
           setConversationHistory({
             conversationPlanning: conversationPlanningToSubmit,
-            questionStatus: newStatus
+            questionStatus: questionStatus
           });
         }
       }

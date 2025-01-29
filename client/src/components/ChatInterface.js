@@ -152,6 +152,9 @@ function ChatInterface({
     }
   }, [currentQuestion, currentQuestionIndex, setQuestionStatus, setInput]);
 
+  // Add state to track original answer when entering edit mode
+  const [originalAnswer, setOriginalAnswer] = useState('');
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -165,10 +168,13 @@ function ChatInterface({
       return;
     }
 
-    console.log('Submitting Answer:', {
+    // Check if the answer actually changed
+    const hasChanged = input !== originalAnswer;
+    console.log('Submitting answer:', {
       questionIndex: currentQuestionIndex,
-      status: 'answered',
-      answer: input
+      originalAnswer,
+      newAnswer: input,
+      hasChanged
     });
 
     const updatedQuestions = [...currentQuestion.questions];
@@ -182,28 +188,48 @@ function ChatInterface({
       questions: updatedQuestions
     };
 
-    sendMessage(currentQuestionIndex, updatedConversationPlanning)
-      .then((newLength) => {
-        if (newLength) {
+    // Only send to backend if answer changed
+    if (hasChanged) {
+      sendMessage(currentQuestionIndex, updatedConversationPlanning)
+        .then((newLength) => {
+          if (newLength) {
+            setQuestionStatus({
+              ...questionStatus,
+              [currentQuestionIndex]: { type: 'answered', answer: input }
+            });
+            setCurrentQuestionIndex(newLength - 1);
+            setInput('');
+            setOriginalAnswer('');
+          }
+        })
+        .catch((error) => {
+          console.error('Error submitting answer:', error);
+          alert('Failed to submit answer. Please try again.');
           setQuestionStatus({
             ...questionStatus,
-            [currentQuestionIndex]: { type: 'answered', answer: input }
+            [currentQuestionIndex]: { 
+              type: 'answering',
+              answer: input 
+            }
           });
-          setCurrentQuestionIndex(newLength - 1);
-          setInput('');
-        }
-      })
-      .catch((error) => {
-        console.error('Error submitting answer:', error);
-        alert('Failed to submit answer. Please try again.');
-        setQuestionStatus({
-          ...questionStatus,
-          [currentQuestionIndex]: { 
-            type: 'answering',
-            answer: input 
-          }
         });
+    } else {
+      // If no changes, just update status and move to next question
+      console.log('No changes detected, skipping backend call');
+      setQuestionStatus({
+        ...questionStatus,
+        [currentQuestionIndex]: { type: 'answered', answer: input }
       });
+      // Move to next question if available
+      if (currentQuestionIndex < currentQuestion.questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        const nextAnswer = questionStatus[currentQuestionIndex + 1]?.answer || 
+                         currentQuestion.questions[currentQuestionIndex + 1]?.response || 
+                         '';
+        setInput(nextAnswer);
+      }
+      setOriginalAnswer('');
+    }
   };
 
   const handlePrevQuestion = () => {
@@ -257,7 +283,9 @@ function ChatInterface({
     
     // If skipped, immediately switch to answering mode with empty input
     if (questionStatus[currentIndex]?.type === 'skipped') {
+      console.log('Changing from skipped to answering mode');
       setInput('');
+      setOriginalAnswer('');
       setQuestionStatus({
         ...questionStatus,
         [currentIndex]: { 
@@ -268,19 +296,23 @@ function ChatInterface({
       return;
     }
 
-    // If already answered, switch to editing mode
+    // If already answered, switch to editing mode and store original answer
     if (questionStatus[currentIndex]?.type === 'answered') {
+      const currentAnswer = questionStatus[currentIndex].answer;
+      console.log('Entering edit mode with original answer:', currentAnswer);
+      setOriginalAnswer(currentAnswer);
       setQuestionStatus({
         ...questionStatus,
         [currentIndex]: { 
           type: 'answering',
-          answer: questionStatus[currentIndex].answer 
+          answer: currentAnswer 
         }
       });
       return;
     }
 
     // For new or other cases
+    setOriginalAnswer(input);
     setQuestionStatus({
       ...questionStatus,
       [currentIndex]: { 

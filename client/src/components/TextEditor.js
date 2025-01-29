@@ -6,6 +6,8 @@ import RedoIcon from '@mui/icons-material/Redo';
 import FormatLineSpacingIcon from '@mui/icons-material/FormatLineSpacing';
 import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
 import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
 
 function TextEditor({ initialContent, onBack }) {
   // Track content history for undo/redo
@@ -16,6 +18,7 @@ function TextEditor({ initialContent, onBack }) {
   // Store original format to restore it correctly
   const [originalFormat, setOriginalFormat] = useState(initialContent);
   const [fontSize, setFontSize] = useState(1.1); // 1.1rem is our default size
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Word counter function
   const getWordCount = useCallback((text) => {
@@ -93,6 +96,19 @@ function TextEditor({ initialContent, onBack }) {
 
   const handleDecreaseFontSize = () => {
     setFontSize(prev => Math.max(prev - 0.1, 0.8)); // Min size 0.8rem
+  };
+
+  const handleCopyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopySuccess(true);
+      // Reset success icon after 2 seconds
+      setTimeout(() => {
+        setCopySuccess(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
   };
 
   return (
@@ -206,104 +222,129 @@ function TextEditor({ initialContent, onBack }) {
               boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
               zIndex: 1,
             }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Tooltip title="Undo last change">
-                  <span>
-                    <IconButton 
-                      onClick={handleUndo} 
-                      disabled={currentIndex === 0}
-                      size="small"
-                    >
-                      <UndoIcon />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title="Redo last change">
-                  <span>
-                    <IconButton 
-                      onClick={handleRedo} 
-                      disabled={currentIndex === contentHistory.length - 1}
-                      size="small"
-                    >
-                      <RedoIcon />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </Box>
+              {/* Left side controls */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {/* Undo/Redo Controls */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Tooltip title="Undo last change">
+                    <span>
+                      <IconButton 
+                        onClick={handleUndo} 
+                        disabled={currentIndex === 0}
+                        size="small"
+                      >
+                        <UndoIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Redo last change">
+                    <span>
+                      <IconButton 
+                        onClick={handleRedo} 
+                        disabled={currentIndex === contentHistory.length - 1}
+                        size="small"
+                      >
+                        <RedoIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
 
-              <Box sx={{ 
-                height: '20px', 
-                width: '1px', 
-                backgroundColor: 'divider' 
-              }} />
+                <Box sx={{ 
+                  height: '20px', 
+                  width: '1px', 
+                  backgroundColor: 'divider' 
+                }} />
 
-              <Tooltip title={`${oneSentencePerLine ? 'Disable' : 'Enable'} one sentence per line`}>
-                <IconButton
-                  onClick={handleToggleFormat}
-                  size="small"
-                  color={oneSentencePerLine ? 'primary' : 'default'}
-                  sx={{
-                    transition: 'all 0.2s ease',
-                    transform: oneSentencePerLine ? 'scale(1.1)' : 'scale(1)',
-                  }}
-                >
-                  <FormatLineSpacingIcon />
-                </IconButton>
-              </Tooltip>
-
-              <Box sx={{ 
-                height: '20px', 
-                width: '1px', 
-                backgroundColor: 'divider' 
-              }} />
-
-              {/* Font Size Controls */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Tooltip title="Decrease font size">
-                  <span>
-                    <IconButton
-                      onClick={handleDecreaseFontSize}
-                      size="small"
-                      disabled={fontSize <= 0.8}
-                    >
-                      <TextDecreaseIcon />
-                    </IconButton>
-                  </span>
+                <Tooltip title={`${oneSentencePerLine ? 'Disable' : 'Enable'} one sentence per line`}>
+                  <IconButton
+                    onClick={handleToggleFormat}
+                    size="small"
+                    color={oneSentencePerLine ? 'primary' : 'default'}
+                    sx={{
+                      transition: 'all 0.2s ease',
+                      transform: oneSentencePerLine ? 'scale(1.1)' : 'scale(1)',
+                    }}
+                  >
+                    <FormatLineSpacingIcon />
+                  </IconButton>
                 </Tooltip>
 
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: 'text.secondary',
-                    minWidth: '32px',
-                    textAlign: 'center'
-                  }}
-                >
-                  {Math.round(fontSize * 10) / 10}x
+                <Box sx={{ 
+                  height: '20px', 
+                  width: '1px', 
+                  backgroundColor: 'divider' 
+                }} />
+
+                {/* Font Size Controls */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Tooltip title="Decrease font size">
+                    <span>
+                      <IconButton
+                        onClick={handleDecreaseFontSize}
+                        size="small"
+                        disabled={fontSize <= 0.8}
+                      >
+                        <TextDecreaseIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'text.secondary',
+                      minWidth: '32px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {Math.round(fontSize * 10) / 10}x
+                  </Typography>
+
+                  <Tooltip title="Increase font size">
+                    <span>
+                      <IconButton
+                        onClick={handleIncreaseFontSize}
+                        size="small"
+                        disabled={fontSize >= 2.0}
+                      >
+                        <TextIncreaseIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </Box>
+
+                <Box sx={{ 
+                  height: '20px', 
+                  width: '1px', 
+                  backgroundColor: 'divider' 
+                }} />
+
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Words: {getWordCount(content)}
                 </Typography>
-
-                <Tooltip title="Increase font size">
-                  <span>
-                    <IconButton
-                      onClick={handleIncreaseFontSize}
-                      size="small"
-                      disabled={fontSize >= 2.0}
-                    >
-                      <TextIncreaseIcon />
-                    </IconButton>
-                  </span>
-                </Tooltip>
               </Box>
 
+              {/* Right side controls */}
               <Box sx={{ 
-                height: '20px', 
-                width: '1px', 
-                backgroundColor: 'divider' 
-              }} />
-
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Words: {getWordCount(content)}
-              </Typography>
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <Tooltip title={copySuccess ? 'Copied!' : 'Copy to clipboard'}>
+                  <IconButton
+                    onClick={handleCopyToClipboard}
+                    size="small"
+                    color={copySuccess ? 'success' : 'default'}
+                    sx={{
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {copySuccess ? <CheckIcon /> : <ContentCopyIcon />}
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </Box>
           </Box>
         </Box>

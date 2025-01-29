@@ -9,11 +9,11 @@ import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 
-function TextEditor({ initialContent, onBack }) {
-  // Track content history for undo/redo
-  const [contentHistory, setContentHistory] = useState([initialContent]);
+function TextEditor({ initialContent, onBack, onContentChange, savedContent }) {
+  // Initialize with saved content if available, otherwise use initial content
+  const [contentHistory, setContentHistory] = useState([savedContent || initialContent]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [content, setContent] = useState(initialContent);
+  const [content, setContent] = useState(savedContent || initialContent);
   const [oneSentencePerLine, setOneSentencePerLine] = useState(false);
   // Store original format to restore it correctly
   const [originalFormat, setOriginalFormat] = useState(initialContent);
@@ -74,6 +74,9 @@ function TextEditor({ initialContent, onBack }) {
     const newHistory = contentHistory.slice(0, currentIndex + 1);
     setContentHistory([...newHistory, newContent]);
     setCurrentIndex(currentIndex + 1);
+
+    // Update parent component
+    onContentChange(newContent);
   };
 
   const handleUndo = () => {

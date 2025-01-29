@@ -15,13 +15,18 @@ function WriteFlow() {
     setInput,
     isLoading,
     showEditor,
+    setShowEditor,
     finalOutput,
     submitAnswer,
     handleBackToQuestions,
     questionStatus,
     setQuestionStatus,
     currentQuestionIndex,
-    setCurrentQuestionIndex
+    setCurrentQuestionIndex,
+    hasChanges,
+    setHasChanges,
+    cameFromEditor,
+    handleBackToEditor
   } = useChatLogic();
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
@@ -56,6 +61,9 @@ function WriteFlow() {
       setQuestionStatus={setQuestionStatus}
       currentQuestionIndex={currentQuestionIndex}
       setCurrentQuestionIndex={setCurrentQuestionIndex}
+      hasChanges={hasChanges}
+      onBackToEditor={handleBackToEditor}
+      cameFromEditor={cameFromEditor}
     />
   );
 }

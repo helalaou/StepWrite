@@ -18,9 +18,12 @@ export function useChatLogic() {
   const [output, setOutput] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const [finalOutput, setFinalOutput] = useState('');
+  const [lastValidOutput, setLastValidOutput] = useState('');
   const [conversationHistory, setConversationHistory] = useState(null);
   const [questionStatus, setQuestionStatus] = useState({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [cameFromEditor, setCameFromEditor] = useState(false);
 
   // Add a question and its response to the conversationPlanning JSON
   const addQuestion = (question, response = '') => {
@@ -63,6 +66,12 @@ export function useChatLogic() {
       let conversationPlanningToSubmit = { ...updatedConversationPlanning };
       
       if (typeof changedIndex === 'number') {
+        // If the answer is different from what was in the conversation history, mark as changed
+        const originalAnswer = conversationHistory?.conversationPlanning?.questions[changedIndex]?.response;
+        if (originalAnswer !== answer) {
+          setHasChanges(true);
+        }
+
         // Reset everything after the edited index
         conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
           .slice(0, changedIndex + 1)
@@ -117,7 +126,9 @@ export function useChatLogic() {
       });
 
       if (!response.data.followup_needed) {
-        setFinalOutput(response.data.output);
+        const newOutput = response.data.output;
+        setFinalOutput(newOutput);
+        setLastValidOutput(newOutput);
         setShowEditor(true);
         setConversationHistory({ 
           conversationPlanning: conversationPlanningToSubmit, 
@@ -178,6 +189,8 @@ export function useChatLogic() {
 
   const handleBackToQuestions = () => {
     setShowEditor(false);
+    setHasChanges(false);
+    setCameFromEditor(true);
     if (conversationHistory) {
       // Restore the entire conversation planning as it was
       setConversationPlanning({
@@ -206,8 +219,18 @@ export function useChatLogic() {
       const lastQuestion = conversationHistory.conversationPlanning.questions[lastQuestionIndex];
       setInput(lastQuestion?.response || '');
       
-      // Clear the final output when going back to questions
-      setFinalOutput('');
+      // Don't clear finalOutput if no changes were made
+      if (hasChanges) {
+        setFinalOutput('');
+      }
+    }
+  };
+
+  const handleBackToEditor = () => {
+    setShowEditor(true);
+    // Restore the last valid output if no changes were made
+    if (!hasChanges && lastValidOutput) {
+      setFinalOutput(lastValidOutput);
     }
   };
 
@@ -262,6 +285,7 @@ export function useChatLogic() {
     isLoading,
     output,
     showEditor,
+    setShowEditor,
     finalOutput,
     conversationHistory,
     questionStatus,
@@ -272,5 +296,10 @@ export function useChatLogic() {
     editQuestion,
     currentQuestionIndex,
     setCurrentQuestionIndex,
+    hasChanges,
+    setHasChanges,
+    cameFromEditor,
+    setCameFromEditor,
+    handleBackToEditor,
   };
 }

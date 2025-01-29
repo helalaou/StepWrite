@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography, IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import EastIcon from '@mui/icons-material/East';
 
 function ChatInterface({
   currentQuestion,
@@ -13,7 +14,10 @@ function ChatInterface({
   questionStatus,
   setQuestionStatus,
   currentQuestionIndex,
-  setCurrentQuestionIndex
+  setCurrentQuestionIndex,
+  hasChanges,
+  onBackToEditor,
+  cameFromEditor
 }) {
   // Navigation control variables
   const navControls = {
@@ -352,6 +356,51 @@ function ChatInterface({
       position: 'relative',
       overflow: 'hidden',
     }}>
+      {/* Add Back to Editor button here, before other navigation */}
+      {currentQuestionIndex === currentQuestion.questions.length - 1 && 
+       !hasChanges && 
+       cameFromEditor && 
+       onBackToEditor && (
+        <Box sx={{
+          position: 'absolute',
+          right: 0,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 3,
+          display: 'flex',
+          alignItems: 'center',
+          backgroundColor: 'background.paper',
+          borderTopLeftRadius: '8px',
+          borderBottomLeftRadius: '8px',
+          boxShadow: 2,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-50%) translateX(-5px)',
+            boxShadow: 4,
+          }
+        }}>
+          <Button
+            variant="contained"
+            onClick={onBackToEditor}
+            sx={{ 
+              height: '60px',
+              borderTopLeftRadius: '8px',
+              borderBottomLeftRadius: '8px',
+              borderTopRightRadius: 0,
+              borderBottomRightRadius: 0,
+              paddingLeft: 3,
+              paddingRight: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            Back to Editor
+            <EastIcon />
+          </Button>
+        </Box>
+      )}
+
       {/* Left Navigation */}
       <Box sx={getNavStyles(true)}>
         <IconButton 

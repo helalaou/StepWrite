@@ -1,9 +1,43 @@
-import React, { useState } from 'react';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import React, { useState, useCallback } from 'react';
+import { Box, TextField, Button, Typography, IconButton } from '@mui/material';
 import WestIcon from '@mui/icons-material/West';
+import UndoIcon from '@mui/icons-material/Undo';
+import RedoIcon from '@mui/icons-material/Redo';
 
 function TextEditor({ initialContent, onBack }) {
+  // Track content history for undo/redo
+  const [contentHistory, setContentHistory] = useState([initialContent]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [content, setContent] = useState(initialContent);
+
+  // Word counter function
+  const getWordCount = useCallback((text) => {
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }, []);
+
+  const handleContentChange = (e) => {
+    const newContent = e.target.value;
+    setContent(newContent);
+    
+    // Add new content to history, removing any future redos
+    const newHistory = contentHistory.slice(0, currentIndex + 1);
+    setContentHistory([...newHistory, newContent]);
+    setCurrentIndex(currentIndex + 1);
+  };
+
+  const handleUndo = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setContent(contentHistory[currentIndex - 1]);
+    }
+  };
+
+  const handleRedo = () => {
+    if (currentIndex < contentHistory.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setContent(contentHistory[currentIndex + 1]);
+    }
+  };
 
   return (
     <Box sx={{ 
@@ -57,10 +91,11 @@ function TextEditor({ initialContent, onBack }) {
         display: 'flex',
         flexDirection: 'column',
         padding: '20px',
-        paddingLeft: { xs: '120px', sm: '140px' }, // Add space for the button
+        paddingLeft: { xs: '120px', sm: '140px' },
         maxWidth: '1200px',
         margin: '0 auto',
         width: '100%',
+        position: 'relative', // Added for absolute positioning of bottom controls
       }}>
         <Box sx={{ 
           display: 'flex', 
@@ -79,7 +114,7 @@ function TextEditor({ initialContent, onBack }) {
           minRows={20}
           maxRows={40}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleContentChange}
           sx={{
             flex: 1,
             '& .MuiInputBase-root': {
@@ -94,6 +129,44 @@ function TextEditor({ initialContent, onBack }) {
           }}
         />
 
+        {/* Bottom Controls */}
+        <Box sx={{ 
+          position: 'absolute',
+          bottom: 40,
+          left: { xs: '120px', sm: '140px' },
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          backgroundColor: 'background.paper',
+          padding: '8px',
+          borderRadius: '4px',
+          boxShadow: 1,
+        }}>
+          {/* Undo/Redo Controls */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton 
+              onClick={handleUndo} 
+              disabled={currentIndex === 0}
+              size="small"
+            >
+              <UndoIcon />
+            </IconButton>
+            <IconButton 
+              onClick={handleRedo} 
+              disabled={currentIndex === contentHistory.length - 1}
+              size="small"
+            >
+              <RedoIcon />
+            </IconButton>
+          </Box>
+
+          {/* Word Counter */}
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            Words: {getWordCount(content)}
+          </Typography>
+        </Box>
+
+        {/* Save Button */}
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'flex-end', 

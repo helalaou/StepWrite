@@ -348,22 +348,6 @@ function TextEditor({ initialContent, onBack }) {
             </Box>
           </Box>
         </Box>
-
-        {/* Save Button */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          gap: 2, 
-          mt: 2 
-        }}>
-          <Button 
-            variant="contained" 
-            color="primary"
-            onClick={() => {/* Add save functionality */}}
-          >
-            Save Changes
-          </Button>
-        </Box>
       </Box>
     </Box>
   );

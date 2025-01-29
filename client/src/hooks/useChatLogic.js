@@ -66,10 +66,22 @@ export function useChatLogic() {
       let conversationPlanningToSubmit = { ...updatedConversationPlanning };
       
       if (typeof changedIndex === 'number') {
+        // Log status change
+        console.log('Question Status Change:', {
+          questionIndex: changedIndex,
+          newStatus: answer === "user has skipped this question" ? 'skipped' : 'answered',
+          answer: answer
+        });
+
         // If the answer is different from what was in the conversation history, mark as changed
         const originalAnswer = conversationHistory?.conversationPlanning?.questions[changedIndex]?.response;
         if (originalAnswer !== answer) {
           setHasChanges(true);
+          console.log('Content Changed:', { 
+            questionIndex: changedIndex,
+            previousAnswer: originalAnswer,
+            newAnswer: answer 
+          });
         }
 
         // Reset everything after the edited index
@@ -235,6 +247,12 @@ export function useChatLogic() {
   };
 
   const handleAnswerClick = (currentIndex) => {
+    console.log('Status Update:', {
+      questionIndex: currentIndex,
+      previousStatus: questionStatus[currentIndex]?.type,
+      newStatus: 'answering'
+    });
+
     // If skipped, immediately switch to answering mode
     if (questionStatus[currentIndex]?.type === 'skipped') {
       setInput(''); // Clear the "user has skipped this question" message

@@ -165,6 +165,12 @@ function ChatInterface({
       return;
     }
 
+    console.log('Submitting Answer:', {
+      questionIndex: currentQuestionIndex,
+      status: 'answered',
+      answer: input
+    });
+
     const updatedQuestions = [...currentQuestion.questions];
     updatedQuestions[currentQuestionIndex] = {
       ...updatedQuestions[currentQuestionIndex],
@@ -286,6 +292,12 @@ function ChatInterface({
 
   const handleSkip = () => {
     if (questionStatus[currentQuestionIndex]?.type !== 'skipped') {
+      console.log('Skipping Question:', {
+        questionIndex: currentQuestionIndex,
+        previousStatus: questionStatus[currentQuestionIndex]?.type,
+        newStatus: 'skipped'
+      });
+
       const skipMessage = "user has skipped this question";
       
       const updatedQuestions = [...currentQuestion.questions];
@@ -453,24 +465,6 @@ function ChatInterface({
           maxWidth: '800px',
           margin: '0 auto',
         }}>
-          {questionStatus[currentQuestionIndex] && (
-            <Typography 
-              sx={{ 
-                color: questionStatus[currentQuestionIndex]?.type === 'skipped' 
-                  ? 'warning.main' 
-                  : questionStatus[currentQuestionIndex]?.type === 'answered' 
-                    ? 'success.main' 
-                    : 'info.main',
-                fontWeight: 'bold',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                fontSize: '0.9rem'
-              }}
-            >
-              Status: {questionStatus[currentQuestionIndex]?.type}
-            </Typography>
-          )}
-
           <Box sx={{ 
             display: 'flex', 
             gap: 2,

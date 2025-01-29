@@ -17,7 +17,7 @@ function TextEditor({ initialContent, onBack }) {
   const [oneSentencePerLine, setOneSentencePerLine] = useState(false);
   // Store original format to restore it correctly
   const [originalFormat, setOriginalFormat] = useState(initialContent);
-  const [fontSize, setFontSize] = useState(1.1); // 1.1rem is our default size
+  const [fontSize, setFontSize] = useState(1.2); // 1.1rem is our default size
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Word counter function

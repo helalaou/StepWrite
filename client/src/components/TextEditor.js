@@ -4,6 +4,8 @@ import WestIcon from '@mui/icons-material/West';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
 import FormatLineSpacingIcon from '@mui/icons-material/FormatLineSpacing';
+import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
+import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 
 function TextEditor({ initialContent, onBack }) {
   // Track content history for undo/redo
@@ -13,6 +15,7 @@ function TextEditor({ initialContent, onBack }) {
   const [oneSentencePerLine, setOneSentencePerLine] = useState(false);
   // Store original format to restore it correctly
   const [originalFormat, setOriginalFormat] = useState(initialContent);
+  const [fontSize, setFontSize] = useState(1.1); // 1.1rem is our default size
 
   // Word counter function
   const getWordCount = useCallback((text) => {
@@ -84,6 +87,14 @@ function TextEditor({ initialContent, onBack }) {
     }
   };
 
+  const handleIncreaseFontSize = () => {
+    setFontSize(prev => Math.min(prev + 0.1, 2.0)); // Max size 2.0rem
+  };
+
+  const handleDecreaseFontSize = () => {
+    setFontSize(prev => Math.max(prev - 0.1, 0.8)); // Min size 0.8rem
+  };
+
   return (
     <Box sx={{ 
       display: 'flex',
@@ -143,7 +154,7 @@ function TextEditor({ initialContent, onBack }) {
         position: 'relative',
       }}>
         <Typography variant="h4" sx={{ mb: 3 }}>
-          Edit Your Content
+          Text Editor
         </Typography>
 
         {/* Text Editor Container */}
@@ -172,7 +183,7 @@ function TextEditor({ initialContent, onBack }) {
                   height: '100%',
                   '& textarea': {
                     height: '100% !important',
-                    fontSize: '1.1rem',
+                    fontSize: `${fontSize}rem`,
                     lineHeight: '1.5',
                     padding: '20px',
                   }
@@ -239,6 +250,50 @@ function TextEditor({ initialContent, onBack }) {
                   <FormatLineSpacingIcon />
                 </IconButton>
               </Tooltip>
+
+              <Box sx={{ 
+                height: '20px', 
+                width: '1px', 
+                backgroundColor: 'divider' 
+              }} />
+
+              {/* Font Size Controls */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Tooltip title="Decrease font size">
+                  <span>
+                    <IconButton
+                      onClick={handleDecreaseFontSize}
+                      size="small"
+                      disabled={fontSize <= 0.8}
+                    >
+                      <TextDecreaseIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    minWidth: '32px',
+                    textAlign: 'center'
+                  }}
+                >
+                  {Math.round(fontSize * 10) / 10}x
+                </Typography>
+
+                <Tooltip title="Increase font size">
+                  <span>
+                    <IconButton
+                      onClick={handleIncreaseFontSize}
+                      size="small"
+                      disabled={fontSize >= 2.0}
+                    >
+                      <TextIncreaseIcon />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </Box>
 
               <Box sx={{ 
                 height: '20px', 

@@ -134,12 +134,81 @@ function EditFlow() {
   );
 }
 
+function WriteWithContextFlow() {
+  const {
+    conversationPlanning,
+    input,
+    setInput,
+    isLoading,
+    showEditor,
+    setShowEditor,
+    finalOutput,
+    submitAnswer,
+    handleBackToQuestions,
+    questionStatus,
+    setQuestionStatus,
+    currentQuestionIndex,
+    setCurrentQuestionIndex,
+    hasChanges,
+    setHasChanges,
+    cameFromEditor,
+    handleBackToEditor,
+    currentEditorContent,
+    setCurrentEditorContent,
+    editorPreferences,
+    setEditorPreferences
+  } = useChatLogic();
+
+  const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
+    try {
+      const result = await submitAnswer(
+        updatedConversationPlanning.questions[changedIndex].id, 
+        input,
+        changedIndex,
+        updatedConversationPlanning
+      );
+      return result;
+    } catch (error) {
+      console.error('Error in handleSendMessage:', error);
+      throw error;
+    }
+  };
+
+  return showEditor ? (
+    <TextEditor 
+      initialContent={finalOutput}
+      onBack={handleBackToQuestions}
+      onContentChange={setCurrentEditorContent}
+      savedContent={currentEditorContent}
+      editorPreferences={editorPreferences}
+      onPreferencesChange={setEditorPreferences}
+    />
+  ) : (
+    <ChatInterface
+      currentQuestion={conversationPlanning}
+      input={input}
+      setInput={setInput}
+      isLoading={isLoading}
+      sendMessage={handleSendMessage}
+      submitAnswer={submitAnswer}
+      questionStatus={questionStatus}
+      setQuestionStatus={setQuestionStatus}
+      currentQuestionIndex={currentQuestionIndex}
+      setCurrentQuestionIndex={setCurrentQuestionIndex}
+      hasChanges={hasChanges}
+      onBackToEditor={handleBackToEditor}
+      cameFromEditor={cameFromEditor}
+    />
+  );
+}
+
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/write" element={<WriteFlow />} />
+        <Route path="/write-with-context" element={<WriteWithContextFlow />} />
         <Route path="/edit" element={<EditFlow />} />
       </Routes>
     </Router>

@@ -25,17 +25,14 @@ function TextEditor({
   const [originalFormat, setOriginalFormat] = useState(savedContent || initialContent);
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // Apply formatting on initial load and when preferences change
+ 
   useEffect(() => {
     if (editorPreferences.oneSentencePerLine) {
       setOriginalFormat(content);
       const formattedContent = formatToOneSentencePerLine(content);
       setContent(formattedContent);
-    } else {
-      setContent(originalFormat);
     }
-    setOneSentencePerLine(editorPreferences.oneSentencePerLine);
-  }, [editorPreferences.oneSentencePerLine]);
+  }, []);  
 
   // Update preferences when they change
   useEffect(() => {
@@ -52,44 +49,31 @@ function TextEditor({
 
   const formatToOneSentencePerLine = (text) => {
     return text
-      // First preserve paragraphs by marking them
       .replace(/\n\s*\n/g, '\n[PARAGRAPH]\n')
-      // Split sentences, keeping punctuation
-      .replace(/([.!?])\s+/g, '$1\n\n')  // Add double newline after .!? followed by space
-      .replace(/([.!?])([^.\s\n])/g, '$1\n\n$2')  // Add double newline if period is followed by non-period char
-      // Restore paragraphs with extra spacing
+      .replace(/([.!?])\s+/g, '$1\n\n')
+      .replace(/([.!?])([^.\s\n])/g, '$1\n\n$2')
       .replace(/\[PARAGRAPH\]/g, '\n\n')
-      // Clean up any excessive newlines
       .replace(/\n{3,}/g, '\n\n');
-  };
-
-  const formatToNormal = (text) => {
-    // Simply return to the original format instead of trying to reconstruct it
-    return originalFormat;
   };
 
   const handleToggleFormat = () => {
     const newOneSentencePerLine = !oneSentencePerLine;
     
     if (newOneSentencePerLine) {
+      // Save current content as original before formatting
       setOriginalFormat(content);
-      const newContent = formatToOneSentencePerLine(content);
-      setContent(newContent);
+      const formattedContent = formatToOneSentencePerLine(content);
+      setContent(formattedContent);
     } else {
+      // Revert to original format
       setContent(originalFormat);
     }
     
     setOneSentencePerLine(newOneSentencePerLine);
     
-    // Update preferences
-    onPreferencesChange({
-      ...editorPreferences,
-      oneSentencePerLine: newOneSentencePerLine
-    });
-    
-    // Add to history
+    // Update history
     const newHistory = contentHistory.slice(0, currentIndex + 1);
-    setContentHistory([...newHistory, content]);
+    setContentHistory([...newHistory, newOneSentencePerLine ? content : originalFormat]);
     setCurrentIndex(currentIndex + 1);
   };
 
@@ -97,16 +81,15 @@ function TextEditor({
     const newContent = e.target.value;
     setContent(newContent);
     
+    // Update original format only when not in one-sentence-per-line mode
     if (!oneSentencePerLine) {
       setOriginalFormat(newContent);
     }
     
-    // Add new content to history, removing any future redos
     const newHistory = contentHistory.slice(0, currentIndex + 1);
     setContentHistory([...newHistory, newContent]);
     setCurrentIndex(currentIndex + 1);
 
-    // Update parent component
     onContentChange(newContent);
   };
 

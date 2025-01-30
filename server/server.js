@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import config from './config.js';
-import { generateQuestion, generateOutput, generateEditQuestion, generateEditOutput, classifyText } from './openaiModule.js';
+import { generateWriteQuestion, generateWriteOutput, generateEditQuestion, generateEditOutput, classifyText } from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -44,7 +44,7 @@ app.post('/submit-answer', async (req, res) => {
     }
 
     if (conversationPlanning.followup_needed) {
-      const { question, conversationPlanning: updatedPlanning } = await generateQuestion(conversationPlanning);
+      const { question, conversationPlanning: updatedPlanning } = await generateWriteQuestion(conversationPlanning);
       
       fs.writeFileSync(
         path.join(tempDir, 'conversation_planning.json'), 
@@ -55,7 +55,7 @@ app.post('/submit-answer', async (req, res) => {
       if (!updatedPlanning.followup_needed) {
         console.log('\nNo more questions needed. Generating final output...');
         console.log('----------------------------------');
-        const output = await generateOutput(updatedPlanning);
+        const output = await generateWriteOutput(updatedPlanning);
         console.log('Generated output:', output);
         console.log('----------------------------------\n');
         
@@ -75,7 +75,7 @@ app.post('/submit-answer', async (req, res) => {
       // If followup_needed is false, generate the final output
       console.log('\nGenerating final output...');
       console.log('----------------------------------');
-      const output = await generateOutput(conversationPlanning);
+      const output = await generateWriteOutput(conversationPlanning);
       console.log('Generated output:', output);
       console.log('----------------------------------\n');
       

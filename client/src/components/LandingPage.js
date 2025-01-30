@@ -12,8 +12,8 @@ function LandingPage() {
     navigate('/write');
   };
 
-  const handleWriteWithContextClick = () => {
-    navigate('/write-with-context');
+  const handleReplyClick = () => {
+    navigate('/reply');
   };
 
   const handleEditClick = () => {
@@ -113,7 +113,7 @@ function LandingPage() {
             },
           },
         }}
-        onClick={handleWriteWithContextClick}
+        onClick={handleReplyClick}
       >
         <ReplyIcon sx={{ 
           fontSize: '5rem', 

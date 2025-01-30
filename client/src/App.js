@@ -7,7 +7,7 @@ import { useChatLogic } from './hooks/useChatLogic';
 import EditTextInput from './components/EditTextInput';
 import { useEditLogic } from './hooks/useEditLogic';
 import SplitScreenEdit from './components/SplitScreenEdit';
-import ReplyContextInput from './components/ReplyContextInput';
+import ReplyInput from './components/ReplyInput';
 
 function WriteFlow() {
   const {
@@ -135,7 +135,7 @@ function EditFlow() {
   );
 }
 
-function WriteWithContextFlow() {
+function ReplyFlow() {
   const {
     originalText,
     setOriginalText,
@@ -177,7 +177,7 @@ function WriteWithContextFlow() {
   };
 
   if (!originalText) {
-    return <ReplyContextInput onSubmit={setOriginalText} />;
+    return <ReplyInput onSubmit={setOriginalText} />;
   }
 
   return showEditor ? (
@@ -214,7 +214,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/write" element={<WriteFlow />} />
-        <Route path="/write-with-context" element={<WriteWithContextFlow />} />
+        <Route path="/reply" element={<ReplyFlow />} />
         <Route path="/edit" element={<EditFlow />} />
       </Routes>
     </Router>

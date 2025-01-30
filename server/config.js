@@ -20,6 +20,13 @@ const config = {
       model: 'gpt-4o',
       temperature: 0.7,
       maxTokens: 10000,
+    },
+    classification_settings: {
+      model: 'gpt-4o',
+      temperature: 0,
+      maxTokens: 10,
+      validCategories: ['email', 'letter', 'message', 'other'],
+      defaultCategory: 'other'
     }
   },
 };

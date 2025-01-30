@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import config from './config.js';
-import { generateQuestion, generateOutput, generateEditQuestion, generateEditOutput } from './openaiModule.js';
+import { generateQuestion, generateOutput, generateEditQuestion, generateEditOutput, classifyText } from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -150,6 +150,25 @@ app.post('/submit-edit-answer', async (req, res) => {
     console.error('Error processing edit submission:', error);
     res.status(500).json({ 
       error: 'Failed to process submission',
+      details: error.message 
+    });
+  }
+});
+
+app.post('/classify-text', async (req, res) => {
+  try {
+    const { text } = req.body;
+    
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ error: 'Text is required and must be a string' });
+    }
+
+    const classification = await classifyText(text);
+    res.json({ type: classification });
+  } catch (error) {
+    console.error('Error classifying text:', error);
+    res.status(500).json({ 
+      error: 'Failed to classify text',
       details: error.message 
     });
   }

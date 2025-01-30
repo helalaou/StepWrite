@@ -82,7 +82,7 @@ function LandingPage() {
             lineHeight: 1.4,
           }}
         >
-          Write something new from scratch
+          Write a new text from scratch
         </Typography>
       </Box>
 

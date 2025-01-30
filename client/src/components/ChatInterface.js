@@ -3,6 +3,8 @@ import { Box, TextField, Button, CircularProgress, Typography, IconButton } from
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EastIcon from '@mui/icons-material/East';
+import WestIcon from '@mui/icons-material/West';
+import { useNavigate } from 'react-router-dom';
 
 function ChatInterface({
   currentQuestion,
@@ -19,6 +21,8 @@ function ChatInterface({
   onBackToEditor,
   cameFromEditor
 }) {
+  const navigate = useNavigate();
+
   // Navigation control variables
   const navControls = {
     width: {
@@ -400,7 +404,49 @@ function ChatInterface({
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* Add Back to Editor button here, before other navigation */}
+      {/* Back to Home Button - Only show on first question */}
+      {currentQuestionIndex === 0 && (
+        <Box sx={{
+          position: 'fixed',
+          left: 0,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          zIndex: 3,
+          display: 'flex',
+          alignItems: 'center',
+          backgroundColor: 'background.paper',
+          borderTopRightRadius: '8px',
+          borderBottomRightRadius: '8px',
+          boxShadow: 2,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-50%) translateX(5px)',
+            boxShadow: 4,
+          }
+        }}>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/')}
+            sx={{ 
+              height: '60px',
+              borderTopRightRadius: '8px',
+              borderBottomRightRadius: '8px',
+              borderTopLeftRadius: 0,
+              borderBottomLeftRadius: 0,
+              paddingLeft: 3,
+              paddingRight: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <WestIcon />
+            Back to Home
+          </Button>
+        </Box>
+      )}
+
+      {/* Back to Editor button */}
       {currentQuestionIndex === currentQuestion.questions.length - 1 && 
        !hasChanges && 
        cameFromEditor && 

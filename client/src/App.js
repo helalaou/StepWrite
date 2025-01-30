@@ -7,6 +7,7 @@ import { useChatLogic } from './hooks/useChatLogic';
 import EditTextInput from './components/EditTextInput';
 import { useEditLogic } from './hooks/useEditLogic';
 import SplitScreenEdit from './components/SplitScreenEdit';
+import ReplyContextInput from './components/ReplyContextInput';
 
 function WriteFlow() {
   const {
@@ -136,12 +137,13 @@ function EditFlow() {
 
 function WriteWithContextFlow() {
   const {
+    originalText,
+    setOriginalText,
     conversationPlanning,
     input,
     setInput,
     isLoading,
     showEditor,
-    setShowEditor,
     finalOutput,
     submitAnswer,
     handleBackToQuestions,
@@ -173,6 +175,10 @@ function WriteWithContextFlow() {
       throw error;
     }
   };
+
+  if (!originalText) {
+    return <ReplyContextInput onSubmit={setOriginalText} />;
+  }
 
   return showEditor ? (
     <TextEditor 

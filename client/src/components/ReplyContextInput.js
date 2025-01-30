@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { Box, TextField, Button, Typography } from '@mui/material';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 
-function EditTextInput({ onSubmit }) {
+function ReplyContextInput({ onSubmit }) {
   const [text, setText] = useState('');
 
   const handleSubmit = () => {
     if (!text.trim()) {
-      alert('Please paste the text you want to edit');
+      alert('Please paste the text you want to reply to');
       return;
     }
     onSubmit(text);
@@ -33,7 +33,7 @@ function EditTextInput({ onSubmit }) {
           mb: 4,
         }}
       >
-        Paste the text you want to edit here
+        Paste the text you want to reply to here
       </Typography>
 
       <Box sx={{ 
@@ -100,4 +100,4 @@ function EditTextInput({ onSubmit }) {
   );
 }
 
-export default EditTextInput; 
+export default ReplyContextInput; 

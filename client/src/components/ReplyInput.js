@@ -4,7 +4,7 @@ import KeyboardIcon from '@mui/icons-material/Keyboard';
 import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
 
-function ReplyContextInput({ onSubmit }) {
+function ReplyInput({ onSubmit }) {
   const [text, setText] = useState('');
   const navigate = useNavigate();
 
@@ -13,7 +13,11 @@ function ReplyContextInput({ onSubmit }) {
       alert('Please paste the text you want to reply to');
       return;
     }
-    onSubmit(text);
+    if (typeof onSubmit === 'function') {
+      onSubmit(text);
+    } else {
+      console.error('onSubmit is not a function');
+    }
   };
 
   return (
@@ -144,4 +148,4 @@ function ReplyContextInput({ onSubmit }) {
   );
 }
 
-export default ReplyContextInput; 
+export default ReplyInput; 

@@ -2,7 +2,7 @@ export const editQuestionPrompt = (originalText, qaFormat) => `
 You are a text editing assistant helping someone edit their text. The user can see their original text on the left side of the screen, and you're helping them make changes through a series of questions.
 
 Original text to edit:
-${originalText}
+"${originalText}""
 
 Previous conversation:
 ${qaFormat}

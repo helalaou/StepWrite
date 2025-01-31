@@ -8,6 +8,7 @@ import EditTextInput from './components/EditTextInput';
 import { useEditLogic } from './hooks/useEditLogic';
 import SplitScreenEdit from './components/SplitScreenEdit';
 import ReplyInput from './components/ReplyInput';
+import { useReplyLogic } from './hooks/useReplyLogic';
 
 function WriteFlow() {
   const {
@@ -152,14 +153,13 @@ function ReplyFlow() {
     currentQuestionIndex,
     setCurrentQuestionIndex,
     hasChanges,
-    setHasChanges,
-    cameFromEditor,
-    handleBackToEditor,
-    currentEditorContent,
-    setCurrentEditorContent,
-    editorPreferences,
-    setEditorPreferences
-  } = useChatLogic();
+    setHasChanges
+  } = useReplyLogic();
+
+  const editorPreferences = {
+    fontSize: 1.3,
+    oneSentencePerLine: false
+  };
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
     try {
@@ -176,6 +176,14 @@ function ReplyFlow() {
     }
   };
 
+  const handleBackToEditor = () => {
+    if (!hasChanges) {
+      setShowEditor(true);
+    } else {
+      alert("You can't go back to the editor because there are unsaved changes.");
+    }
+  };
+
   if (!originalText) {
     return <ReplyInput onSubmit={setOriginalText} />;
   }
@@ -184,10 +192,10 @@ function ReplyFlow() {
     <TextEditor 
       initialContent={finalOutput}
       onBack={handleBackToQuestions}
-      onContentChange={setCurrentEditorContent}
-      savedContent={currentEditorContent}
+      onContentChange={() => {}}
+      savedContent={finalOutput}
       editorPreferences={editorPreferences}
-      onPreferencesChange={setEditorPreferences}
+      onPreferencesChange={() => {}}
     />
   ) : (
     <ChatInterface
@@ -203,7 +211,6 @@ function ReplyFlow() {
       setCurrentQuestionIndex={setCurrentQuestionIndex}
       hasChanges={hasChanges}
       onBackToEditor={handleBackToEditor}
-      cameFromEditor={cameFromEditor}
     />
   );
 }

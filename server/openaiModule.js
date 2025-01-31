@@ -4,6 +4,7 @@ import config from './config.js';
 import { writeQuestionPrompt, writeOutputPrompt } from './prompts/writePrompts.js';
 import { editQuestionPrompt, editOutputPrompt } from './prompts/editPrompts.js';
 import { classificationPrompt } from './prompts/classificationPrompt.js';
+import { replyQuestionPrompt, replyOutputPrompt } from './prompts/replyPrompts.js';
 
 dotenv.config();
 
@@ -223,10 +224,89 @@ async function classifyText(text) {
   }
 }
 
+async function generateReplyQuestion(originalText, conversationPlanning) {
+  const qaFormat = conversationPlanning.questions
+    .map(q => `Q: ${q.question}; A: ${q.response}`)
+    .join('\n');
+
+  const prompt = replyQuestionPrompt(originalText, qaFormat);
+
+  console.log('\n=== SENDING TO OPENAI (Reply Question Generation) ===');
+  console.log('Prompt:', prompt);
+  console.log('================================================\n');
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.question_generation_settings.model,
+      messages: [{ role: 'system', content: prompt }],
+      max_tokens: config.openai.question_generation_settings.maxTokens,
+      temperature: config.openai.question_generation_settings.temperature,
+    });
+
+    const responseText = completion.choices[0].message.content.trim();
+    console.log('Raw OpenAI response:', responseText);
+
+    const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    let parsedResponse;
+    
+    try {
+      parsedResponse = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('Failed to parse cleaned response:', parseError);
+      const questionMatch = cleanedResponse.match(/"question"\s*:\s*"([^"]+)"/);
+      const followupMatch = cleanedResponse.match(/"followup_needed"\s*:\s*(true|false)/);
+      
+      if (questionMatch && followupMatch) {
+        parsedResponse = {
+          question: questionMatch[1],
+          followup_needed: followupMatch[1] === 'true'
+        };
+      } else {
+        throw new Error('Could not parse response into required format');
+      }
+    }
+
+    return parsedResponse;
+  } catch (error) {
+    console.error('Failed to generate reply question:', error);
+    throw error;
+  }
+}
+
+async function generateReplyOutput(originalText, conversationPlanning) {
+  const qaFormat = conversationPlanning.questions
+    .map(q => `Q: ${q.question}; A: ${q.response}`)
+    .join('\n');
+
+  const prompt = replyOutputPrompt(originalText, qaFormat);
+
+  console.log('\n=== SENDING TO OPENAI (Reply Output Generation) ===');
+  console.log('Prompt:', prompt);
+  console.log('=============================================\n');
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.output_generation_settings.model,
+      messages: [{ role: 'system', content: prompt }],
+      max_tokens: config.openai.output_generation_settings.maxTokens,
+      temperature: config.openai.output_generation_settings.temperature,
+    });
+
+    const output = completion.choices[0].message.content.trim();
+    console.log('Generated reply output:', output);
+    return output;
+  } catch (error) {
+    console.error('Failed to generate reply output:', error);
+    throw error;
+  }
+}
+
 export {
   generateWriteQuestion,
   generateWriteOutput,
   generateEditQuestion,
   generateEditOutput,
+  generateReplyQuestion,
+  generateReplyOutput,
   classifyText
 }; 

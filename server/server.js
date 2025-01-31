@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import config from './config.js';
-import { generateWriteQuestion, generateWriteOutput, generateEditQuestion, generateEditOutput, classifyText } from './openaiModule.js';
+import { generateWriteQuestion, generateWriteOutput, generateEditQuestion, generateEditOutput, classifyText, generateReplyQuestion, generateReplyOutput } from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -169,6 +169,65 @@ app.post('/classify-text', async (req, res) => {
     console.error('Error classifying text:', error);
     res.status(500).json({ 
       error: 'Failed to classify text',
+      details: error.message 
+    });
+  }
+});
+
+// Add new route for reply flow
+app.post('/submit-reply-answer', async (req, res) => {
+  try {
+    const { originalText, conversationPlanning, changedIndex, answer } = req.body;
+    console.log('Received reply submission:', { originalText, conversationPlanning, changedIndex, answer });
+
+    // If a response was changed, remove subsequent questions
+    let updatedConversationPlanning = { ...conversationPlanning };
+    if (typeof changedIndex === 'number') {
+      updatedConversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
+      if (changedIndex >= 0) {
+        updatedConversationPlanning.questions[changedIndex].response = answer;
+      }
+      updatedConversationPlanning.followup_needed = true;
+    }
+
+    if (updatedConversationPlanning.followup_needed) {
+      const response = await generateReplyQuestion(originalText, updatedConversationPlanning);
+      
+      // If no more questions needed, generate final output
+      if (!response.followup_needed) {
+        const output = await generateReplyOutput(originalText, updatedConversationPlanning);
+        res.json({ 
+          output,
+          followup_needed: false 
+        });
+        return;
+      }
+
+      // Add the new question to the conversation planning
+      const newQuestion = {
+        id: updatedConversationPlanning.questions.length + 1,
+        question: response.question,
+        response: ''
+      };
+
+      updatedConversationPlanning.questions.push(newQuestion);
+      updatedConversationPlanning.followup_needed = response.followup_needed;
+
+      res.json({ 
+        conversationPlanning: updatedConversationPlanning,
+        followup_needed: true 
+      });
+    } else {
+      const output = await generateReplyOutput(originalText, updatedConversationPlanning);
+      res.json({ 
+        output,
+        followup_needed: false 
+      });
+    }
+  } catch (error) {
+    console.error('Error processing reply submission:', error);
+    res.status(500).json({ 
+      error: 'Failed to process submission',
       details: error.message 
     });
   }

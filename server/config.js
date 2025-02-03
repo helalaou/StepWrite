@@ -11,18 +11,52 @@ const config = {
   },
   openai: {
     timeout: 70000, // 70 seconds
-    question_generation_settings: {
-      model: 'gpt-4o',
-      temperature: 0.7,
-      maxTokens: 10000,
+    
+    // Write flow settings
+    write: {
+      question: {
+        model: 'chatgpt-4o-latest',
+        temperature: 0.7,
+        maxTokens: 30,
+      },
+      output: {
+        model: 'chatgpt-4o-latest',
+        temperature: 0.7,
+        maxTokens: 10000,
+      }
     },
-    output_generation_settings: {
-      model: 'gpt-4o',
-      temperature: 0.7,
-      maxTokens: 10000,
+
+    // Edit flow settings
+    edit: {
+      question: {
+        model: 'chatgpt-4o-latest',
+        temperature: 0.7,
+        maxTokens: 30,
+      },
+      output: {
+        model: 'chatgpt-4o-latest',
+        temperature: 0.7,
+        maxTokens: 10000,
+      }
     },
-    classification_settings: {
-      model: 'gpt-4o',
+
+    // Reply flow settings
+    reply: {
+      question: {
+        model: 'chatgpt-4o-latest',
+        temperature: 0.7,
+        maxTokens: 30,
+      },
+      output: {
+        model: 'chatgpt-4o-latest',
+        temperature: 0.7,
+        maxTokens: 10000,
+      }
+    },
+
+    // Classification settings
+    classification: {
+      model: 'chatgpt-4o-latest',
       temperature: 0,
       maxTokens: 10,
       validCategories: ['email', 'letter', 'message', 'other'],

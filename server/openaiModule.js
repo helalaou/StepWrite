@@ -26,10 +26,10 @@ async function generateWriteQuestion(conversationPlanning) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: config.openai.question_generation_settings.model,
+      model: config.openai.write.question.model,
       messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.question_generation_settings.maxTokens,
-      temperature: config.openai.question_generation_settings.temperature,
+      max_tokens: config.openai.write.question.maxTokens,
+      temperature: config.openai.write.question.temperature,
     });
 
     console.log('\n=== OPENAI RESPONSE (Question Generation) ===');
@@ -100,10 +100,10 @@ async function generateWriteOutput(conversationPlanning) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: config.openai.output_generation_settings.model,
+      model: config.openai.write.output.model,
       messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.output_generation_settings.maxTokens,
-      temperature: config.openai.output_generation_settings.temperature,
+      max_tokens: config.openai.write.output.maxTokens,
+      temperature: config.openai.write.output.temperature,
     });
 
     const output = completion.choices[0].message.content.trim();
@@ -132,10 +132,10 @@ async function generateEditQuestion(originalText, conversationPlanning) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: config.openai.question_generation_settings.model,
+      model: config.openai.edit.question.model,
       messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.question_generation_settings.maxTokens,
-      temperature: config.openai.question_generation_settings.temperature,
+      max_tokens: config.openai.edit.question.maxTokens,
+      temperature: config.openai.edit.question.temperature,
     });
 
     const responseText = completion.choices[0].message.content.trim();
@@ -181,10 +181,10 @@ async function generateEditOutput(originalText, conversationPlanning) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: config.openai.output_generation_settings.model,
+      model: config.openai.edit.output.model,
       messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.output_generation_settings.maxTokens,
-      temperature: config.openai.output_generation_settings.temperature,
+      max_tokens: config.openai.edit.output.maxTokens,
+      temperature: config.openai.edit.output.temperature,
     });
 
     const output = completion.choices[0].message.content.trim();
@@ -201,20 +201,20 @@ async function classifyText(text) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: config.openai.classification_settings.model,
+      model: config.openai.classification.model,
       messages: [
         { role: 'system', content: prompt },
         { role: 'user', content: `Text to classify:\n${text}` }
       ],
-      max_tokens: config.openai.classification_settings.maxTokens,
-      temperature: config.openai.classification_settings.temperature,
+      max_tokens: config.openai.classification.maxTokens,
+      temperature: config.openai.classification.temperature,
     });
 
     const classification = completion.choices[0].message.content.trim().toLowerCase();
     
-    if (!config.openai.classification_settings.validCategories.includes(classification)) {
-      console.warn(`Unexpected classification: ${classification}, defaulting to "${config.openai.classification_settings.defaultCategory}"`);
-      return config.openai.classification_settings.defaultCategory;
+    if (!config.openai.classification.validCategories.includes(classification)) {
+      console.warn(`Unexpected classification: ${classification}, defaulting to "${config.openai.classification.defaultCategory}"`);
+      return config.openai.classification.defaultCategory;
     }
 
     return classification;
@@ -237,10 +237,10 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: config.openai.question_generation_settings.model,
+      model: config.openai.reply.question.model,
       messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.question_generation_settings.maxTokens,
-      temperature: config.openai.question_generation_settings.temperature,
+      max_tokens: config.openai.reply.question.maxTokens,
+      temperature: config.openai.reply.question.temperature,
     });
 
     const responseText = completion.choices[0].message.content.trim();
@@ -286,10 +286,10 @@ async function generateReplyOutput(originalText, conversationPlanning) {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: config.openai.output_generation_settings.model,
+      model: config.openai.reply.output.model,
       messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.output_generation_settings.maxTokens,
-      temperature: config.openai.output_generation_settings.temperature,
+      max_tokens: config.openai.reply.output.maxTokens,
+      temperature: config.openai.reply.output.temperature,
     });
 
     const output = completion.choices[0].message.content.trim();

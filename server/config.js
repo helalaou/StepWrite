@@ -61,6 +61,22 @@ const config = {
       maxTokens: 10,
       validCategories: ['email', 'letter', 'message', 'other'],
       defaultCategory: 'other'
+    },
+
+    // fact checking setings
+    factChecking: {
+      enabled: false,
+      maxAttempts: 3,
+      check: {
+        model: 'gpt-4o',
+        temperature: 0.3,
+        maxTokens: 10000,
+      },
+      correction: {
+        model: 'gpt-4o',
+        temperature: 0.7,
+        maxTokens: 10000,
+      }
     }
   },
 };

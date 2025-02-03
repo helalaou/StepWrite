@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import config from './config.js';
-import { generateWriteQuestion, generateWriteOutput, generateEditQuestion, generateEditOutput, classifyText, generateReplyQuestion, generateReplyOutput } from './openaiModule.js';
+import { generateWriteQuestion, generateWriteOutput, generateEditQuestion, generateEditOutput, classifyText, generateReplyQuestion, generateReplyOutput, generateOutputWithFactCheck } from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -33,7 +33,6 @@ app.post('/submit-answer', async (req, res) => {
     // If a response was changed, remove subsequent questions
     if (typeof changedIndex === 'number') {
       conversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
-      // Ensure followup_needed is true when editing responses
       conversationPlanning.followup_needed = true;
     }
 
@@ -53,10 +52,14 @@ app.post('/submit-answer', async (req, res) => {
 
       // If the question generation indicates no more questions needed
       if (!updatedPlanning.followup_needed) {
-        console.log('\nNo more questions needed. Generating final output...');
+        console.log('\n=== FINAL OUTPUT GENERATION ===');
+        console.log('Fact Checking Status:', config.openai.factChecking.enabled ? 'Enabled' : 'Disabled');
         console.log('----------------------------------');
-        const output = await generateWriteOutput(updatedPlanning);
-        console.log('Generated output:', output);
+        
+        const output = await generateOutputWithFactCheck(updatedPlanning);
+        
+        console.log('\n=== GENERATION COMPLETE ===');
+        console.log('Output length:', output.length, 'characters');
         console.log('----------------------------------\n');
         
         res.json({ 
@@ -72,11 +75,15 @@ app.post('/submit-answer', async (req, res) => {
         followup_needed: true 
       });
     } else {
-      // If followup_needed is false, generate the final output
-      console.log('\nGenerating final output...');
+      // Generate output with fact checking
+      console.log('\n=== FINAL OUTPUT GENERATION ===');
+      console.log('Fact Checking Status:', config.openai.factChecking.enabled ? 'Enabled' : 'Disabled');
       console.log('----------------------------------');
-      const output = await generateWriteOutput(conversationPlanning);
-      console.log('Generated output:', output);
+      
+      const output = await generateOutputWithFactCheck(conversationPlanning);
+      
+      console.log('\n=== GENERATION COMPLETE ===');
+      console.log('Output length:', output.length, 'characters');
       console.log('----------------------------------\n');
       
       res.json({ 
@@ -86,7 +93,10 @@ app.post('/submit-answer', async (req, res) => {
     }
   } catch (error) {
     console.error('Error processing submission:', error);
-    res.status(500).json({ error: 'Failed to process submission' });
+    res.status(500).json({ 
+      error: 'Failed to process submission',
+      details: error.message 
+    });
   }
 });
 

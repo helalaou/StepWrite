@@ -5,6 +5,7 @@ import { writeQuestionPrompt, writeOutputPrompt } from './prompts/writePrompts.j
 import { editQuestionPrompt, editOutputPrompt } from './prompts/editPrompts.js';
 import { classificationPrompt } from './prompts/classificationPrompt.js';
 import { replyQuestionPrompt, replyOutputPrompt } from './prompts/replyPrompts.js';
+import { factCheckPrompt, factCorrectionPrompt } from './prompts/factCheckingPrompt.js';
 
 dotenv.config();
 
@@ -301,6 +302,117 @@ async function generateReplyOutput(originalText, conversationPlanning) {
   }
 }
 
+async function performFactCheck(qaFormat, output) {
+  const prompt = factCheckPrompt(qaFormat, output);
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.factChecking.check.model,
+      messages: [{ role: 'system', content: prompt }],
+      temperature: config.openai.factChecking.check.temperature,
+      max_tokens: config.openai.factChecking.check.maxTokens,
+    });
+
+    const responseText = completion.choices[0].message.content.trim();
+    const parsedResponse = JSON.parse(responseText);
+
+    console.log('\n=== FACT CHECK RESULTS ===');
+    console.log('Passed:', parsedResponse.passed);
+    console.log('Issues found:', parsedResponse.issues.length);
+    console.log('========================\n');
+
+    return parsedResponse;
+  } catch (error) {
+    console.error('Failed to perform fact check:', error);
+    throw error;
+  }
+}
+
+async function generateCorrection(qaFormat, output, issues) {
+  const prompt = factCorrectionPrompt(qaFormat, output, issues);
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.factChecking.correction.model,
+      messages: [{ role: 'system', content: prompt }],
+      temperature: config.openai.factChecking.correction.temperature,
+      max_tokens: config.openai.factChecking.correction.maxTokens,
+    });
+
+    return completion.choices[0].message.content.trim();
+  } catch (error) {
+    console.error('Failed to generate correction:', error);
+    throw error;
+  }
+}
+
+async function generateOutputWithFactCheck(conversationPlanning) {
+  console.log('\n=== FACT CHECKING STATUS ===');
+  if (!config.openai.factChecking.enabled) {
+    console.log('❌ Fact checking is disabled in config');
+    console.log('Generating output without fact checking...');
+    console.log('==============================\n');
+    return await generateWriteOutput(conversationPlanning);
+  }
+  
+  console.log('✓ Fact checking is enabled');
+  console.log(`Maximum attempts configured: ${config.openai.factChecking.maxAttempts}`);
+  console.log('==============================\n');
+
+  const qaFormat = conversationPlanning.questions
+    .map(q => `Q: ${q.question}\nA: ${q.response}`)
+    .join('\n\n');
+
+  let attempts = 0;
+  
+  console.log('=== INITIAL OUTPUT GENERATION ===');
+  let output = await generateWriteOutput(conversationPlanning);
+  console.log('Initial output generated');
+  console.log('==============================\n');
+
+  while (attempts < config.openai.factChecking.maxAttempts) {
+    attempts++;
+    console.log(`\n=== FACT CHECK ATTEMPT ${attempts}/${config.openai.factChecking.maxAttempts} ===`);
+    
+    // Perform fact check
+    const checkResult = await performFactCheck(qaFormat, output);
+
+    if (checkResult.passed) {
+      console.log('✓ Fact check passed!');
+      console.log('No issues found in the generated content');
+      console.log('==============================\n');
+      return output;
+    }
+
+    console.log('\n❌ Fact check failed');
+    console.log('Issues found:', checkResult.issues.length);
+    checkResult.issues.forEach((issue, index) => {
+      console.log(`\nIssue ${index + 1}:`);
+      console.log(`Type: ${issue.type}`);
+      console.log(`Detail: ${issue.detail}`);
+      console.log(`Reference: ${issue.qa_reference}`);
+    });
+
+    if (attempts === config.openai.factChecking.maxAttempts) {
+      console.log('\n⚠️ Maximum attempts reached');
+      console.log('Using final correction attempt...');
+    } else {
+      console.log('\n🔄 Generating correction...');
+    }
+    
+    // Generate correction based on issues
+    output = await generateCorrection(qaFormat, output, checkResult.issues);
+    console.log('Correction generated');
+    console.log('==============================\n');
+  }
+
+  console.log('⚠️ WARNING: Failed to generate fully verified output');
+  console.log('Returning best attempt after maximum iterations');
+  console.log('==============================\n');
+  
+  return output;
+}
+
 export {
   generateWriteQuestion,
   generateWriteOutput,
@@ -308,5 +420,6 @@ export {
   generateEditOutput,
   generateReplyQuestion,
   generateReplyOutput,
-  classifyText
+  classifyText,
+  generateOutputWithFactCheck
 }; 

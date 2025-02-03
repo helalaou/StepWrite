@@ -30,6 +30,7 @@ ${qaFormat}
 
 5. **Avoid Redundant or Unnecessary Questions**
    - If something is already answered in the conversation or marked as skipped, do not ask again.
+   - Do not ask the same question or questions similar to it with different wording more than once.
    - Do not ask about details the model can infer on its own (e.g., greetings, sign-offs, contact info, or subject lines).
 
 6. **Ask for Essential Content Details Only**

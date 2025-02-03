@@ -27,6 +27,7 @@ ${qaFormat}
 
 5. **Avoid Redundant or Unnecessary Questions**
    - If something is already answered in the conversation or marked as skipped, do not ask again.
+   - Do not ask the same question or questions similar to it with different wording more than once.
    - Do not ask about details that can be inferred (e.g., greetings, closings, or formatting).
    - Do not ask hypothetical questions, such as how someone else might respond.
 

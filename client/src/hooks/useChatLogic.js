@@ -2,12 +2,13 @@ import { useState } from 'react';
 import axios from 'axios';
 import config from '../config.js';
 
-export function useChatLogic() {
+export function useChatLogic(mode = 'write') {
+  const [originalText, setOriginalText] = useState('');
   const [conversationPlanning, setConversationPlanning] = useState({
     questions: [
       {
         id: 1,
-        question: 'What would you like to write?',
+        question: mode === 'write' ? 'What would you like to write?' : 'What is the main point you want to make in your reply?',
         response: '', 
       },
     ],
@@ -26,7 +27,7 @@ export function useChatLogic() {
   const [cameFromEditor, setCameFromEditor] = useState(false);
   const [currentEditorContent, setCurrentEditorContent] = useState('');
   const [editorPreferences, setEditorPreferences] = useState({
-    fontSize: 1.3,  
+    fontSize: 1.3,
     oneSentencePerLine: false
   });
 
@@ -64,7 +65,6 @@ export function useChatLogic() {
     });
   };
 
-  // Submit the user's response to a question
   const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning) => {
     setIsLoading(true);
     try {
@@ -74,36 +74,22 @@ export function useChatLogic() {
         const originalAnswer = conversationHistory?.conversationPlanning?.questions[changedIndex]?.response;
         const hasChanged = originalAnswer !== answer;
         
-        console.log('Processing answer submission:', {
-          questionIndex: changedIndex,
-          originalAnswer,
-          newAnswer: answer,
-          hasChanged
-        });
-
         if (hasChanged) {
           setHasChanges(true);
           setCurrentEditorContent('');
           setEditorPreferences({
-            fontSize: 1.3,   
+            fontSize: 1.3,
             oneSentencePerLine: false
           });
           
-          // Reset everything after the edited index only if content changed
           conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
             .slice(0, changedIndex + 1)
-            .map((q, idx) => {
-              if (idx === changedIndex) {
-                return { ...q, response: answer };
-              }
-              return q;
-            });
+            .map((q, idx) => idx === changedIndex ? { ...q, response: answer } : q);
           
           conversationPlanningToSubmit.followup_needed = true;
           setFinalOutput('');
         }
 
-        // Update conversation history
         if (conversationHistory) {
           setConversationHistory({
             conversationPlanning: conversationPlanningToSubmit,
@@ -112,11 +98,15 @@ export function useChatLogic() {
         }
       }
 
-      const response = await axios.post(`${config.serverUrl}/submit-answer`, {
+      const endpoint = mode === 'write' ? 'submit-answer' : 'submit-reply-answer';
+      const payload = {
+        ...(mode === 'reply' && { originalText }),
         conversationPlanning: conversationPlanningToSubmit,
         changedIndex,
         answer
-      });
+      };
+
+      const response = await axios.post(`${config.serverUrl}/${endpoint}`, payload);
 
       if (!response.data.followup_needed) {
         const newOutput = response.data.output;
@@ -140,29 +130,15 @@ export function useChatLogic() {
           followup_needed: response.data.followup_needed
         };
 
-      
-        //  Cleanup statuses for truncated or newly added questions
         const newQuestionStatus = { ...questionStatus };
-
-        // 1. Remove statuses for any questions that no longer exist
         Object.keys(newQuestionStatus).forEach((key) => {
-          const idx = parseInt(key, 10);
-          if (idx >= updatedPlanning.questions.length) {
-            delete newQuestionStatus[idx];
-          }
-        });
-
-        // 2. Ensure that brand-new question indexes are set to undefined
-        updatedPlanning.questions.forEach((_, index) => {
-          if (!newQuestionStatus.hasOwnProperty(index)) {
-            newQuestionStatus[index] = undefined;
+          if (parseInt(key, 10) >= updatedPlanning.questions.length) {
+            delete newQuestionStatus[key];
           }
         });
 
         setConversationPlanning(updatedPlanning);
         setQuestionStatus(newQuestionStatus);
-        
-        // Update conversation history with current state
         setConversationHistory({ 
           conversationPlanning: updatedPlanning, 
           questionStatus: newQuestionStatus
@@ -185,16 +161,12 @@ export function useChatLogic() {
     setHasChanges(false);
     setCameFromEditor(true);
     
-    // No need to store content here as it's being updated continuously via onContentChange
-
     if (conversationHistory) {
-      // Restore the entire conversation planning as it was
       setConversationPlanning({
         ...conversationHistory.conversationPlanning,
         followup_needed: true
       });
       
-      // Restore all question statuses as they were
       const restoredStatus = {};
       conversationHistory.conversationPlanning.questions.forEach((question, index) => {
         if (question.response) {
@@ -206,31 +178,22 @@ export function useChatLogic() {
       });
       
       setQuestionStatus(restoredStatus);
-      
-      // Set current question index to the last question
       const lastQuestionIndex = conversationHistory.conversationPlanning.questions.length - 1;
       setCurrentQuestionIndex(lastQuestionIndex);
-      
-      // Set input to the last question's response
-      const lastQuestion = conversationHistory.conversationPlanning.questions[lastQuestionIndex];
-      setInput(lastQuestion?.response || '');
+      setInput(conversationHistory.conversationPlanning.questions[lastQuestionIndex]?.response || '');
     }
   };
 
   const handleBackToEditor = () => {
     setShowEditor(true);
-    
-    // If no changes were made to questions, keep the current editor content and preferences
     if (!hasChanges && currentEditorContent) {
       setFinalOutput(currentEditorContent);
     } else if (!hasChanges && lastValidOutput) {
       setFinalOutput(lastValidOutput);
     }
-
-    // If questions were changed, reset preferences to defaults
     if (hasChanges) {
       setEditorPreferences({
-        fontSize: 1.3,   
+        fontSize: 1.3,
         oneSentencePerLine: false
       });
     }
@@ -287,6 +250,7 @@ export function useChatLogic() {
   };
 
   return {
+    ...(mode === 'reply' && { originalText, setOriginalText }),
     conversationPlanning,
     input,
     setInput,

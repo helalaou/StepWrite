@@ -15,12 +15,12 @@ const config = {
     // Write flow settings
     write: {
       question: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4o',
         temperature: 0.7,
         maxTokens: 30,
       },
       output: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4o',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -29,12 +29,12 @@ const config = {
     // Edit flow settings
     edit: {
       question: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4o',
         temperature: 0.7,
         maxTokens: 30,
       },
       output: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4o',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -43,12 +43,12 @@ const config = {
     // Reply flow settings
     reply: {
       question: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4o',
         temperature: 0.7,
         maxTokens: 30,
       },
       output: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4o',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -56,7 +56,7 @@ const config = {
 
     // Classification settings
     classification: {
-      model: 'chatgpt-4o-latest',
+      model: 'gpt-4o',
       temperature: 0,
       maxTokens: 10,
       validCategories: ['email', 'letter', 'message', 'other'],

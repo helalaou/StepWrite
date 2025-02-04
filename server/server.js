@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import OpenAI from 'openai';
+import { logger } from './config.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -28,7 +29,7 @@ const openai = new OpenAI({
 app.post('/submit-answer', async (req, res) => {
   try {
     const { conversationPlanning, changedIndex } = req.body;
-    console.log('Processing submission with conversation planning:', conversationPlanning);
+    logger.info('Processing submission with conversation planning:', conversationPlanning);
 
     // If a response was changed, remove subsequent questions
     if (typeof changedIndex === 'number') {
@@ -52,15 +53,18 @@ app.post('/submit-answer', async (req, res) => {
 
       // If the question generation indicates no more questions needed
       if (!updatedPlanning.followup_needed) {
-        console.log('\n=== FINAL OUTPUT GENERATION ===');
-        console.log('Fact Checking Status:', config.openai.factChecking.enabled ? 'Enabled' : 'Disabled');
-        console.log('----------------------------------');
+        logger.section('FINAL OUTPUT GENERATION', {
+          factCheckingEnabled: config.openai.factChecking.enabled
+        });
         
         const output = await generateOutputWithFactCheck(updatedPlanning);
         
-        console.log('\n=== GENERATION COMPLETE ===');
-        console.log('Output length:', output.length, 'characters');
-        console.log('----------------------------------\n');
+        logger.section('GENERATION COMPLETE', {
+          output,
+          length: output.length,
+          characters: output.length,
+          words: output.split(/\s+/).length
+        });
         
         res.json({ 
           output,
@@ -76,15 +80,18 @@ app.post('/submit-answer', async (req, res) => {
       });
     } else {
       // Generate output with fact checking
-      console.log('\n=== FINAL OUTPUT GENERATION ===');
-      console.log('Fact Checking Status:', config.openai.factChecking.enabled ? 'Enabled' : 'Disabled');
-      console.log('----------------------------------');
+      logger.section('FINAL OUTPUT GENERATION', {
+        factCheckingEnabled: config.openai.factChecking.enabled
+      });
       
       const output = await generateOutputWithFactCheck(conversationPlanning);
       
-      console.log('\n=== GENERATION COMPLETE ===');
-      console.log('Output length:', output.length, 'characters');
-      console.log('----------------------------------\n');
+      logger.section('GENERATION COMPLETE', {
+        output,
+        length: output.length,
+        characters: output.length,
+        words: output.split(/\s+/).length
+      });
       
       res.json({ 
         output,
@@ -92,7 +99,7 @@ app.post('/submit-answer', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error processing submission:', error);
+    logger.error('Error processing submission:', error);
     res.status(500).json({ 
       error: 'Failed to process submission',
       details: error.message 
@@ -104,7 +111,7 @@ app.post('/submit-answer', async (req, res) => {
 app.post('/submit-edit-answer', async (req, res) => {
   try {
     const { originalText, conversationPlanning, changedIndex, answer } = req.body;
-    console.log('Received edit submission:', { originalText, conversationPlanning, changedIndex, answer });
+    logger.info('Received edit submission:', { originalText, conversationPlanning, changedIndex, answer });
 
     // If a response was changed, remove subsequent questions
     let updatedConversationPlanning = { ...conversationPlanning };
@@ -157,7 +164,7 @@ app.post('/submit-edit-answer', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error processing edit submission:', error);
+    logger.error('Error processing edit submission:', error);
     res.status(500).json({ 
       error: 'Failed to process submission',
       details: error.message 
@@ -176,7 +183,7 @@ app.post('/classify-text', async (req, res) => {
     const classification = await classifyText(text);
     res.json({ type: classification });
   } catch (error) {
-    console.error('Error classifying text:', error);
+    logger.error('Error classifying text:', error);
     res.status(500).json({ 
       error: 'Failed to classify text',
       details: error.message 
@@ -188,7 +195,7 @@ app.post('/classify-text', async (req, res) => {
 app.post('/submit-reply-answer', async (req, res) => {
   try {
     const { originalText, conversationPlanning, changedIndex, answer } = req.body;
-    console.log('Received reply submission:', { originalText, conversationPlanning, changedIndex, answer });
+    logger.info('Received reply submission:', { originalText, conversationPlanning, changedIndex, answer });
 
     // If a response was changed, remove subsequent questions
     let updatedConversationPlanning = { ...conversationPlanning };
@@ -235,7 +242,7 @@ app.post('/submit-reply-answer', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error processing reply submission:', error);
+    logger.error('Error processing reply submission:', error);
     res.status(500).json({ 
       error: 'Failed to process submission',
       details: error.message 
@@ -245,5 +252,11 @@ app.post('/submit-reply-answer', async (req, res) => {
 
 // Start server
 app.listen(config.server.port, () => {
-  console.log(`${config.app.name} server v${config.app.version} running at http://localhost:${config.server.port}`);
+  logger.info(`${config.app.name} server v${config.app.version} running at http://localhost:${config.server.port}`);
+  logger.info('Registered routes:');
+  app._router.stack.forEach((r) => {
+    if (r.route && r.route.path) {
+      logger.info(r.route.path);
+    }
+  });
 });

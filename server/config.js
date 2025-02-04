@@ -1,3 +1,5 @@
+import logger from './utils/logger.js';
+
 const config = {
   server: {
     port: 3001,
@@ -65,7 +67,7 @@ const config = {
 
     // fact checking setings
     factChecking: {
-      enabled: false,
+      enabled: true,
       maxAttempts: 3,
       check: {
         model: 'gpt-4o',
@@ -79,6 +81,24 @@ const config = {
       }
     }
   },
+  logging: {
+    level: 'debug',
+    file: {
+      maxSize: 5242880, // 5MB
+      maxFiles: 5,
+      format: {
+        timestamp: 'YYYY-MM-DD HH:mm:ss',
+        breakLength: 120
+      }
+    },
+    console: {
+      format: {
+        timestamp: 'YYYY-MM-DD HH:mm:ss',
+        breakLength: 120
+      }
+    }
+  }
 };
 
+export { logger };
 export default config;

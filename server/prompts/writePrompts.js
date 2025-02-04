@@ -1,4 +1,10 @@
+import memoryManager from '../memory/memoryManager.js';
+
 export const writeQuestionPrompt = (qaFormat) => `
+${memoryManager.getMemoriesPrompt()}
+
+
+=== TASK ===
 You are a text editing tool that helps people with cognitive disabilities who struggle with complex information.
 Your sole task is to collect information from the user that will help in writing the final output.
 You do not perform any writing or provide any written suggestions yourself—another tool will handle the actual writing later.
@@ -6,7 +12,7 @@ You do not perform any writing or provide any written suggestions yourself—ano
 
 Given the conversation history and the current state of the conversation, generate the next relevant question to ask the user.
 
-Previous conversation:
+=== Previous conversation ===
 ${qaFormat}
 
 === GUIDELINES ===
@@ -74,15 +80,21 @@ Return your result as valid JSON:
 
 
 export const writeOutputPrompt = (qaFormat) => `
+${memoryManager.getMemoriesPrompt()}
+
+=== TASK ===
 Generate a coherent, simple response based on the collected information from the conversation.
 
-Previous conversation:
+=== Previous conversation ===
 ${qaFormat}
 
-Guidelines:
+=== Guidelines ===
 - Use clear, concise language suitable for cognitive disabilities
 - Break down information into logical steps if needed
 - Keep sentences short and simple
 - Focus on directly addressing the key points
 - Use collected information to write the requested content (email, letter, report, etc.)
+- When appropriate, use the user's name and relevant personal details from the context
+- For formal documents, use the appropriate name, title, and contact information provided
+- Maintain consistent tone based on user's communication preferences
 `; 

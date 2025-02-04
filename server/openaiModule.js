@@ -335,17 +335,42 @@ async function performFactCheck(qaFormat, output) {
     });
 
     const responseText = completion.choices[0].message.content.trim();
-    const parsedResponse = JSON.parse(responseText);
+    
+    //cleaning json response
+    const cleanedResponse = responseText
+      .replace(/^```json\s*/, '') // Remove opening JSON code block
+      .replace(/\s*```$/, '')     // Remove closing code block
+      .trim();                    // Remove any extra whitespace
 
-    logger.section('FACT CHECK RESULTS', {
-      rawResponse: responseText,
-      parsed: parsedResponse,
-      passed: parsedResponse.passed,
-      issueCount: parsedResponse.issues.length,
-      issues: parsedResponse.issues
-    });
+    try {
+      const parsedResponse = JSON.parse(cleanedResponse);
+      
+      logger.section('FACT CHECK RESULTS', {
+        rawResponse: responseText,
+        cleaned: cleanedResponse,
+        parsed: parsedResponse,
+        passed: parsedResponse.passed,
+        issueCount: parsedResponse.issues.length,
+        issues: parsedResponse.issues
+      });
 
-    return parsedResponse;
+      return parsedResponse;
+    } catch (parseError) {
+      logger.error('Failed to parse fact check response:', {
+        error: parseError,
+        responseText,
+        cleanedResponse
+      });
+      // Return a default response to prevent complete failure
+      return {
+        passed: false,
+        issues: [{
+          type: "error",
+          detail: "Failed to parse fact check response",
+          qa_reference: "System error"
+        }]
+      };
+    }
   } catch (error) {
     logger.error('Failed to perform fact check:', error);
     throw error;

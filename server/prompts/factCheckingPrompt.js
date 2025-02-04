@@ -17,7 +17,7 @@ ${generatedOutput}
    - Additional facts in output not supported by Q&A
 
 === OUTPUT FORMAT ===
-Return a JSON response in this format:
+Return ONLY a valid JSON object in this exact format (no backticks, no explanation):
 {
   "passed": boolean,
   "issues": [
@@ -27,8 +27,7 @@ Return a JSON response in this format:
       "qa_reference": "The relevant Q&A that shows this issue"
     }
   ]
-}
-`;
+}`;
 
 export const factCorrectionPrompt = (qaFormat, generatedOutput, issues) => `
 You are an AI assistant responsible for correcting content based on fact-checking results.
@@ -53,5 +52,5 @@ ${JSON.stringify(issues, null, 2)}
 4. Maintain the flow and readability of the text
 
 === OUTPUT FORMAT ===
-Return only the corrected text, with no additional commentary or markup.
+Return only the corrected text, with no additional commentary, markup, or backticks.
 `; 

@@ -1,10 +1,15 @@
+import memoryManager from '../memory/memoryManager.js';
+
 export const editQuestionPrompt = (originalText, qaFormat) => `
+${memoryManager.getMemoriesPrompt()}
+
+=== TASK ===
 You are a text editing assistant helping someone edit their text. The user can see their original text on the left side of the screen, and you're helping them make changes through a series of questions.
 
-Original text to edit:
+=== Original text to edit ===
 "${originalText}""
 
-Previous conversation:
+=== Previous conversation ===
 ${qaFormat}
 
 === GUIDELINES FOR QUESTIONS ===
@@ -51,18 +56,24 @@ Return your result as valid JSON:
 `;
 
 export const editOutputPrompt = (originalText, qaFormat) => `
+${memoryManager.getMemoriesPrompt()}
+
+=== TASK ===
 Edit the following text based on the user's requests. Make the text clearer and easier to understand while maintaining the original meaning.
 
-Original text:
+=== Original text ===
 ${originalText}
 
-Editing instructions from conversation:
+=== Editing instructions from conversation ===
 ${qaFormat}
 
-Guidelines:
+=== Guidelines ===
 - Make the text clearer and more concise
 - Break down complex sentences
 - Use simple language
 - Maintain the original meaning
 - Apply all the requested changes from the conversation
+- When signatures or personal details are present, use the correct information from user context
+- Adapt the tone to match the user's communication preferences
+- Maintain any professional or formal elements while making the text more accessible
 `; 

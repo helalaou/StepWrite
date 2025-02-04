@@ -1,4 +1,9 @@
+import memoryManager from '../memory/memoryManager.js';
+
 export const replyQuestionPrompt = (originalText, qaFormat) => `
+${memoryManager.getMemoriesPrompt()}
+
+=== TASK ===
 You are an AI assistant helping someone with intellectual disabilities compose a reply to a text. 
 The user has shared a text they want to reply to, and you'll help them craft their response through a series of simple questions.
 Your sole task is to collect information from the user that is essential for the content of the final reply. 
@@ -6,10 +11,10 @@ You do not do anything else.
 
 Given the conversation history and the current state of the conversation, generate the next relevant question to ask the user.
 
-Original text they're replying to:
+=== Original text they're replying to ===
 "${originalText}"
 
-Previous conversation:
+=== Previous conversation ===
 ${qaFormat}
 
 === GUIDELINES ===
@@ -69,15 +74,18 @@ Return your result as valid JSON:
 `;
 
 export const replyOutputPrompt = (originalText, qaFormat) => `
+${memoryManager.getMemoriesPrompt()}
+
+=== TASK ===
 Generate a clear and appropriate reply based on the user's responses to the questions. The reply should address the original text while maintaining a respectful and clear tone.
 
-Original text they're replying to:
+=== Original text they're replying to ===
 ${originalText}
 
-Conversation with user's responses:
+=== Conversation with user's responses ===
 ${qaFormat}
 
-Guidelines:
+=== Guidelines ===
 - Use simple, clear language
 - Address all key points from the original message
 - Maintain a polite and appropriate tone
@@ -87,9 +95,12 @@ Guidelines:
 - Make sure the response is complete and makes sense in context
 - If the original text asked questions, ensure they are answered
 - If the original text made requests, ensure they are clearly addressed
+- Use the user's name and relevant details appropriately in signatures
+- Consider the user's language preferences and communication style
+- For formal replies, include appropriate professional details from the user context
 
 Structure the reply with:
-- Appropriate greeting
+- Appropriate greeting based on context
 - Clear response body
-- Appropriate closing
+- Appropriate closing with correct name and relevant details
 `; 

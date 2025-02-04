@@ -4,7 +4,6 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import util from 'util';
 import stripAnsi from 'strip-ansi';
-import config from '../config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,6 +14,27 @@ if (!fs.existsSync(tempDir)) {
 }
 
 const logFile = path.join(tempDir, 'app.log');
+
+// Default config values
+const defaultConfig = {
+  logging: {
+    level: 'debug',
+    file: {
+      maxSize: 5242880, // 5MB
+      maxFiles: 5,
+      format: {
+        timestamp: 'YYYY-MM-DD HH:mm:ss',
+        breakLength: 120
+      }
+    },
+    console: {
+      format: {
+        timestamp: 'YYYY-MM-DD HH:mm:ss',
+        breakLength: 120
+      }
+    }
+  }
+};
 
 const formatMessage = (message, forConsole = false) => {
   if (typeof message === 'string') {
@@ -30,7 +50,7 @@ const formatMessage = (message, forConsole = false) => {
     colors: true,
     maxArrayLength: null,
     maxStringLength: null,
-    breakLength: config.logging.console.format.breakLength
+    breakLength: defaultConfig.logging.console.format.breakLength
   });
 };
 
@@ -54,7 +74,7 @@ const createFormat = (forConsole = false) => winston.format.printf(({ level, mes
 const consoleFormat = winston.format.combine(
   winston.format.colorize(),
   winston.format.timestamp({ 
-    format: config.logging.console.format.timestamp 
+    format: defaultConfig.logging.console.format.timestamp 
   }),
   winston.format.splat(),
   createFormat(true)
@@ -62,14 +82,14 @@ const consoleFormat = winston.format.combine(
 
 const fileFormat = winston.format.combine(
   winston.format.timestamp({ 
-    format: config.logging.file.format.timestamp 
+    format: defaultConfig.logging.file.format.timestamp 
   }),
   winston.format.splat(),
   createFormat(false)
 );
 
 const logger = winston.createLogger({
-  level: config.logging.level,
+  level: defaultConfig.logging.level,
   transports: [
     new winston.transports.Console({
       format: consoleFormat
@@ -77,8 +97,8 @@ const logger = winston.createLogger({
     new winston.transports.File({ 
       filename: logFile,
       format: fileFormat,
-      maxsize: config.logging.file.maxSize,
-      maxFiles: config.logging.file.maxFiles,
+      maxsize: defaultConfig.logging.file.maxSize,
+      maxFiles: defaultConfig.logging.file.maxFiles,
       tailable: true
     })
   ]

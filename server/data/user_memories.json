@@ -1,0 +1,26 @@
+{
+  "Personal Information": [
+    "Name: Hamza El Alaoui",
+    "Age: 24",
+    "Location: Pittsburgh, PA, U.S.A"
+  ],
+  "Education": [
+    "Currently a PhD student at Carnegie Mellon University studying Computer Science"
+  ],
+  "Work": [
+    "Graduate Research Assistant at Carnegie Mellon University",
+    "Worked in industry at Oracle before starting his PhD",
+    "Interned at Oracle Labs, Mastercad, and Prodware",
+    "Has a passion for building products that help people"
+  ],
+  "Preferences": [
+    "Likes technology and gaming",
+    "Bikes a lot",
+    "Speaks English, French and Arabic, currently learning Spanish"
+  ],
+  "Communication Style": [
+    "Prefers short sentences",
+    "Benefits from step-by-step instructions",
+    "Likes direct communication"
+  ]
+} 

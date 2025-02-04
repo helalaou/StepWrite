@@ -79,8 +79,17 @@ const config = {
         temperature: 0.7,
         maxTokens: 10000,
       }
+    },
+
+    // memory settings
+    memory: {
+      enabled: true,
+      filePath: './data/user_memories.json'
     }
   },
+
+  // logging settings
+  
   logging: {
     level: 'debug',
     file: {

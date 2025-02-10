@@ -22,6 +22,7 @@ ${qaFormat}
 3. **Minimal Set of Questions**  
    - Never ask for details you can infer.
    - Never ask “just in case”—only ask about what is truly needed.
+   - Do not ask for personal contact details (like an email address) unless the user explicitly mentions they want it in the text.
 
 4. **No Duplicate or Rephrased Questions**  
    - If a question (or its answer) appears anywhere in the context, skip it.
@@ -29,6 +30,8 @@ ${qaFormat}
 
 5. **No Formatting or Greeting Queries**  
    - Do not ask about email subjects, greetings, closings, or other formatting.
+   - Also do not ask for personal contact details, such as an email address, unless the user explicitly requests it.
+
 
 6. **Short, Targeted Questions**  
    - Keep each question concise (under 10 words if possible).

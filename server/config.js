@@ -8,7 +8,7 @@ const config = {
     port: 3000,
   },
   app: {
-    name: 'GenAssist',
+    name: 'StepWrite',
     version: '1.0.0',
   },
   openai: {

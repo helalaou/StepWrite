@@ -1,7 +1,7 @@
 const config = {
   serverUrl: 'http://localhost:3001',
   app: {
-    name: 'GenAssist',
+    name: 'StepWrite',
     version: '1.0.0',
   },
   llm: {

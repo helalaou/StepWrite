@@ -1,7 +1,7 @@
 {
-  "name": "genassist-server",
+  "name": "StepWrite-server",
   "version": "1.0.0",
-  "description": "Server component for the GenAssist system",
+  "description": "Server component for the StepWrite system",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "openai": "^4.82.0",
+    "openai": "^4.83.0",
     "strip-ansi": "^7.1.0",
     "winston": "^3.11.0"
   }

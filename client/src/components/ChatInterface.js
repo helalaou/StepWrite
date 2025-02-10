@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button, CircularProgress, Typography, IconButton } from '@mui/material';
+import { Box, TextField, Button, CircularProgress, Typography, IconButton, Tooltip } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EastIcon from '@mui/icons-material/East';
@@ -461,38 +461,28 @@ function ChatInterface({
           zIndex: 3,
           display: 'flex',
           alignItems: 'center',
-          backgroundColor: 'background.paper',
-          borderTopLeftRadius: '8px',
-          borderBottomLeftRadius: '8px',
-          boxShadow: 2,
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            transform: 'translateY(-50%) translateX(-5px)',
-            boxShadow: 4,
-          }
         }}>
-          <Button
-            variant="contained"
-            onClick={onBackToEditor}
-            sx={{ 
-              height: { xs: '45px', sm: '60px' },
-              borderTopLeftRadius: '8px',
-              borderBottomLeftRadius: '8px',
-              borderTopRightRadius: 0,
-              borderBottomRightRadius: 0,
-              paddingLeft: { xs: 1, sm: 3 },
-              paddingRight: { xs: 1, sm: 3 },
-              minWidth: { xs: '40px', sm: 'auto' },
-              display: 'flex',
-              alignItems: 'center',
-              gap: { xs: 0, sm: 1 },
-            }}
-          >
-            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-              Back to Editor
-            </Box>
-            <EastIcon />
-          </Button>
+          <Tooltip title="Back to Editor" placement="left">
+            <Button
+              variant="contained"
+              onClick={onBackToEditor}
+              sx={{ 
+                minWidth: { xs: '40px', lg: '65px' },
+                width: { xs: '40px', lg: '65px' },
+                height: { xs: '40px', lg: '65px' },
+                borderTopLeftRadius: '8px',
+                borderBottomLeftRadius: '8px',
+                borderTopRightRadius: 0,
+                borderBottomRightRadius: 0,
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <EastIcon sx={{ fontSize: { xs: '1.2rem', lg: '1.8rem' } }} />
+            </Button>
+          </Tooltip>
         </Box>
       )}
 

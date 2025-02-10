@@ -136,50 +136,61 @@ function TextEditor({
     }}>
       <Box sx={{
         position: 'fixed',
-        left: { xs: '8px', sm: 0 },
-        top: { xs: 'auto', sm: '50%' },
-        bottom: { xs: '8px', sm: 'auto' },
-        transform: { xs: 'none', sm: 'translateY(-50%)' },
+        left: { xs: '8px', md: 0 },
+        top: { xs: 'auto', md: '50%' },
+        bottom: { xs: '8px', md: 'auto' },
+        transform: { xs: 'none', md: 'translateY(-50%)' },
         zIndex: 3,
         display: 'flex',
         alignItems: 'center',
         backgroundColor: 'background.paper',
         borderRadius: { 
           xs: '4px', 
-          sm: '0 8px 8px 0' 
+          md: '0 8px 8px 0' 
         },
         boxShadow: 2,
         transition: 'all 0.3s ease',
         '&:hover': {
           transform: { 
             xs: 'translateX(5px)', 
-            sm: 'translateY(-50%) translateX(5px)' 
+            md: 'translateY(-50%) translateX(5px)' 
           },
           boxShadow: 4,
+        },
+        '@media (max-width: 1300px)': {
+          left: '8px',
+          top: 'auto',
+          bottom: '8px',
+          transform: 'none',
+          '&:hover': {
+            transform: 'translateX(5px)',
+          },
         }
       }}>
-        <Button
-          variant="contained"
-          onClick={onBack}
-          sx={{ 
-            height: { xs: '45px', sm: '60px' },
-            borderRadius: { 
-              xs: '4px', 
-              sm: '0 8px 8px 0' 
-            },
-            paddingLeft: { xs: 1, sm: 3 },
-            paddingRight: { xs: 1, sm: 3 },
-            minWidth: { xs: '40px', sm: 'auto' },
-            display: 'flex',
-            alignItems: 'center',
-            gap: { xs: 0, sm: 1 },
-          }}
-        >
-          <WestIcon />
-          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-            Back to Questions
-          </Box>
-        </Button>
+        <Tooltip title="Back to Questions" placement="right">
+          <Button
+            variant="contained"
+            onClick={onBack}
+            sx={{ 
+              minWidth: { xs: '40px', lg: '65px' },
+              width: { xs: '40px', lg: '65px' },
+              height: { xs: '40px', lg: '65px' },
+              borderRadius: { 
+                xs: '4px', 
+                md: '0 8px 8px 0' 
+              },
+              padding: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              '@media (max-width: 1300px)': {
+                borderRadius: '4px',
+              }
+            }}
+          >
+            <WestIcon sx={{ fontSize: { xs: '1.2rem', lg: '1.8rem' } }} />
+          </Button>
+        </Tooltip>
       </Box>
 
       <Box sx={{ 

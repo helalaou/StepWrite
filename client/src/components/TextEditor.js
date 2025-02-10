@@ -157,20 +157,23 @@ function TextEditor({
           variant="contained"
           onClick={onBack}
           sx={{ 
-            height: '60px',
+            height: { xs: '45px', sm: '60px' },
             borderTopRightRadius: '8px',
             borderBottomRightRadius: '8px',
             borderTopLeftRadius: 0,
             borderBottomLeftRadius: 0,
-            paddingLeft: 3,
-            paddingRight: 3,
+            paddingLeft: { xs: 1, sm: 3 },
+            paddingRight: { xs: 1, sm: 3 },
+            minWidth: { xs: '40px', sm: 'auto' },
             display: 'flex',
             alignItems: 'center',
-            gap: 1,
+            gap: { xs: 0, sm: 1 },
           }}
         >
           <WestIcon />
-          Back to Questions
+          <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+            Back to Questions
+          </Box>
         </Button>
       </Box>
 

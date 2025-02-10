@@ -427,20 +427,23 @@ function ChatInterface({
             variant="contained"
             onClick={() => navigate('/')}
             sx={{ 
-              height: '60px',
+              height: { xs: '45px', sm: '60px' },
               borderTopRightRadius: '8px',
               borderBottomRightRadius: '8px',
               borderTopLeftRadius: 0,
               borderBottomLeftRadius: 0,
-              paddingLeft: 3,
-              paddingRight: 3,
+              paddingLeft: { xs: 1, sm: 3 },
+              paddingRight: { xs: 1, sm: 3 },
+              minWidth: { xs: '40px', sm: 'auto' },
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
+              gap: { xs: 0, sm: 1 },
             }}
           >
             <WestIcon />
-            Back to Home
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              Back to Home
+            </Box>
           </Button>
         </Box>
       )}
@@ -451,7 +454,7 @@ function ChatInterface({
        cameFromEditor && 
        onBackToEditor && (
         <Box sx={{
-          position: 'absolute',
+          position: 'fixed',
           right: 0,
           top: '50%',
           transform: 'translateY(-50%)',
@@ -472,19 +475,22 @@ function ChatInterface({
             variant="contained"
             onClick={onBackToEditor}
             sx={{ 
-              height: '60px',
+              height: { xs: '45px', sm: '60px' },
               borderTopLeftRadius: '8px',
               borderBottomLeftRadius: '8px',
               borderTopRightRadius: 0,
               borderBottomRightRadius: 0,
-              paddingLeft: 3,
-              paddingRight: 3,
+              paddingLeft: { xs: 1, sm: 3 },
+              paddingRight: { xs: 1, sm: 3 },
+              minWidth: { xs: '40px', sm: 'auto' },
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
+              gap: { xs: 0, sm: 1 },
             }}
           >
-            Back to Editor
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              Back to Editor
+            </Box>
             <EastIcon />
           </Button>
         </Box>

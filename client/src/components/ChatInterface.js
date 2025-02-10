@@ -392,7 +392,6 @@ function ChatInterface({
   const isAnswering = questionStatus[currentQuestionIndex]?.type === 'answering';
   const isAnswered = questionStatus[currentQuestionIndex]?.type === 'answered';
   const isSkipped = questionStatus[currentQuestionIndex]?.type === 'skipped';
-  const isUnanswered = questionStatus[currentQuestionIndex] === undefined;
 
   return (
     <Box sx={{ 

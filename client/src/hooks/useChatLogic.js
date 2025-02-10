@@ -16,7 +16,7 @@ export function useChatLogic(mode = 'write') {
   });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [output, setOutput] = useState('');
+  const [output] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   const [finalOutput, setFinalOutput] = useState('');
   const [lastValidOutput, setLastValidOutput] = useState('');
@@ -197,56 +197,6 @@ export function useChatLogic(mode = 'write') {
         oneSentencePerLine: false
       });
     }
-  };
-
-  const handleAnswerClick = (currentIndex) => {
-    console.log('Status Update:', {
-      questionIndex: currentIndex,
-      previousStatus: questionStatus[currentIndex]?.type,
-      newStatus: 'answering'
-    });
-
-    // If skipped, immediately switch to answering mode
-    if (questionStatus[currentIndex]?.type === 'skipped') {
-      setInput(''); // Clear the "user has skipped this question" message
-      setQuestionStatus({
-        ...questionStatus,
-        [currentIndex]: { 
-          type: 'answering',
-          answer: '' 
-        }
-      });
-      return;
-    }
-
-    // If already answered, switch to editing mode
-    if (questionStatus[currentIndex]?.type === 'answered') {
-      setQuestionStatus({
-        ...questionStatus,
-        [currentIndex]: { 
-          type: 'answering',
-          answer: questionStatus[currentIndex].answer 
-        }
-      });
-      return;
-    }
-
-    // Remove any subsequent question statuses
-    const updatedQuestionStatus = { ...questionStatus };
-    Object.keys(updatedQuestionStatus).forEach((key) => {
-      if (parseInt(key) > currentIndex) {
-        delete updatedQuestionStatus[key];
-      }
-    });
-
-    // Set current question to answering state
-    setQuestionStatus({
-      ...updatedQuestionStatus,
-      [currentIndex]: { 
-        type: 'answering',
-        answer: questionStatus[currentIndex]?.answer || input 
-      }
-    });
   };
 
   return {

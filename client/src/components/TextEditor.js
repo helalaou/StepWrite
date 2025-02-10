@@ -32,7 +32,7 @@ function TextEditor({
       const formattedContent = formatToOneSentencePerLine(content);
       setContent(formattedContent);
     }
-  }, []);  
+  }, [content, editorPreferences.oneSentencePerLine]);
 
   // Update preferences when they change
   useEffect(() => {

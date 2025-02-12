@@ -76,6 +76,7 @@ function WriteFlow() {
   );
 }
 
+/* Temporarily disabled EditFlow
 function EditFlow() {
   const {
     originalText,
@@ -130,6 +131,7 @@ function EditFlow() {
     />
   );
 }
+*/
 
 function ReplyFlow() {
   const chatLogic = useChatLogic('reply');
@@ -210,7 +212,9 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/write" element={<WriteFlow />} />
         <Route path="/reply" element={<ReplyFlow />} />
+        {/* Temporarily disabled edit route
         <Route path="/edit" element={<EditFlow />} />
+        */}
       </Routes>
     </Router>
   );

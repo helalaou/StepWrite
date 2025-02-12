@@ -16,9 +16,11 @@ function LandingPage() {
     navigate('/reply');
   };
 
+  /* Temporarily disabled edit functionality
   const handleEditClick = () => {
     navigate('/edit');
   };
+  */
 
   return (
     <Box sx={{ 
@@ -149,10 +151,9 @@ function LandingPage() {
         </Typography>
       </Box>
 
-      {/* Divider */}
+      {/* Temporarily disabled Edit section
       <Box sx={{ width: '2px', bgcolor: 'grey.300', height: '100%' }} />
 
-      {/* Edit Section */}
       <Box 
         sx={{ 
           flex: 1,
@@ -211,6 +212,7 @@ function LandingPage() {
           Change or improve a text you have
         </Typography>
       </Box>
+      */}
     </Box>
   );
 }

@@ -1,4 +1,9 @@
+import memoryManager from '../memory/memoryManager.js';
+
 export const factCheckPrompt = (qaFormat, generatedOutput) => `
+${memoryManager.getMemoriesPrompt()}
+${memoryManager.getMemoryFactCheckPrompt()}
+
 You are a meticulous fact-checker responsible for ensuring the final output
 faithfully represents the user's Q&A. Minor spelling or grammar corrections
 (e.g., "alexndr" → "Alexander") are allowed if they preserve the user's intended
@@ -16,12 +21,15 @@ ${generatedOutput}
 2. Verify that all key facts (e.g., important names, dates, times, locations,
    or other crucial details) provided by the user appear accurately in the output.
    - Minor rephrasing, spelling fixes, or grammar edits are acceptable if the meaning remains unchanged.
-3. It is acceptable for the output to include extra clarifications or courtesy
-   elements (like greetings) as long as they do not conflict with user facts.
+   - If memory context is present, treat memory-derived information as valid facts even if not in Q&A.
+3. It is acceptable for the output to include:
+   - Extra clarifications or courtesy elements (like greetings)
+   - Information derived from user memory context
+   - Standard formatting and professional conventions
 4. Identify issues only if:
-   - The output omits or ignores a crucial fact from the Q&A.
-   - The output contradicts or misstates a user fact.
-   - The output invents new factual claims that conflict with the Q&A.
+   - The output omits or ignores a crucial fact from the Q&A (excluding memory-derived content)
+   - The output contradicts or misstates a user fact
+   - The output invents new factual claims that conflict with both Q&A and memory context
 5. If there are no issues, "passed": true. Otherwise, "passed": false.
 
 === OUTPUT FORMAT ===
@@ -54,10 +62,10 @@ ${JSON.stringify(issues, null, 2)}
 1. Review the original Q&A and the current output.
 2. Address ONLY the issues flagged:
    - If a key fact is missing, insert it.
-   - If a fact is contradicted or misstated, correct it to match the user’s Q&A.
+   - If a fact is contradicted or misstated, correct it to match the user's Q&A.
    - If the output introduces a major new claim that conflicts with the Q&A, remove or adjust it.
 3. Minor spelling/grammar tweaks are acceptable and need not be removed if they preserve the original meaning.
-4. Ensure the corrected version stays concise, preserves the user’s key details,
+4. Ensure the corrected version stays concise, preserves the user's key details,
    and does not remove benign expansions like greetings unless they cause a conflict.
 
 === OUTPUT FORMAT ===

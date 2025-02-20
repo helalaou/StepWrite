@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import config from '../config.js';
 import { logger } from '../config.js';
-import { memoryPrompt } from '../prompts/memoryPrompt.js';
+import { memoryPrompt, memoryFactCheckPrompt } from '../prompts/memoryPrompt.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +39,13 @@ class MemoryManager {
 
     const memories = this.loadMemories(); // Reload to get latest
     return memoryPrompt(memories);
+  }
+
+  getMemoryFactCheckPrompt() {
+    if (!this.isEnabled() || !this.memories) {
+      return '';
+    }
+    return memoryFactCheckPrompt(this.memories);
   }
 }
 

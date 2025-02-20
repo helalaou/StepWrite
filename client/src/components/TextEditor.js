@@ -15,10 +15,12 @@ function TextEditor({
   onContentChange, 
   savedContent,
   editorPreferences,
-  onPreferencesChange 
+  onPreferencesChange,
+  savedHistory,
+  onHistoryChange
 }) {
-  const [contentHistory, setContentHistory] = useState([savedContent || initialContent]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [contentHistory, setContentHistory] = useState(savedHistory || [savedContent || initialContent]);
+  const [currentIndex, setCurrentIndex] = useState(savedHistory ? savedHistory.length - 1 : 0);
   const [content, setContent] = useState(savedContent || initialContent);
   const [fontSize, setFontSize] = useState(editorPreferences.fontSize || 1.1);
   const [oneSentencePerLine, setOneSentencePerLine] = useState(editorPreferences.oneSentencePerLine);
@@ -76,10 +78,12 @@ function TextEditor({
     setOneSentencePerLine(newOneSentencePerLine);
     
     const newHistory = contentHistory.slice(0, currentIndex + 1);
-    setContentHistory([...newHistory, newContent]);
+    const updatedHistory = [...newHistory, newContent];
+    setContentHistory(updatedHistory);
     setCurrentIndex(currentIndex + 1);
 
     onContentChange(newContent);
+    onHistoryChange(updatedHistory);
   };
 
   const handleContentChange = (e) => {
@@ -87,23 +91,39 @@ function TextEditor({
     setContent(newContent);
     
     const newHistory = contentHistory.slice(0, currentIndex + 1);
-    setContentHistory([...newHistory, newContent]);
+    const updatedHistory = [...newHistory, newContent];
+    setContentHistory(updatedHistory);
     setCurrentIndex(currentIndex + 1);
 
     onContentChange(newContent);
+    onHistoryChange(updatedHistory);
   };
 
   const handleUndo = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setContent(contentHistory[currentIndex - 1]);
+      const newIndex = currentIndex - 1;
+      const newContent = contentHistory[newIndex];
+      
+      setCurrentIndex(newIndex);
+      setContent(newContent);
+      
+      // Notify parent of content and history changes
+      onContentChange(newContent);
+      onHistoryChange(contentHistory);
     }
   };
 
   const handleRedo = () => {
     if (currentIndex < contentHistory.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setContent(contentHistory[currentIndex + 1]);
+      const newIndex = currentIndex + 1;
+      const newContent = contentHistory[newIndex];
+      
+      setCurrentIndex(newIndex);
+      setContent(newContent);
+      
+      // Notify parent of content and history changes
+      onContentChange(newContent);
+      onHistoryChange(contentHistory);
     }
   };
 

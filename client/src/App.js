@@ -30,7 +30,9 @@ function WriteFlow() {
     currentEditorContent,
     setCurrentEditorContent,
     editorPreferences,
-    setEditorPreferences
+    setEditorPreferences,
+    editorHistory,
+    setEditorHistory
   } = chatLogic;
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
@@ -56,6 +58,8 @@ function WriteFlow() {
       savedContent={currentEditorContent}
       editorPreferences={editorPreferences}
       onPreferencesChange={setEditorPreferences}
+      savedHistory={editorHistory}
+      onHistoryChange={setEditorHistory}
     />
   ) : (
     <ChatInterface

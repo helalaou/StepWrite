@@ -30,6 +30,7 @@ export function useChatLogic(mode = 'write') {
     fontSize: 1.3,
     oneSentencePerLine: false
   });
+  const [editorHistory, setEditorHistory] = useState(null);
 
   // Add a question and its response to the conversationPlanning JSON
   const addQuestion = (question, response = '') => {
@@ -188,14 +189,21 @@ export function useChatLogic(mode = 'write') {
     setShowEditor(true);
     if (!hasChanges && currentEditorContent) {
       setFinalOutput(currentEditorContent);
+      if (!editorHistory) {
+        setEditorHistory([currentEditorContent]);
+      }
     } else if (!hasChanges && lastValidOutput) {
       setFinalOutput(lastValidOutput);
+      if (!editorHistory) {
+        setEditorHistory([lastValidOutput]);
+      }
     }
     if (hasChanges) {
       setEditorPreferences({
         fontSize: 1.3,
         oneSentencePerLine: false
       });
+      setEditorHistory(null);
     }
   };
 
@@ -227,5 +235,7 @@ export function useChatLogic(mode = 'write') {
     setCurrentEditorContent,
     editorPreferences,
     setEditorPreferences,
+    editorHistory,
+    setEditorHistory,
   };
 }

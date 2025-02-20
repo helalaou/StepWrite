@@ -3,10 +3,11 @@ import dotenv from 'dotenv';
 import config from './config.js';
 import { writeQuestionPrompt, writeOutputPrompt } from './prompts/writePrompts.js';
 import { editQuestionPrompt, editOutputPrompt } from './prompts/editPrompts.js';
-import { classificationPrompt } from './prompts/classificationPrompt.js';
+import { textTypeClassificationPrompt } from './prompts/textTypeClassificationPrompt.js';
 import { replyQuestionPrompt, replyOutputPrompt } from './prompts/replyPrompts.js';
 import { factCheckPrompt, factCorrectionPrompt } from './prompts/factCheckingPrompt.js';
 import { logger } from './config.js';
+import { toneClassificationPrompt } from './prompts/toneClassificationPrompt.js';
 
 dotenv.config();
 
@@ -100,12 +101,12 @@ async function generateWriteQuestion(conversationPlanning) {
   }
 }
 
-async function generateWriteOutput(conversationPlanning) {
+async function generateWriteOutput(conversationPlanning, toneClassification) {
   const qaFormat = conversationPlanning.questions
     .map(q => `Q: ${q.question}; A: ${q.response}`)
     .join('\n');
 
-  const prompt = writeOutputPrompt(qaFormat);
+  const prompt = writeOutputPrompt(qaFormat, toneClassification);
 
   logger.section('OPENAI REQUEST (Output Generation)', {
     prompt,
@@ -212,31 +213,45 @@ async function generateEditOutput(originalText, conversationPlanning) {
   }
 }
 
-async function classifyText(text) {
-  const prompt = classificationPrompt(text);
+async function classifyTextType(text) {
+  const prompt = textTypeClassificationPrompt(text);
+  
+  logger.section('TEXT TYPE CLASSIFICATION REQUEST', {
+    text: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+    model: config.openai.textTypeClassification.model,
+    temperature: config.openai.textTypeClassification.temperature,
+    maxTokens: config.openai.textTypeClassification.maxTokens
+  });
 
   try {
     const completion = await openai.chat.completions.create({
-      model: config.openai.classification.model,
-      messages: [
-        { role: 'system', content: prompt },
-        { role: 'user', content: `Text to classify:\n${text}` }
-      ],
-      max_tokens: config.openai.classification.maxTokens,
-      temperature: config.openai.classification.temperature,
+      model: config.openai.textTypeClassification.model,
+      messages: [{ role: 'system', content: prompt }],
+      temperature: config.openai.textTypeClassification.temperature,
+      max_tokens: config.openai.textTypeClassification.maxTokens,
     });
 
-    const classification = completion.choices[0].message.content.trim().toLowerCase();
+    const type = completion.choices[0].message.content.trim().toLowerCase();
     
-    if (!config.openai.classification.validCategories.includes(classification)) {
-      logger.warn(`Unexpected classification: ${classification}, defaulting to "${config.openai.classification.defaultCategory}"`);
-      return config.openai.classification.defaultCategory;
-    }
+    logger.section('TEXT TYPE CLASSIFICATION RESULT', {
+      rawResponse: type,
+      validCategories: config.openai.textTypeClassification.validCategories,
+      defaultCategory: config.openai.textTypeClassification.defaultCategory,
+      finalType: config.openai.textTypeClassification.validCategories.includes(type) 
+        ? type 
+        : config.openai.textTypeClassification.defaultCategory
+    });
 
-    return classification;
+    return config.openai.textTypeClassification.validCategories.includes(type) 
+      ? type 
+      : config.openai.textTypeClassification.defaultCategory;
   } catch (error) {
-    logger.error('Failed to classify text:', error);
-    throw error;
+    logger.error('Error in text type classification:', {
+      error: error.message,
+      stack: error.stack,
+      defaultingTo: config.openai.textTypeClassification.defaultCategory
+    });
+    return config.openai.textTypeClassification.defaultCategory;
   }
 }
 
@@ -247,9 +262,12 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
 
   const prompt = replyQuestionPrompt(originalText, qaFormat);
 
-  logger.info('\n=== SENDING TO OPENAI (Reply Question Generation) ===');
-  logger.info('Prompt:', prompt);
-  logger.info('================================================\n');
+  logger.section('OPENAI REQUEST (Reply Question Generation)', {
+    prompt,
+    model: config.openai.reply.question.model,
+    maxTokens: config.openai.reply.question.maxTokens,
+    temperature: config.openai.reply.question.temperature
+  });
 
   try {
     const completion = await openai.chat.completions.create({
@@ -260,7 +278,9 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
     });
 
     const responseText = completion.choices[0].message.content.trim();
-    logger.info('Raw OpenAI response:', responseText);
+    logger.section('OPENAI RESPONSE (Reply Question Generation)', {
+      rawResponse: responseText
+    });
 
     const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
     let parsedResponse;
@@ -289,16 +309,24 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
   }
 }
 
-async function generateReplyOutput(originalText, conversationPlanning) {
+async function generateReplyOutput(originalText, conversationPlanning, toneClassification) {
+  // Format Q&A with proper newlines and spacing
   const qaFormat = conversationPlanning.questions
-    .map(q => `Q: ${q.question}; A: ${q.response}`)
-    .join('\n');
+    .map(q => `Q: ${q.question}\nA: ${q.response}`)
+    .join('\n\n');
 
-  const prompt = replyOutputPrompt(originalText, qaFormat);
+  const prompt = replyOutputPrompt(originalText, qaFormat, toneClassification);
 
-  logger.info('\n=== SENDING TO OPENAI (Reply Output Generation) ===');
-  logger.info('Prompt:', prompt);
-  logger.info('=============================================\n');
+  logger.section('OPENAI REQUEST (Reply Output Generation)', {
+    prompt,
+    model: config.openai.reply.output.model,
+    maxTokens: config.openai.reply.output.maxTokens,
+    temperature: config.openai.reply.output.temperature,
+    originalTextLength: originalText.length,
+    qaFormatLength: qaFormat.length,
+    questionsCount: conversationPlanning.questions.length,
+    hasTone: !!toneClassification
+  });
 
   try {
     const completion = await openai.chat.completions.create({
@@ -309,7 +337,12 @@ async function generateReplyOutput(originalText, conversationPlanning) {
     });
 
     const output = completion.choices[0].message.content.trim();
-    logger.info('Generated reply output:', output);
+    logger.section('OPENAI RESPONSE (Reply Output Generation)', {
+      output,
+      length: output.length,
+      words: output.split(/\s+/).length
+    });
+
     return output;
   } catch (error) {
     logger.error('Failed to generate reply output:', error);
@@ -395,7 +428,7 @@ async function generateCorrection(qaFormat, output, issues) {
   }
 }
 
-async function generateOutputWithFactCheck(conversationPlanning) {
+async function generateOutputWithFactCheck(conversationPlanning, toneClassification) {
   logger.section('FACT CHECKING STATUS', {
     enabled: config.openai.factChecking.enabled,
     maxAttempts: config.openai.factChecking.maxAttempts
@@ -403,7 +436,7 @@ async function generateOutputWithFactCheck(conversationPlanning) {
 
   if (!config.openai.factChecking.enabled) {
     logger.info('Fact checking disabled, generating output without verification');
-    return await generateWriteOutput(conversationPlanning);
+    return await generateWriteOutput(conversationPlanning, toneClassification);
   }
 
   const qaFormat = conversationPlanning.questions
@@ -417,7 +450,7 @@ async function generateOutputWithFactCheck(conversationPlanning) {
     qaFormat
   });
 
-  let output = await generateWriteOutput(conversationPlanning);
+  let output = await generateWriteOutput(conversationPlanning, toneClassification);
 
   while (attempts < config.openai.factChecking.maxAttempts) {
     attempts++;
@@ -444,7 +477,7 @@ async function generateOutputWithFactCheck(conversationPlanning) {
     }
     
     // Generate correction based on issues
-    const correctionPrompt = factCorrectionPrompt(qaFormat, output, checkResult.issues);
+    const correctionPrompt = factCorrectionPrompt(qaFormat, output, checkResult.issues, toneClassification);
     logger.section('GENERATING CORRECTION', {
       attempt: attempts,
       prompt: correctionPrompt
@@ -472,6 +505,58 @@ async function generateOutputWithFactCheck(conversationPlanning) {
   return output;
 }
 
+async function classifyTone(qaFormat, originalText = '') {
+  const prompt = toneClassificationPrompt(qaFormat, originalText);
+  
+  logger.section('TONE CLASSIFICATION REQUEST', {
+    prompt,
+    model: config.openai.toneClassification.model,
+    temperature: config.openai.toneClassification.temperature,
+    hasOriginalText: !!originalText,
+    qaFormatLength: qaFormat.length
+  });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.toneClassification.model,
+      messages: [{ role: 'system', content: prompt }],
+      temperature: config.openai.toneClassification.temperature,
+      max_tokens: config.openai.toneClassification.maxTokens,
+    });
+
+    const responseText = completion.choices[0].message.content.trim();
+    const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    
+    try {
+      const parsedResponse = JSON.parse(cleanedResponse);
+      logger.section('TONE CLASSIFICATION RESULT', {
+        tone: parsedResponse.tone,
+        confidence: parsedResponse.confidence,
+        reasoning: parsedResponse.reasoning,
+        rawResponse: responseText
+      });
+      return parsedResponse;
+    } catch (parseError) {
+      logger.error('Error parsing tone classification response:', {
+        error: parseError,
+        responseText,
+        cleanedResponse
+      });
+      return {
+        tone: 'FORMAL_PROFESSIONAL',
+        confidence: 1.0,
+        reasoning: 'Default tone due to parsing error'
+      };
+    }
+  } catch (error) {
+    logger.error('Error in tone classification:', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+}
+
 export {
   generateWriteQuestion,
   generateWriteOutput,
@@ -479,6 +564,7 @@ export {
   generateEditOutput,
   generateReplyQuestion,
   generateReplyOutput,
-  classifyText,
-  generateOutputWithFactCheck
+  classifyTextType,
+  generateOutputWithFactCheck,
+  classifyTone
 }; 

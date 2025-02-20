@@ -1,4 +1,5 @@
 import memoryManager from '../memory/memoryManager.js';
+import config from '../config.js';
 
 export const replyQuestionPrompt = (originalText, qaFormat) => {
   const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
@@ -95,14 +96,17 @@ Return your result as valid JSON:
 `;
 };
 
-export const replyOutputPrompt = (originalText, qaFormat) => {
+export const replyOutputPrompt = (originalText, qaFormat, toneClassification) => {
   const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
+  const hasTone = config.openai.toneClassification.enabled && toneClassification;
 
   return `
 ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
-Generate a clear and appropriate reply based on the user's responses to the questions. The reply should address the original text while respecting any relevant details provided by the user.
+Generate a clear and appropriate reply based on the user's responses to the questions. 
+${hasTone ? `Use the specified tone: ${toneClassification.tone}
+Reason for tone: ${toneClassification.reasoning}` : ''}
 
 === Original text they're replying to ===
 ${originalText}
@@ -112,6 +116,7 @@ ${qaFormat}
 
 === Guidelines ===
 - Use simple, direct language.
+${hasTone ? `- Maintain the ${toneClassification.tone} tone throughout the reply.` : ''}
 - Address all key points from the original message.
 - Keep sentences short and focused on what the user wants to convey.
 - Incorporate any essential details the user provided.
@@ -124,5 +129,7 @@ ${hasMemory ? `
 - For formal replies, include any professional or contact details the user has provided.
 - Include an appropriate greeting and closing if context calls for it.
 - Make sure the response is complete and consistent with the user's stated intentions.
+${hasTone ? `- Adapt language and expressions to match the ${toneClassification.tone} tone.` : ''}
+- Never ask for additional details or clarification - use the information provided.
 `;
 };

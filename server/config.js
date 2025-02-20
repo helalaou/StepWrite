@@ -57,7 +57,7 @@ const config = {
     },
 
     // Classification settings
-    classification: {
+    textTypeClassification: {
       model: 'gpt-4o',
       temperature: 0,
       maxTokens: 10,
@@ -85,6 +85,27 @@ const config = {
     memory: {
       enabled: true,
       filePath: './data/user_memories.json'
+    },
+
+    toneClassification: {
+      model: 'gpt-4o',
+      temperature: 0.3,
+      maxTokens: 200,
+      enabled: true,
+      categories: {
+        FORMAL_PROFESSIONAL: 'Strict business communication',
+        FORMAL_FRIENDLY: 'Professional but warm',
+        INFORMAL_RESPECTFUL: 'Casual but maintaining respect',
+        INFORMAL_CASUAL: 'Very relaxed and friendly',
+        INFORMAL_INTIMATE: 'Close personal relationships',
+        ACADEMIC: 'Scholarly or educational context',
+        TECHNICAL: 'Technical or specialized field',
+        DIPLOMATIC: 'Careful and tactful',
+        EMPATHETIC: 'Showing understanding and compassion',
+        ASSERTIVE: 'Direct and confident',
+        APOLOGETIC: 'Expressing regret or making amends',
+        URGENT: 'Time-sensitive or important matters'
+      }
     }
   },
 

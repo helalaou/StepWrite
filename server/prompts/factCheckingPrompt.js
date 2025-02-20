@@ -1,4 +1,5 @@
 import memoryManager from '../memory/memoryManager.js';
+import config from '../config.js';
 
 export const factCheckPrompt = (qaFormat, generatedOutput) => {
   const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
@@ -50,7 +51,10 @@ Return ONLY valid JSON (no extra text or backticks):
 `;
 };
 
-export const factCorrectionPrompt = (qaFormat, generatedOutput, issues) => `
+export const factCorrectionPrompt = (qaFormat, generatedOutput, issues, toneClassification) => {
+  const hasTone = config.openai.toneClassification.enabled && toneClassification;
+
+  return `
 You are an AI assistant responsible for correcting content based on fact-checking results.
 
 === ORIGINAL Q&A ===
@@ -62,6 +66,10 @@ ${generatedOutput}
 === IDENTIFIED ISSUES ===
 ${JSON.stringify(issues, null, 2)}
 
+${hasTone ? `=== TONE GUIDANCE ===
+Maintain the ${toneClassification.tone} tone while making corrections.
+Reason for tone: ${toneClassification.reasoning}` : ''}
+
 === TASK ===
 1. Review the original Q&A and the current output.
 2. Address ONLY the issues flagged:
@@ -69,10 +77,15 @@ ${JSON.stringify(issues, null, 2)}
    - If a fact is contradicted or misstated, correct it to match the user's Q&A.
    - If the output introduces a major new claim that conflicts with the Q&A, remove or adjust it.
 3. Minor spelling/grammar tweaks are acceptable and need not be removed if they preserve the original meaning.
-4. Ensure the corrected version stays concise, preserves the user's key details,
-   and does not remove benign expansions like greetings unless they cause a conflict.
+4. Ensure the corrected version:
+   - Stays concise
+   - Preserves the user's key details
+   ${hasTone ? `   - Maintains the ${toneClassification.tone} tone throughout` : ''}
+   - Does not remove benign expansions like greetings unless they cause a conflict
+- Never ask for additional details or clarification - use the information provided.
 
 === OUTPUT FORMAT ===
 Return only the corrected text, with no additional commentary, markup, or backticks.
 `;
+};
 

@@ -1,4 +1,5 @@
 import memoryManager from '../memory/memoryManager.js';
+import config from '../config.js';
 
 export const writeQuestionPrompt = (qaFormat) => `
 ${memoryManager.getMemoriesPrompt()}
@@ -86,22 +87,24 @@ Return your result as valid JSON:
 `;
 
 
-export const writeOutputPrompt = (qaFormat) => {
+export const writeOutputPrompt = (qaFormat, toneClassification) => {
   const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
+  const hasTone = config.openai.toneClassification.enabled && toneClassification;
 
   return `
 ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
-Generate a coherent, concise response based on the conversation. 
-This response should be suitable for a user who might be busy with other tasks (hands-free). 
-You have the collected details from the user—use them to form the final text. 
+Generate a coherent, concise response based on the conversation.
+${hasTone ? `Use the specified tone: ${toneClassification.tone}
+Reason for tone: ${toneClassification.reasoning}` : ''}
 
 === Previous conversation ===
 ${qaFormat}
 
 === Guidelines ===
 - Use clear, straightforward language.
+${hasTone ? `- Maintain the ${toneClassification.tone} tone throughout the text.` : ''}
 - Break down information into logical steps if needed.
 - Keep sentences short and focused on the user's main points.
 - Incorporate any essential details the user provided.
@@ -110,6 +113,7 @@ ${hasMemory ? `
 - Do not add personal details from memory unless they were specifically discussed.
 ` : ''}
 - If formality is required (e.g., a formal letter or email), include name, title, and contact info if the user provided them.
-- Maintain a consistent tone based on the conversation.
+${hasTone ? `- Adapt language and expressions to match the ${toneClassification.tone} tone.` : ''}
+- Never ask for additional details or clarification - use the information provided.
 `;
 };

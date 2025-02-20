@@ -68,7 +68,7 @@ const config = {
     // fact checking setings
     factChecking: {
       enabled: true,
-      maxAttempts: 3,
+      maxAttempts: 5,
       check: {
         model: 'gpt-4o',
         temperature: 0.3,

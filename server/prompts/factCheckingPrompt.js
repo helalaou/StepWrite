@@ -5,9 +5,9 @@ export const factCheckPrompt = (qaFormat, generatedOutput) => {
   const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
 
   return `
-${memoryManager.getMemoriesPrompt()}
-${hasMemory ? memoryManager.getMemoryFactCheckPrompt() : ''}
+${hasMemory ? `${memoryManager.getMemoryFactCheckPrompt()}` : ''}
 
+=== TASK ===
 You are a meticulous fact-checker responsible for ensuring the final output
 faithfully represents the user's responses, exactly as they provided them.
 
@@ -17,7 +17,7 @@ ${qaFormat}
 === GENERATED OUTPUT ===
 ${generatedOutput}
 
-=== TASK ===
+=== GUIDELINES ===
 1. Compare the user's responses in the Q&A with how they are represented in the generated output.
 2. Your job is ONLY to verify that the output accurately reflects what the user said - NOT to judge if their answers were correct or appropriate for each question.
 3. Verify that the user's responses appear accurately in the output, with these allowances:
@@ -26,10 +26,11 @@ ${generatedOutput}
    - Standard formatting and professional conventions can be added
    - Grammar fixes and proper capitalization are allowed
    - Brand names can be properly capitalized/formatted (e.g., "facebook" → "Facebook")
+   ${hasMemory ? '   - Memory-derived details like names, titles, and contact info are valid' : ''}
 
 4. Only flag issues if:
    - The output fundamentally changes or contradicts the user's intended meaning
-   - The output adds major new claims or facts not implied by the context
+   - The output adds major new claims or facts not implied by the context${hasMemory ? ' or memory' : ''}
    - The output completely ignores or omits the user's main point
    - The output misrepresents important details (beyond simple spelling/formatting fixes)
 
@@ -42,6 +43,7 @@ ${generatedOutput}
    - Addition of standard professional elements
    - Grammar or formatting improvements
    - Brand name corrections
+   ${hasMemory ? '   - Inclusion of verified memory details (names, titles, contact info, etc.)' : ''}
 
 === OUTPUT FORMAT ===
 Return ONLY valid JSON (no extra text or backticks):
@@ -54,8 +56,7 @@ Return ONLY valid JSON (no extra text or backticks):
       "qa_reference": "Relevant Q&A excerpt or question"
     }
   ]
-}
-`;
+}`;
 };
 
 export const factCorrectionPrompt = (qaFormat, generatedOutput, issues, toneClassification) => {

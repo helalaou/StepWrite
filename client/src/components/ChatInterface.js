@@ -413,38 +413,28 @@ function ChatInterface({
           zIndex: 3,
           display: 'flex',
           alignItems: 'center',
-          backgroundColor: 'background.paper',
-          borderTopRightRadius: '8px',
-          borderBottomRightRadius: '8px',
-          boxShadow: 2,
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            transform: 'translateY(-50%) translateX(5px)',
-            boxShadow: 4,
-          }
         }}>
-          <Button
-            variant="contained"
-            onClick={() => navigate('/')}
-            sx={{ 
-              height: { xs: '45px', sm: '60px' },
-              borderTopRightRadius: '8px',
-              borderBottomRightRadius: '8px',
-              borderTopLeftRadius: 0,
-              borderBottomLeftRadius: 0,
-              paddingLeft: { xs: 1, sm: 3 },
-              paddingRight: { xs: 1, sm: 3 },
-              minWidth: { xs: '40px', sm: 'auto' },
-              display: 'flex',
-              alignItems: 'center',
-              gap: { xs: 0, sm: 1 },
-            }}
-          >
-            <WestIcon />
-            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
-              Back to Home
-            </Box>
-          </Button>
+          <Tooltip title="Back to Home" placement="right">
+            <Button
+              variant="contained"
+              onClick={() => navigate('/')}
+              sx={{ 
+                minWidth: { xs: '40px', lg: '65px' },
+                width: { xs: '40px', lg: '65px' },
+                height: { xs: '40px', lg: '65px' },
+                borderTopRightRadius: '8px',
+                borderBottomRightRadius: '8px',
+                borderTopLeftRadius: 0,
+                borderBottomLeftRadius: 0,
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <WestIcon sx={{ fontSize: { xs: '1.2rem', lg: '1.8rem' } }} />
+            </Button>
+          </Tooltip>
         </Box>
       )}
 

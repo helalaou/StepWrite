@@ -284,7 +284,6 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
 
     const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
     let parsedResponse;
-    
     try {
       parsedResponse = JSON.parse(cleanedResponse);
     } catch (parseError) {
@@ -302,7 +301,29 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
       }
     }
 
-    return parsedResponse;
+    const { question, followup_needed } = parsedResponse;
+    
+    const updatedConversationPlanning = {
+      ...conversationPlanning,
+      questions: [
+        ...conversationPlanning.questions,
+        {
+          id: conversationPlanning.questions.length + 1,
+          question,
+          response: ''
+        }
+      ],
+      followup_needed
+    };
+
+    logger.section('FINAL RESULT', {
+      question,
+      followup_needed,
+      updatedQuestionCount: updatedConversationPlanning.questions.length
+    });
+
+    return { question, conversationPlanning: updatedConversationPlanning };
+
   } catch (error) {
     logger.error('Failed to generate reply question:', error);
     throw error;

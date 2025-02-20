@@ -43,7 +43,13 @@ app.post('/classify-text', async (req, res) => {
 app.post('/submit-reply-answer', async (req, res) => {
   try {
     const { originalText, conversationPlanning, changedIndex, answer } = req.body;
-    logger.info('Received reply submission:', { originalText, conversationPlanning, changedIndex, answer });
+    logger.section('PROCESSING REPLY SUBMISSION', {
+      originalText,
+      conversationPlanning,
+      changedIndex,
+      answer,
+      questionsCount: conversationPlanning?.questions?.length || 0
+    });
 
     // If a response was changed, remove subsequent questions
     let updatedConversationPlanning = { ...conversationPlanning };
@@ -56,20 +62,37 @@ app.post('/submit-reply-answer', async (req, res) => {
     }
 
     if (updatedConversationPlanning.followup_needed) {
-      const response = await generateReplyQuestion(originalText, updatedConversationPlanning);
+      const { question, conversationPlanning: newPlanning } = await generateReplyQuestion(
+        originalText,
+        updatedConversationPlanning
+      );
       
-      // If no more questions needed, generate final output
-      if (!response.followup_needed) {
-        const qaFormat = updatedConversationPlanning.questions
-          .map(q => `Q: ${q.question}\nA: ${q.response}`)
-          .join('\n\n');
+      // If no more questions needed, generate final output with fact checking
+      if (!newPlanning.followup_needed) {
+        logger.section('FINAL OUTPUT GENERATION', {
+          factCheckingEnabled: config.openai.factChecking.enabled
+        });
 
+        // First get tone classification
         let toneClassification = null;
         if (config.openai.toneClassification.enabled) {
+          const qaFormat = newPlanning.questions
+            .map(q => `Q: ${q.question}\nA: ${q.response}`)
+            .join('\n\n');
           toneClassification = await classifyTone(qaFormat, originalText);
         }
-
-        const output = await generateReplyOutput(originalText, updatedConversationPlanning, toneClassification);
+        
+        // Then generate output with fact checking
+        const output = await generateOutputWithFactCheck(newPlanning, toneClassification);
+        
+        logger.section('GENERATION COMPLETE', {
+          output,
+          length: output.length,
+          characters: output.length,
+          words: output.split(/\s+/).length,
+          ...(toneClassification && { usedTone: toneClassification.tone })
+        });
+        
         res.json({ 
           output,
           followup_needed: false 
@@ -77,26 +100,22 @@ app.post('/submit-reply-answer', async (req, res) => {
         return;
       }
 
-      // Add the new question to the conversation planning
-      const newQuestion = {
-        id: updatedConversationPlanning.questions.length + 1,
-        question: response.question,
-        response: ''
-      };
-
-      updatedConversationPlanning.questions.push(newQuestion);
-      updatedConversationPlanning.followup_needed = response.followup_needed;
-
       res.json({ 
-        question: response.question,
-        conversationPlanning: updatedConversationPlanning,
+        question,
+        conversationPlanning: newPlanning,
         followup_needed: true 
       });
     } else {
-      const output = await generateReplyOutput(originalText, updatedConversationPlanning);
-      res.json({ 
-        output,
-        followup_needed: false 
+      // If no followup needed, start with first question
+      const { question, conversationPlanning: newPlanning } = await generateReplyQuestion(
+        originalText,
+        updatedConversationPlanning
+      );
+
+      res.json({
+        question,
+        conversationPlanning: newPlanning,
+        followup_needed: true
       });
     }
   } catch (error) {

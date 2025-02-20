@@ -1,8 +1,11 @@
 import memoryManager from '../memory/memoryManager.js';
 
-export const factCheckPrompt = (qaFormat, generatedOutput) => `
+export const factCheckPrompt = (qaFormat, generatedOutput) => {
+  const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
+
+  return `
 ${memoryManager.getMemoriesPrompt()}
-${memoryManager.getMemoryFactCheckPrompt()}
+${hasMemory ? memoryManager.getMemoryFactCheckPrompt() : ''}
 
 You are a meticulous fact-checker responsible for ensuring the final output
 faithfully represents the user's Q&A. Minor spelling or grammar corrections
@@ -45,6 +48,7 @@ Return ONLY valid JSON (no extra text or backticks):
   ]
 }
 `;
+};
 
 export const factCorrectionPrompt = (qaFormat, generatedOutput, issues) => `
 You are an AI assistant responsible for correcting content based on fact-checking results.

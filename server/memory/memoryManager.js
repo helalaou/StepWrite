@@ -32,17 +32,19 @@ class MemoryManager {
     }
   }
 
+  isEnabled() {
+    return config.openai.memory.enabled && this.memories && Object.keys(this.memories).length > 0;
+  }
+
   getMemoriesPrompt() {
-    if (!config.openai.memory.enabled) {
+    if (!this.isEnabled()) {
       return '';
     }
-
-    const memories = this.loadMemories(); // Reload to get latest
-    return memoryPrompt(memories);
+    return memoryPrompt(this.memories);
   }
 
   getMemoryFactCheckPrompt() {
-    if (!this.isEnabled() || !this.memories) {
+    if (!this.isEnabled()) {
       return '';
     }
     return memoryFactCheckPrompt(this.memories);

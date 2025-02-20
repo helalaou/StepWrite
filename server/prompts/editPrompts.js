@@ -1,6 +1,9 @@
 import memoryManager from '../memory/memoryManager.js';
 
-export const editQuestionPrompt = (originalText, qaFormat) => `
+export const editQuestionPrompt = (originalText, qaFormat) => {
+  const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
+
+  return `
 ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
@@ -51,6 +54,13 @@ ${qaFormat}
    - If contradictory or unclear instructions arise, ask one direct clarifying question. If the user does not clarify, assume the most logical interpretation based on context.
    - Stop asking questions once all necessary changes have been addressed (set "followup_needed" to false).
 
+${hasMemory ? `
+Additional Memory Guidelines:
+- Only reference memory information if directly relevant to the editing task
+- Do not suggest including memory details unless they are essential to the text
+- Avoid asking about or suggesting personal details from memory unless specifically relevant
+` : ''}
+
 === OUTPUT FORMAT ===
 Return your result as valid JSON:
 
@@ -61,8 +71,12 @@ Return your result as valid JSON:
 
 - Set followup_needed to false when all necessary changes have been addressed
 `;
+};
 
-export const editOutputPrompt = (originalText, qaFormat) => `
+export const editOutputPrompt = (originalText, qaFormat) => {
+  const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
+
+  return `
 ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
@@ -84,4 +98,11 @@ ${qaFormat}
 - Adapt the tone to match the user's communication preferences
 - Maintain any professional or formal elements while making the text more accessible
 - If contradictory or unclear user requests appear, use your best judgment to resolve them consistently with the conversation
+
+${hasMemory ? `
+Memory-Specific Guidelines:
+- Only include memory-derived information if explicitly relevant to this edit
+- Do not add personal details from memory unless they were specifically discussed
+` : ''}
 `;
+};

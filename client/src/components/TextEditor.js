@@ -358,6 +358,23 @@ function TextEditor({
             </Tooltip>
           </Box>
 
+          
+          
+          {/* Word Counter */}
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              color: 'text.secondary',
+              fontSize: { xs: '0.91rem', sm: '0.91rem' },
+              display: 'flex',
+              alignItems: 'center',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {content.trim().split(/\s+/).filter(word => word.length > 0).length} words
+          </Typography>
+
+         
           <Tooltip title={copySuccess ? 'Copied!' : 'Copy to clipboard'}>
             <IconButton
               onClick={handleCopyToClipboard}

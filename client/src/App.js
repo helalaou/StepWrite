@@ -59,6 +59,7 @@ function WriteFlow() {
     />
   ) : (
     <ChatInterface
+      mode="write"
       currentQuestion={conversationPlanning}
       input={input}
       setInput={setInput}
@@ -188,6 +189,7 @@ function ReplyFlow() {
     />
   ) : (
     <ChatInterface
+      mode="reply"
       currentQuestion={conversationPlanning}
       input={input}
       setInput={setInput}

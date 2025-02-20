@@ -5,6 +5,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EastIcon from '@mui/icons-material/East';
 import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
+import NavigationButton from './NavigationButton';
 
 function ChatInterface({
   currentQuestion,
@@ -405,37 +406,11 @@ function ChatInterface({
     }}>
       {/* Back to Home Button - Only show on first question */}
       {currentQuestionIndex === 0 && (
-        <Box sx={{
-          position: 'fixed',
-          left: 0,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 3,
-          display: 'flex',
-          alignItems: 'center',
-        }}>
-          <Tooltip title="Back to Home" placement="right">
-            <Button
-              variant="contained"
-              onClick={() => navigate('/')}
-              sx={{ 
-                minWidth: { xs: '40px', lg: '65px' },
-                width: { xs: '40px', lg: '65px' },
-                height: { xs: '40px', lg: '65px' },
-                borderTopRightRadius: '8px',
-                borderBottomRightRadius: '8px',
-                borderTopLeftRadius: 0,
-                borderBottomLeftRadius: 0,
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <WestIcon sx={{ fontSize: { xs: '1.2rem', lg: '1.8rem' } }} />
-            </Button>
-          </Tooltip>
-        </Box>
+        <NavigationButton
+          direction="left"
+          onClick={() => navigate('/')}
+          tooltip="Back to Home"
+        />
       )}
 
       {/* Back to Editor button */}
@@ -443,40 +418,14 @@ function ChatInterface({
        !hasChanges && 
        cameFromEditor && 
        onBackToEditor && (
-        <Box sx={{
-          position: 'fixed',
-          right: 0,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          zIndex: 3,
-          display: 'flex',
-          alignItems: 'center',
-        }}>
-          <Tooltip title="Back to Editor" placement="left">
-            <Button
-              variant="contained"
-              onClick={onBackToEditor}
-              sx={{ 
-                minWidth: { xs: '40px', lg: '65px' },
-                width: { xs: '40px', lg: '65px' },
-                height: { xs: '40px', lg: '65px' },
-                borderTopLeftRadius: '8px',
-                borderBottomLeftRadius: '8px',
-                borderTopRightRadius: 0,
-                borderBottomRightRadius: 0,
-                padding: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <EastIcon sx={{ fontSize: { xs: '1.2rem', lg: '1.8rem' } }} />
-            </Button>
-          </Tooltip>
-        </Box>
+        <NavigationButton
+          direction="right"
+          onClick={onBackToEditor}
+          tooltip="Back to Editor"
+        />
       )}
 
-      {/* Left Navigation */}
+      {/* Left/Right Navigation */}
       <Box sx={getNavStyles(true)}>
         <IconButton 
           onClick={handlePrevQuestion} 
@@ -487,7 +436,6 @@ function ChatInterface({
         </IconButton>
       </Box>
 
-      {/* Right Navigation */}
       <Box sx={getNavStyles(false)}>
         <IconButton 
           onClick={handleNextQuestion} 

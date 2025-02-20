@@ -9,10 +9,7 @@ ${memoryManager.getMemoriesPrompt()}
 ${hasMemory ? memoryManager.getMemoryFactCheckPrompt() : ''}
 
 You are a meticulous fact-checker responsible for ensuring the final output
-faithfully represents the user's Q&A. Minor spelling or grammar corrections
-(e.g., "alexndr" → "Alexander") are allowed if they preserve the user's intended
-meaning. Standard additions (like greetings, sign-offs, or a subject line) are
-also acceptable if they do not contradict or distort user data.
+faithfully represents the user's Q&A. 
 
 === ORIGINAL Q&A ===
 ${qaFormat}
@@ -22,19 +19,25 @@ ${generatedOutput}
 
 === TASK ===
 1. Compare the Q&A with the generated output.
-2. Verify that all key facts (e.g., important names, dates, times, locations,
-   or other crucial details) provided by the user appear accurately in the output.
-   - Minor rephrasing, spelling fixes, or grammar edits are acceptable if the meaning remains unchanged.
-   - If memory context is present, treat memory-derived information as valid facts even if not in Q&A.
-3. It is acceptable for the output to include:
-   - Extra clarifications or courtesy elements (like greetings)
-   - Information derived from user memory context
-   - Standard formatting and professional conventions
-4. Identify issues only if:
-   - The output omits or ignores a crucial fact from the Q&A (excluding memory-derived content)
-   - The output contradicts or misstates a user fact
-   - The output invents new factual claims that conflict with both Q&A and memory context
-5. If there are no issues, "passed": true. Otherwise, "passed": false.
+2. Verify that all key facts appear accurately in the output, with these allowances:
+   - Common spelling corrections are acceptable (e.g., "zoolm" → "zoom", "tommorrow" → "tomorrow")
+   - Reasonable expansions of brief responses are fine (e.g., "ok" can be expanded into a proper response)
+   - Standard formatting and professional conventions can be added
+   - Grammar fixes and proper capitalization are allowed
+   - Brand names can be properly capitalized/formatted (e.g., "facebook" → "Facebook")
+
+3. Only flag issues if:
+   - The output fundamentally changes or contradicts the user's intended meaning
+   - The output adds major new claims or facts not implied by the context
+   - The output completely ignores or omits the user's main point
+   - The output misrepresents important details (beyond simple spelling/formatting fixes)
+
+4. Do NOT flag issues for:
+   - Spelling corrections that preserve the intended meaning
+   - Expansion of terse responses into proper communication
+   - Addition of standard professional elements
+   - Grammar or formatting improvements
+   - Brand name corrections
 
 === OUTPUT FORMAT ===
 Return ONLY valid JSON (no extra text or backticks):

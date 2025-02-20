@@ -27,19 +27,158 @@ const openai = new OpenAI({
 
 // Submit Answer Route
 app.post('/submit-answer', async (req, res) => {
-  // ... write route implementation ...
+  try {
+    const { conversationPlanning, changedIndex } = req.body;
+    logger.info('Processing submission with conversation planning:', conversationPlanning);
+
+    // If a response was changed, remove subsequent questions
+    if (typeof changedIndex === 'number') {
+      conversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
+      conversationPlanning.followup_needed = true;
+    }
+
+    if (conversationPlanning.followup_needed) {
+      const { question, conversationPlanning: updatedPlanning } = await generateWriteQuestion(conversationPlanning);
+      
+      // If no more questions needed, generate final output
+      if (!updatedPlanning.followup_needed) {
+        logger.section('FINAL OUTPUT GENERATION', {
+          factCheckingEnabled: config.openai.factChecking.enabled
+        });
+        
+        let toneClassification = null;
+        if (config.openai.toneClassification.enabled) {
+          const qaFormat = updatedPlanning.questions
+            .map(q => `Q: ${q.question}\nA: ${q.response}`)
+            .join('\n\n');
+          toneClassification = await classifyTone(qaFormat);
+        }
+        
+        const output = await generateOutputWithFactCheck(updatedPlanning, toneClassification);
+        
+        logger.section('GENERATION COMPLETE', {
+          output,
+          length: output.length,
+          characters: output.length,
+          words: output.split(/\s+/).length,
+          ...(toneClassification && { usedTone: toneClassification.tone })
+        });
+        
+        res.json({ 
+          output,
+          followup_needed: false 
+        });
+        return;
+      }
+
+      res.json({ 
+        question, 
+        conversationPlanning: updatedPlanning,
+        followup_needed: true 
+      });
+    } else {
+      // Generate output with fact checking
+      logger.section('FINAL OUTPUT GENERATION', {
+        factCheckingEnabled: config.openai.factChecking.enabled
+      });
+      
+      let toneClassification = null;
+      if (config.openai.toneClassification.enabled) {
+        const qaFormat = conversationPlanning.questions
+          .map(q => `Q: ${q.question}\nA: ${q.response}`)
+          .join('\n\n');
+        toneClassification = await classifyTone(qaFormat);
+      }
+      
+      const output = await generateOutputWithFactCheck(conversationPlanning, toneClassification);
+      
+      logger.section('GENERATION COMPLETE', {
+        output,
+        length: output.length,
+        characters: output.length,
+        words: output.split(/\s+/).length,
+        ...(toneClassification && { usedTone: toneClassification.tone })
+      });
+      
+      res.json({ 
+        output,
+        followup_needed: false 
+      });
+    }
+  } catch (error) {
+    logger.error('Error processing submission:', error);
+    res.status(500).json({ 
+      error: 'Failed to process submission',
+      details: error.message 
+    });
+  }
 });
 
-// Add new route for edit flow
+ 
 app.post('/submit-edit-answer', async (req, res) => {
-  // ... edit route implementation ...
+  try {
+    const { originalText, conversationPlanning, changedIndex } = req.body;
+    logger.info('Processing edit submission:', { originalText, conversationPlanning, changedIndex });
+
+    // If a response was changed, remove subsequent questions
+    if (typeof changedIndex === 'number') {
+      conversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
+      conversationPlanning.followup_needed = true;
+    }
+
+    if (conversationPlanning.followup_needed) {
+      const { question, conversationPlanning: updatedPlanning } = await generateEditQuestion(originalText, conversationPlanning);
+      
+      // If no more questions needed, generate final output
+      if (!updatedPlanning.followup_needed) {
+        const output = await generateEditOutput(originalText, updatedPlanning);
+        res.json({ 
+          output,
+          followup_needed: false 
+        });
+        return;
+      }
+
+      res.json({ 
+        question, 
+        conversationPlanning: updatedPlanning,
+        followup_needed: true 
+      });
+    } else {
+      const output = await generateEditOutput(originalText, conversationPlanning);
+      res.json({ 
+        output,
+        followup_needed: false 
+      });
+    }
+  } catch (error) {
+    logger.error('Error processing edit submission:', error);
+    res.status(500).json({ 
+      error: 'Failed to process submission',
+      details: error.message 
+    });
+  }
 });
 
 app.post('/classify-text', async (req, res) => {
-  // ... classify route implementation ...
+  try {
+    const { text } = req.body;
+    
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ error: 'Text is required and must be a string' });
+    }
+
+    const classification = await classifyTextType(text);
+    res.json({ type: classification });
+  } catch (error) {
+    logger.error('Error classifying text:', error);
+    res.status(500).json({ 
+      error: 'Failed to classify text',
+      details: error.message 
+    });
+  }
 });
 
-// Add new route for reply flow
 app.post('/submit-reply-answer', async (req, res) => {
   try {
     const { originalText, conversationPlanning, changedIndex, answer } = req.body;

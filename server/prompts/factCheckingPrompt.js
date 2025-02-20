@@ -9,7 +9,7 @@ ${memoryManager.getMemoriesPrompt()}
 ${hasMemory ? memoryManager.getMemoryFactCheckPrompt() : ''}
 
 You are a meticulous fact-checker responsible for ensuring the final output
-faithfully represents the user's Q&A. 
+faithfully represents the user's responses, exactly as they provided them.
 
 === ORIGINAL Q&A ===
 ${qaFormat}
@@ -18,21 +18,25 @@ ${qaFormat}
 ${generatedOutput}
 
 === TASK ===
-1. Compare the Q&A with the generated output.
-2. Verify that all key facts appear accurately in the output, with these allowances:
+1. Compare the user's responses in the Q&A with how they are represented in the generated output.
+2. Your job is ONLY to verify that the output accurately reflects what the user said - NOT to judge if their answers were correct or appropriate for each question.
+3. Verify that the user's responses appear accurately in the output, with these allowances:
    - Common spelling corrections are acceptable (e.g., "zoolm" → "zoom", "tommorrow" → "tomorrow")
    - Reasonable expansions of brief responses are fine (e.g., "ok" can be expanded into a proper response)
    - Standard formatting and professional conventions can be added
    - Grammar fixes and proper capitalization are allowed
    - Brand names can be properly capitalized/formatted (e.g., "facebook" → "Facebook")
 
-3. Only flag issues if:
+4. Only flag issues if:
    - The output fundamentally changes or contradicts the user's intended meaning
    - The output adds major new claims or facts not implied by the context
    - The output completely ignores or omits the user's main point
    - The output misrepresents important details (beyond simple spelling/formatting fixes)
 
-4. Do NOT flag issues for:
+5. Do NOT flag issues for:
+   - Whether the user's answer was appropriate for the question
+   - Whether the user answered in the wrong section (ie: user answered "I want to travel" in the "What's your email subject?" question)
+   - Whether the user's response makes logical sense
    - Spelling corrections that preserve the intended meaning
    - Expansion of terse responses into proper communication
    - Addition of standard professional elements

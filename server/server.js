@@ -7,10 +7,18 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import OpenAI from 'openai';
 import { logger } from './config.js';
+import multer from 'multer';
+import { Readable } from 'stream';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Add near the top of the file, after imports
+const tempDir = path.join(__dirname, 'temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir);
+}
 
 // Middleware
 app.use(cors({
@@ -24,6 +32,9 @@ app.use(express.json());
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+// Configure multer for memory storage
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Submit Answer Route
 app.post('/submit-answer', async (req, res) => {
@@ -261,6 +272,41 @@ app.post('/submit-reply-answer', async (req, res) => {
     logger.error('Error processing reply submission:', error);
     res.status(500).json({ 
       error: 'Failed to process submission',
+      details: error.message 
+    });
+  }
+});
+
+// Add this new endpoint
+app.post('/transcribe-audio', upload.single('audio'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No audio file provided' });
+  }
+
+  try {
+    // Create a temporary file path
+    const tempFilePath = path.join(__dirname, 'temp', `${Date.now()}.webm`);
+    
+    // Write the buffer to a temporary file
+    fs.writeFileSync(tempFilePath, req.file.buffer);
+
+    // Create a file object that OpenAI's API can handle
+    const file = fs.createReadStream(tempFilePath);
+
+    const transcription = await openai.audio.transcriptions.create({
+      file: file,
+      model: "whisper-1",
+      response_format: "text"
+    });
+
+    // Clean up: Delete the temporary file
+    fs.unlinkSync(tempFilePath);
+
+    res.json({ text: transcription });
+  } catch (error) {
+    logger.error('Error transcribing audio:', error);
+    res.status(500).json({ 
+      error: 'Failed to transcribe audio',
       details: error.message 
     });
   }

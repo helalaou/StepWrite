@@ -9,6 +9,7 @@
     "install-all": "npm install && cd client && npm install && cd ../server && npm install"
   },
   "dependencies": {
-    "concurrently": "^8.0.0"
+    "concurrently": "^8.0.0",
+    "multer": "^1.4.5-lts.1"
   }
 }

@@ -6,6 +6,7 @@ import EastIcon from '@mui/icons-material/East';
 import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
+import VoiceInput from './VoiceInput';
 
 function ChatInterface({
   currentQuestion,
@@ -544,21 +545,29 @@ function ChatInterface({
                 }}
               />
               {isAnswering && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  size="large"
-                  sx={{ 
-                    height: 'auto',
-                    alignSelf: 'stretch',
-                    width: 'auto',
-                    fontSize: '1.2rem'
-                  }}
-                >
-                  {isLoading ? <CircularProgress size={23} /> : 'SAVE'}
-                </Button>
+                <>
+                  <VoiceInput
+                    onTranscriptionComplete={(text) => {
+                      setInput(prev => prev + (prev ? ' ' : '') + text);
+                    }}
+                    disabled={isLoading}
+                  />
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleSubmit}
+                    disabled={isLoading}
+                    size="large"
+                    sx={{ 
+                      height: 'auto',
+                      alignSelf: 'stretch',
+                      width: 'auto',
+                      fontSize: '1.2rem'
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={23} /> : 'SAVE'}
+                  </Button>
+                </>
               )}
             </Box>
           )}

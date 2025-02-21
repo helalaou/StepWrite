@@ -97,26 +97,42 @@ function VoiceInput({ onTranscriptionComplete, disabled = false }) {
     <Box sx={{ 
       display: 'flex', 
       alignItems: 'center',
-      gap: 1 
+      justifyContent: 'center',
+      height: '100%',
+      py: 1
     }}>
       <IconButton
         onClick={isRecording ? stopRecording : startRecording}
         disabled={disabled || isProcessing}
         color={isRecording ? 'error' : 'primary'}
         sx={{
-          width: 48,
-          height: 48,
-          transition: 'all 0.2s ease',
+          width: { xs: 56, sm: 64 },   
+          height: { xs: 56, sm: 64 },
+          borderRadius: '50%',
+          backgroundColor: theme => isRecording 
+            ? 'error.light'
+            : 'primary.light',
           '&:hover': {
+            backgroundColor: theme => isRecording 
+              ? 'error.main'
+              : 'primary.main',
             transform: 'scale(1.1)',
           },
           '&:active': {
             transform: 'scale(0.95)',
           },
+          transition: 'all 0.2s ease',
+          '& .MuiSvgIcon-root': {
+            fontSize: { xs: '2rem', sm: '2.5rem' },   
+            color: 'white',
+          },
         }}
       >
         {isProcessing ? (
-          <CircularProgress size={24} />
+          <CircularProgress 
+            size={32}
+            sx={{ color: 'white' }}
+          />
         ) : isRecording ? (
           <StopIcon />
         ) : (
@@ -125,7 +141,7 @@ function VoiceInput({ onTranscriptionComplete, disabled = false }) {
       </IconButton>
       {isRecording && (
         <Typography
-          variant="body2"
+          variant="body1"   
           color="error"
           sx={{ 
             animation: 'pulse 1.5s infinite',
@@ -134,6 +150,9 @@ function VoiceInput({ onTranscriptionComplete, disabled = false }) {
               '50%': { opacity: 0.5 },
               '100%': { opacity: 1 },
             },
+            fontSize: { xs: '1rem', sm: '1.1rem' },  
+            fontWeight: 500,
+            minWidth: 90   
           }}
         >
           Recording...

@@ -524,8 +524,18 @@ function ChatInterface({
             <Box sx={{ 
               display: 'flex', 
               width: '100%',
-              gap: 2
+              gap: 2,
+              alignItems: 'center',
+              minHeight: '120px'
             }}>
+              {isAnswering && (
+                <VoiceInput
+                  onTranscriptionComplete={(text) => {
+                    setInput(prev => prev + (prev ? ' ' : '') + text);
+                  }}
+                  disabled={isLoading}
+                />
+              )}
               <TextField
                 fullWidth
                 multiline
@@ -545,29 +555,20 @@ function ChatInterface({
                 }}
               />
               {isAnswering && (
-                <>
-                  <VoiceInput
-                    onTranscriptionComplete={(text) => {
-                      setInput(prev => prev + (prev ? ' ' : '') + text);
-                    }}
-                    disabled={isLoading}
-                  />
-                  <Button
-                    variant="contained"
-                    color="success"
-                    onClick={handleSubmit}
-                    disabled={isLoading}
-                    size="large"
-                    sx={{ 
-                      height: 'auto',
-                      alignSelf: 'stretch',
-                      width: 'auto',
-                      fontSize: '1.2rem'
-                    }}
-                  >
-                    {isLoading ? <CircularProgress size={23} /> : 'SAVE'}
-                  </Button>
-                </>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  size="large"
+                  sx={{ 
+                    alignSelf: 'stretch',
+                    width: 'auto',
+                    fontSize: '1.2rem'
+                  }}
+                >
+                  {isLoading ? <CircularProgress size={23} /> : 'SAVE'}
+                </Button>
               )}
             </Box>
           )}

@@ -1,12 +1,12 @@
-import React from 'react';
+// import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
 import TextEditor from './components/TextEditor';
 import { useChatLogic } from './hooks/useChatLogic';
-import EditTextInput from './components/EditTextInput';
-import { useEditLogic } from './hooks/useEditLogic';
-import SplitScreenEdit from './components/SplitScreenEdit';
+// import EditTextInput from './components/EditTextInput';
+// import { useEditLogic } from './hooks/useEditLogic';
+// import SplitScreenEdit from './components/SplitScreenEdit';
 import ReplyInput from './components/ReplyInput';
 
 function WriteFlow() {

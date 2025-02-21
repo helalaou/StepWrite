@@ -5,7 +5,12 @@ import StopIcon from '@mui/icons-material/Stop';
 import axios from 'axios';
 import config from '../config';
 
-function VoiceInput({ onTranscriptionComplete, disabled = false }) {
+function VoiceInput({ 
+  onTranscriptionComplete, 
+  disabled = false,
+  autoStart = false,
+  showStopButton = false
+}) {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioChunks, setAudioChunks] = useState([]);
@@ -19,12 +24,58 @@ function VoiceInput({ onTranscriptionComplete, disabled = false }) {
     };
   }, [mediaRecorder]);
 
+  useEffect(() => {
+    if (autoStart && !isRecording && !disabled && !isProcessing) {
+      startRecording();
+    }
+  }, [autoStart, isRecording, disabled, isProcessing]);
+
+  const handleVoiceActivityDetection = (stream) => {
+    const audioContext = new AudioContext();
+    const analyser = audioContext.createAnalyser();
+    const microphone = audioContext.createMediaStreamSource(stream);
+    microphone.connect(analyser);
+    
+    analyser.fftSize = 256;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    let silenceStart = Date.now();
+    const silenceThreshold = 2000; // 2 seconds of silence
+    
+    const checkAudio = () => {
+      if (!isRecording) return;
+      
+      analyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+      
+      if (average < 10) { // Silence threshold
+        if (Date.now() - silenceStart > silenceThreshold) {
+          stopRecording();
+          audioContext.close();
+          return;
+        }
+      } else {
+        silenceStart = Date.now();
+      }
+      
+      requestAnimationFrame(checkAudio);
+    };
+    
+    checkAudio();
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'  //   set the MIME type
+        mimeType: 'audio/webm'
       });
+      
+      if (autoStart) {
+        handleVoiceActivityDetection(stream);
+      }
+      
       const chunks = [];
 
       recorder.ondataavailable = (e) => {
@@ -103,7 +154,7 @@ function VoiceInput({ onTranscriptionComplete, disabled = false }) {
     }}>
       <IconButton
         onClick={isRecording ? stopRecording : startRecording}
-        disabled={disabled || isProcessing}
+        disabled={disabled || isProcessing || (autoStart && !isRecording)}
         color={isRecording ? 'error' : 'primary'}
         sx={{
           width: { xs: 56, sm: 64 },   
@@ -126,6 +177,7 @@ function VoiceInput({ onTranscriptionComplete, disabled = false }) {
             fontSize: { xs: '2rem', sm: '2.5rem' },   
             color: 'white',
           },
+          visibility: autoStart && !isRecording && !showStopButton ? 'hidden' : 'visible'
         }}
       >
         {isProcessing ? (

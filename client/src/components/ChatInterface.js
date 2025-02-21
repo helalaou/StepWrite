@@ -7,6 +7,7 @@ import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
 import VoiceInput from './VoiceInput';
+import config from '../config';
 
 function ChatInterface({
   currentQuestion,
@@ -21,7 +22,7 @@ function ChatInterface({
   setCurrentQuestionIndex,
   hasChanges,
   onBackToEditor,
-  cameFromEditor
+  cameFromEditor,
 }) {
   const navigate = useNavigate();
 
@@ -395,6 +396,21 @@ function ChatInterface({
   const isAnswered = questionStatus[currentQuestionIndex]?.type === 'answered';
   const isSkipped = questionStatus[currentQuestionIndex]?.type === 'skipped';
 
+  // Update the handleVoiceTranscriptionComplete function
+  const handleVoiceTranscriptionComplete = (text) => {
+    if (config.input.mode === 'VOICE_ONLY') {
+      setInput(text);
+      // Auto-submit in voice-only mode
+      setTimeout(() => {
+        // Use the existing handleSubmit function to maintain all the same logic
+        handleSubmit();
+      }, 1000);
+    } else {
+      // In other modes, just append to input like typing
+      setInput(prev => prev + (prev ? ' ' : '') + text);
+    }
+  };
+
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -528,33 +544,35 @@ function ChatInterface({
               alignItems: 'center',
               minHeight: '120px'
             }}>
-              {isAnswering && (
+              {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && isAnswering && (
                 <VoiceInput
-                  onTranscriptionComplete={(text) => {
-                    setInput(prev => prev + (prev ? ' ' : '') + text);
-                  }}
+                  onTranscriptionComplete={handleVoiceTranscriptionComplete}
                   disabled={isLoading}
+                  autoStart={config.input.mode === 'VOICE_ONLY'}
+                  showStopButton={config.input.mode === 'VOICE_ONLY'}
                 />
               )}
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                variant="outlined"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder="Type your answer..."
-                disabled={!isAnswering || isLoading}
-                sx={{ 
-                  '& .MuiInputBase-input': { 
-                    fontSize: '1.5rem', 
-                    padding: '15px'
-                  },
-                  bgcolor: !isAnswering && isAnswered ? 'action.hover' : 'background.paper'
-                }}
-              />
-              {isAnswering && (
+              {config.input.mode !== 'VOICE_ONLY' && (
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  variant="outlined"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Type your answer..."
+                  disabled={!isAnswering || isLoading}
+                  sx={{ 
+                    '& .MuiInputBase-input': { 
+                      fontSize: '1.5rem', 
+                      padding: '15px'
+                    },
+                    bgcolor: !isAnswering && isAnswered ? 'action.hover' : 'background.paper'
+                  }}
+                />
+              )}
+              {isAnswering && config.input.mode !== 'VOICE_ONLY' && (
                 <Button
                   variant="contained"
                   color="success"

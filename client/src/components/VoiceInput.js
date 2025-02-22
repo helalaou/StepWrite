@@ -4,6 +4,7 @@ import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop';
 import axios from 'axios';
 import config from '../config';
+import { keyframes } from '@mui/system';
 
 function VoiceInput({ 
   onTranscriptionComplete, 
@@ -144,46 +145,81 @@ function VoiceInput({
     }
   };
 
+  // Define pulse animation
+  const pulseAnimation = keyframes`
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(161, 38, 20, 0.4);
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 10px rgba(161, 38, 20, 0);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 0 0 rgba(161, 38, 20, 0);
+    }
+  `;
+
   return (
     <Box sx={{ 
       display: 'flex', 
       alignItems: 'center',
       justifyContent: 'center',
       height: '100%',
-      py: 1
+      py: 1,
+      position: 'relative',
+      width: { xs: 56, sm: 64 }
     }}>
       <IconButton
         onClick={isRecording ? stopRecording : startRecording}
         disabled={disabled || isProcessing || (autoStart && !isRecording)}
-        color={isRecording ? 'error' : 'primary'}
         sx={{
           width: { xs: 56, sm: 64 },   
           height: { xs: 56, sm: 64 },
           borderRadius: '50%',
           backgroundColor: theme => isRecording 
-            ? 'error.light'
-            : 'primary.light',
+            ? 'error.main'
+            : 'primary.main',
           '&:hover': {
             backgroundColor: theme => isRecording 
-              ? 'error.main'
-              : 'primary.main',
+              ? 'error.dark'
+              : 'primary.dark',
             transform: 'scale(1.1)',
           },
           '&:active': {
             transform: 'scale(0.95)',
           },
           transition: 'all 0.2s ease',
+          animation: isRecording ? `${pulseAnimation} 2s infinite` : 'none',
+          boxShadow: theme => isRecording 
+            ? '0 0 10px rgba(161, 38, 20, 0.5)'
+            : '0 3px 5px rgba(0, 0, 0, 0.2)',
           '& .MuiSvgIcon-root': {
             fontSize: { xs: '2rem', sm: '2.5rem' },   
-            color: 'white',
+            color: '#ffffff',
+            transition: 'transform 0.2s ease',
+            transform: isRecording ? 'scale(0.9)' : 'scale(1)',
+          },
+          '&.Mui-disabled': {
+            backgroundColor: theme => isRecording 
+              ? 'error.light'
+              : 'primary.light',
+            '& .MuiSvgIcon-root': {
+              color: 'rgba(255, 255, 255, 0.5)',
+            }
           },
           visibility: autoStart && !isRecording && !showStopButton ? 'hidden' : 'visible'
         }}
       >
         {isProcessing ? (
           <CircularProgress 
-            size={32}
-            sx={{ color: 'white' }}
+            size={28}
+            thickness={5}
+            sx={{ 
+              color: 'white',
+              opacity: 0.9
+            }}
           />
         ) : isRecording ? (
           <StopIcon />
@@ -193,21 +229,36 @@ function VoiceInput({
       </IconButton>
       {isRecording && (
         <Typography
-          variant="body1"   
+          variant="body2"   
           color="error"
           sx={{ 
-            animation: 'pulse 1.5s infinite',
-            '@keyframes pulse': {
-              '0%': { opacity: 1 },
-              '50%': { opacity: 0.5 },
-              '100%': { opacity: 1 },
-            },
-            fontSize: { xs: '1rem', sm: '1.1rem' },  
+            position: 'absolute',
+            bottom: -24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            animation: `${keyframes`
+              0% { opacity: 1; }
+              50% { opacity: 0.5; }
+              100% { opacity: 1; }
+            `} 1.5s infinite`,
+            fontSize: '0.75rem',
             fontWeight: 500,
-            minWidth: 90   
+            letterSpacing: '0.5px',
+            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            '&::before': {
+              content: '""',
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: 'error.main',
+              display: 'inline-block'
+            }
           }}
         >
-          Recording...
+          Recording
         </Typography>
       )}
     </Box>

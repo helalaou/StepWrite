@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TextField, Button, CircularProgress, Typography, IconButton, Tooltip } from '@mui/material';
+import { Box, TextField, Button, CircularProgress, Typography, IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import EastIcon from '@mui/icons-material/East';
-import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
 import VoiceInput from './VoiceInput';

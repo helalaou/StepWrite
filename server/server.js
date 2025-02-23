@@ -61,7 +61,7 @@ app.use((req, res, next) => {
 });
 
 // Submit Answer Route
-app.post('/submit-answer', async (req, res) => {
+app.post('/api/write', async (req, res) => {
   try {
     const { conversationPlanning, changedIndex } = req.body;
     logger.info('Processing submission with conversation planning:', conversationPlanning);
@@ -149,8 +149,7 @@ app.post('/submit-answer', async (req, res) => {
   }
 });
 
- 
-app.post('/submit-edit-answer', async (req, res) => {
+app.post('/api/edit', async (req, res) => {
   try {
     const { originalText, conversationPlanning, changedIndex } = req.body;
     logger.info('Processing edit submission:', { originalText, conversationPlanning, changedIndex });
@@ -195,26 +194,58 @@ app.post('/submit-edit-answer', async (req, res) => {
   }
 });
 
-app.post('/classify-text', async (req, res) => {
+app.post('/api/classify/text-type', async (req, res) => {
   try {
     const { text } = req.body;
-    
     if (!text || typeof text !== 'string') {
       return res.status(400).json({ error: 'Text is required and must be a string' });
     }
-
     const classification = await classifyTextType(text);
     res.json({ type: classification });
   } catch (error) {
-    logger.error('Error classifying text:', error);
+    logger.error('Error classifying text type:', error);
     res.status(500).json({ 
-      error: 'Failed to classify text',
+      error: 'Failed to classify text type',
       details: error.message 
     });
   }
 });
 
-app.post('/submit-reply-answer', async (req, res) => {
+app.post('/api/classify/tone', async (req, res) => {
+  try {
+    const { text, originalText } = req.body;
+    if (!text) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+    const toneClassification = await classifyTone(text, originalText);
+    res.json(toneClassification);
+  } catch (error) {
+    logger.error('Error classifying tone:', error);
+    res.status(500).json({ 
+      error: 'Failed to classify tone',
+      details: error.message 
+    });
+  }
+});
+
+app.post('/api/check/facts', async (req, res) => {
+  try {
+    const { qaFormat, output } = req.body;
+    if (!qaFormat || !output) {
+      return res.status(400).json({ error: 'QA format and output are required' });
+    }
+    const factCheckResult = await performFactCheck(qaFormat, output);
+    res.json(factCheckResult);
+  } catch (error) {
+    logger.error('Error checking facts:', error);
+    res.status(500).json({ 
+      error: 'Failed to check facts',
+      details: error.message 
+    });
+  }
+});
+
+app.post('/api/reply', async (req, res) => {
   try {
     const { originalText, conversationPlanning, changedIndex, answer } = req.body;
     logger.section('PROCESSING REPLY SUBMISSION', {
@@ -341,7 +372,7 @@ app.post('/api/tts/generate', async (req, res) => {
 });
 
 // Update STT endpoint
-app.post('/transcribe-audio', upload.single('audio'), async (req, res) => {
+app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No audio file provided' });
   }

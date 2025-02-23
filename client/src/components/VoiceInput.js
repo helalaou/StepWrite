@@ -179,7 +179,7 @@ function VoiceInput({
 
       // Send cleaned audio to server
       const response = await axios.post(
-        `${config.serverUrl}/transcribe-audio`,
+        `${config.serverUrl}${config.endpoints.transcribe}`,
         formData,
         {
           headers: {

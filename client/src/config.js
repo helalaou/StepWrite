@@ -45,7 +45,16 @@ const config = {
   // API URL configuration
   apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3001',   
 
- 
+  endpoints: {
+    write: '/api/write',
+    reply: '/api/reply',
+    edit: '/api/edit',
+    classifyTextType: '/api/classify/text-type',
+    classifyTone: '/api/classify/tone',
+    factCheck: '/api/check/facts',
+    tts: '/api/tts/generate',
+    transcribe: '/api/transcribe'
+  }
 };
 
 export default config;

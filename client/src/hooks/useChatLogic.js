@@ -99,7 +99,7 @@ export function useChatLogic(mode = 'write') {
         }
       }
 
-      const endpoint = mode === 'write' ? 'submit-answer' : 'submit-reply-answer';
+      const endpoint = mode === 'write' ? config.endpoints.write : config.endpoints.reply;
       const payload = {
         ...(mode === 'reply' && { originalText }),
         conversationPlanning: conversationPlanningToSubmit,
@@ -107,7 +107,7 @@ export function useChatLogic(mode = 'write') {
         answer
       };
 
-      const response = await axios.post(`${config.serverUrl}/${endpoint}`, payload);
+      const response = await axios.post(`${config.serverUrl}${endpoint}`, payload);
 
       if (!response.data.followup_needed) {
         const newOutput = response.data.output;

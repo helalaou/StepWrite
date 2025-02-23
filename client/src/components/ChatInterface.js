@@ -549,8 +549,17 @@ function ChatInterface({
                 fontSize: { xs: '0.75rem', sm: '1.2rem' },
                 padding: { xs: '0 10px', sm: '0 40px' },
                 bgcolor: isAnswered ? 'success.main' : isAnswering ? 'primary.main' : undefined,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
                 '&:hover': {
-                  bgcolor: isAnswered ? 'success.dark' : isAnswering ? 'primary.dark' : undefined
+                  bgcolor: isAnswered ? 'success.dark' : isAnswering ? 'primary.dark' : undefined,
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
                 }
               }}
             >
@@ -563,12 +572,21 @@ function ChatInterface({
                 onClick={handleSkip}
                 size="large"
                 sx={{ 
-                  height: { xs: '28px', sm: '64px' },  // Match Answer button height
-                  fontSize: { xs: '0.75rem', sm: '1.2rem' },  // Match Answer button font
-                  padding: { xs: '0 10px', sm: '0 40px' },  // Match Answer button padding
+                  height: { xs: '28px', sm: '64px' },
+                  fontSize: { xs: '0.75rem', sm: '1.2rem' },
+                  padding: { xs: '0 10px', sm: '0 40px' },
                   bgcolor: questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'warning.main' : undefined,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
                   '&:hover': {
-                    bgcolor: questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'warning.dark' : undefined
+                    bgcolor: questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'warning.dark' : undefined,
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
                   }
                 }}
               >

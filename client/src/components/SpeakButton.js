@@ -68,7 +68,9 @@ function SpeakButton({ text, disabled = false }) {
         color: isPlaying ? 'primary.main' : 'text.secondary',
         opacity: 0.7,
         transition: 'all 0.2s ease',
-        padding: '8px',
+        padding: { xs: '4px', sm: '8px' },
+        width: { xs: '32px', sm: '40px', md: '48px' },
+        height: { xs: '32px', sm: '40px', md: '48px' },
         '&:hover': {
           color: 'primary.main',
           opacity: 1,
@@ -76,13 +78,13 @@ function SpeakButton({ text, disabled = false }) {
           bgcolor: 'transparent'
         },
         '& .MuiSvgIcon-root': {
-          fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.8rem' }
+          fontSize: { xs: '1.5rem', sm: '2rem', md: '2.4rem' }
         }
       }}
     >
       {isLoading ? (
         <CircularProgress 
-          size={20} 
+          size={{ xs: 24, sm: 28, md: 32 }}
           sx={{ 
             color: 'primary.main',
             opacity: 0.8

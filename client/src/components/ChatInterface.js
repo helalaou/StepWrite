@@ -495,23 +495,34 @@ function ChatInterface({
         position: 'relative',
         zIndex: 1,
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+        <Box sx={{ 
+          position: 'relative',
+          width: '100%',
+          mb: 4
+        }}>
           <Typography 
             variant="h4" 
-            gutterBottom 
             sx={{ 
               fontSize: { xs: '24pt', sm: '32pt', md: '42pt' },
               textAlign: 'center',
-              mb: 4,
               transition: 'all 0.3s ease',
+              width: '100%',
+              pr: { xs: '32px', sm: '48px' }  // Make room for the speaker button
             }}
           >
             {currentQuestion.questions[currentQuestionIndex]?.question || ''}
           </Typography>
-          <SpeakButton 
-            text={currentQuestion.questions[currentQuestionIndex]?.question} 
-            disabled={isLoading}
-          />
+          <Box sx={{
+            position: 'absolute',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+          }}>
+            <SpeakButton 
+              text={currentQuestion.questions[currentQuestionIndex]?.question} 
+              disabled={isLoading}
+            />
+          </Box>
         </Box>
 
         <Box sx={{ 
@@ -552,9 +563,9 @@ function ChatInterface({
                 onClick={handleSkip}
                 size="large"
                 sx={{ 
-                  height: { xs: '40px', sm: '64px' },
-                  fontSize: { xs: '0.9rem', sm: '1.2rem' },
-                  padding: { xs: '0 15px', sm: '0 40px' },
+                  height: { xs: '28px', sm: '64px' },  // Match Answer button height
+                  fontSize: { xs: '0.75rem', sm: '1.2rem' },  // Match Answer button font
+                  padding: { xs: '0 10px', sm: '0 40px' },  // Match Answer button padding
                   bgcolor: questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'warning.main' : undefined,
                   '&:hover': {
                     bgcolor: questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'warning.dark' : undefined

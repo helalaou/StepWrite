@@ -66,13 +66,28 @@ function SpeakButton({ text, disabled = false }) {
       size="small"
       sx={{
         color: isPlaying ? 'primary.main' : 'text.secondary',
+        opacity: 0.7,
+        transition: 'all 0.2s ease',
+        padding: '8px',
         '&:hover': {
-          color: 'primary.main'
+          color: 'primary.main',
+          opacity: 1,
+          transform: 'scale(1.1)',
+          bgcolor: 'transparent'
+        },
+        '& .MuiSvgIcon-root': {
+          fontSize: { xs: '1.2rem', sm: '1.5rem', md: '1.8rem' }
         }
       }}
     >
       {isLoading ? (
-        <CircularProgress size={24} />
+        <CircularProgress 
+          size={20} 
+          sx={{ 
+            color: 'primary.main',
+            opacity: 0.8
+          }} 
+        />
       ) : (
         <VolumeUpIcon />
       )}

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
 import VoiceInput from './VoiceInput';
 import config from '../config';
+import SpeakButton from './SpeakButton';
 
 function ChatInterface({
   currentQuestion,
@@ -411,6 +412,29 @@ function ChatInterface({
     }
   };
 
+  useEffect(() => {
+    // Function to clean up audio files
+    const cleanupAudio = async () => {
+      try {
+        await fetch(`${config.apiUrl}/api/tts/cleanup`, {
+          method: 'POST',
+          credentials: 'include'
+        });
+      } catch (error) {
+        console.error('Failed to cleanup audio files:', error);
+      }
+    };
+
+    // Add window unload event listener
+    window.addEventListener('beforeunload', cleanupAudio);
+    
+    // Cleanup on component unmount
+    return () => {
+      window.removeEventListener('beforeunload', cleanupAudio);
+      cleanupAudio();
+    };
+  }, []);
+
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -471,18 +495,24 @@ function ChatInterface({
         position: 'relative',
         zIndex: 1,
       }}>
-        <Typography 
-          variant="h4" 
-          gutterBottom 
-          sx={{ 
-            fontSize: { xs: '24pt', sm: '32pt', md: '42pt' },
-            textAlign: 'center',
-            mb: 4,
-            transition: 'all 0.3s ease',
-          }}
-        >
-          {currentQuestion.questions[currentQuestionIndex]?.question || ''}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+          <Typography 
+            variant="h4" 
+            gutterBottom 
+            sx={{ 
+              fontSize: { xs: '24pt', sm: '32pt', md: '42pt' },
+              textAlign: 'center',
+              mb: 4,
+              transition: 'all 0.3s ease',
+            }}
+          >
+            {currentQuestion.questions[currentQuestionIndex]?.question || ''}
+          </Typography>
+          <SpeakButton 
+            text={currentQuestion.questions[currentQuestionIndex]?.question} 
+            disabled={isLoading}
+          />
+        </Box>
 
         <Box sx={{ 
           display: 'flex', 

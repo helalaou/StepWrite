@@ -1,4 +1,6 @@
 import logger from './utils/logger.js';
+import fs from 'fs';
+import path from 'path';
 
 const config = {
   server: {
@@ -127,8 +129,34 @@ const config = {
         breakLength: 120
       }
     }
-  }
+  },
+
+  // Audio storage settings
+  audio: {
+    tts: {
+      model: 'tts-1',
+      voice: 'sage',
+      format: 'mp3',
+      tempDir: './temp/tts',  
+      cacheEnabled: true,
+      cleanupInterval: 3600000, // 1 hour in milliseconds
+    },
+    stt: {
+      tempDir: './temp/stt',  
+      format: 'webm'
+    }
+  },
 };
+
+// Create temp directories if they don't exist
+try {
+  fs.mkdirSync(path.resolve(config.audio.tts.tempDir), { recursive: true });
+  fs.mkdirSync(path.resolve(config.audio.stt.tempDir), { recursive: true });
+} catch (err) {
+  if (err.code !== 'EEXIST') {
+    logger.error('Failed to create temp directories:', err);
+  }
+}
 
 export { logger };
 export default config;

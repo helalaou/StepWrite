@@ -36,7 +36,12 @@ const config = {
       //number of samples to analyze for noise floor
       sampleSize: 2000           // (range: 500-5000) Higher = more accurate noise detection
     }
-  }
+  },
+
+  // API URL configuration
+  apiUrl: process.env.NODE_ENV === 'production' 
+    ? process.env.REACT_APP_API_URL 
+    : 'http://localhost:3001',   
 };
 
 export default config;

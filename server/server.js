@@ -9,6 +9,10 @@ import OpenAI from 'openai';
 import { logger } from './config.js';
 import multer from 'multer';
 import { Readable } from 'stream';
+import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
+import cookieParser from 'cookie-parser';
+import { cleanupOnStartup } from './utils/cleanup.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +31,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 // Update initialization:
 const openai = new OpenAI({
@@ -35,6 +40,25 @@ const openai = new OpenAI({
 
 // Configure multer for memory storage
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Track active sessions and their audio files
+const sessions = new Map();
+
+// Add session middleware
+app.use((req, res, next) => {
+  // Get or create session ID from cookie
+  let sessionId = req.cookies?.sessionId;
+  if (!sessionId) {
+    sessionId = uuidv4();
+    res.cookie('sessionId', sessionId, { 
+      httpOnly: true,
+      sameSite: 'strict'
+    });
+    sessions.set(sessionId, new Set()); // Track files for this session
+  }
+  req.sessionId = sessionId;
+  next();
+});
 
 // Submit Answer Route
 app.post('/submit-answer', async (req, res) => {
@@ -277,42 +301,127 @@ app.post('/submit-reply-answer', async (req, res) => {
   }
 });
 
-// Add this new endpoint
+// TTS endpoint
+app.post('/api/tts/generate', async (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Text is required' });
+  }
+
+  try {
+    const hash = crypto.createHash('md5').update(text).digest('hex');
+    const audioFilename = `${hash}.${config.audio.tts.format}`;
+    const audioPath = path.join(config.audio.tts.tempDir, audioFilename);
+
+    const sessionFiles = sessions.get(req.sessionId) || new Set();
+    sessionFiles.add(audioPath);
+    sessions.set(req.sessionId, sessionFiles);
+
+    if (config.audio.tts.cacheEnabled && fs.existsSync(audioPath)) {
+      const stats = fs.statSync(audioPath);
+      if (stats.size > 0) {
+        return res.json({ audioUrl: `/tts/${audioFilename}` });  
+      }
+    }
+
+    const response = await openai.audio.speech.create({
+      model: config.audio.tts.model,
+      voice: config.audio.tts.voice,
+      input: text,
+    });
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    fs.writeFileSync(audioPath, buffer);
+
+    res.json({ audioUrl: `/tts/${audioFilename}` });   
+  } catch (error) {
+    logger.error('TTS generation error:', error);
+    res.status(500).json({ error: 'Failed to generate speech' });
+  }
+});
+
+// Update STT endpoint
 app.post('/transcribe-audio', upload.single('audio'), async (req, res) => {
   if (!req.file) {
-    console.error('No audio file provided');
     return res.status(400).json({ error: 'No audio file provided' });
   }
 
   try {
-    // Create a temporary file path
-    const tempFilePath = path.join(__dirname, 'temp', `${Date.now()}.webm`);
-    
-    // Write the buffer to a temporary file
+    const tempFilePath = path.join(config.audio.stt.tempDir, `${Date.now()}.${config.audio.stt.format}`);
     fs.writeFileSync(tempFilePath, req.file.buffer);
 
-    // Create a file object that OpenAI's API can handle
     const file = fs.createReadStream(tempFilePath);
-
-    console.log('Sending audio file to OpenAI for transcription');
     const transcription = await openai.audio.transcriptions.create({
       file: file,
       model: "whisper-1",
       response_format: "text"
     });
 
-    // Clean up: Delete the temporary file
     fs.unlinkSync(tempFilePath);
-
-    console.log('Transcription received:', transcription);
     res.json({ text: transcription });
   } catch (error) {
-    console.error('OpenAI API Error:', error);
+    logger.error('STT error:', error);
     res.status(500).json({ 
       error: 'Failed to transcribe audio',
       details: error.message 
     });
   }
+});
+
+ 
+app.use('/tts', express.static(config.audio.tts.tempDir));  // Changed from /audio to /tts
+
+/ 
+const cleanupAudioFiles = () => {
+  try {
+    // Clean up TTS files
+    if (fs.existsSync(config.audio.tts.tempDir)) {
+      const ttsFiles = fs.readdirSync(config.audio.tts.tempDir);
+      ttsFiles.forEach(file => {
+        const filePath = path.join(config.audio.tts.tempDir, file);
+        try {
+          fs.unlinkSync(filePath);
+        } catch (error) {
+          logger.error(`Failed to delete TTS file ${filePath}:`, error);
+        }
+      });
+    }
+
+    // Clean up STT files
+    if (fs.existsSync(config.audio.stt.tempDir)) {
+      const sttFiles = fs.readdirSync(config.audio.stt.tempDir);
+      sttFiles.forEach(file => {
+        const filePath = path.join(config.audio.stt.tempDir, file);
+        try {
+          fs.unlinkSync(filePath);
+        } catch (error) {
+          logger.error(`Failed to delete STT file ${filePath}:`, error);
+        }
+      });
+    }
+    
+    sessions.clear();
+  } catch (error) {
+    logger.error('Audio cleanup error:', error);
+  }
+};
+
+// Run cleanup periodically
+setInterval(cleanupAudioFiles, config.audio.tts.cleanupInterval);
+
+// Run cleanup on server start
+cleanupOnStartup();
+
+// Update the existing SIGINT handler
+process.on('SIGINT', () => {
+  cleanupAudioFiles();
+  process.exit(0);
+});
+
+// Also handle SIGTERM
+process.on('SIGTERM', () => {
+  cleanupAudioFiles();
+  process.exit(0);
 });
 
 // Start server

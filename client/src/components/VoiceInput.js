@@ -230,8 +230,8 @@ function VoiceInput({
         onClick={isRecording ? stopRecording : startRecording}
         disabled={disabled || isProcessing || (autoStart && !isRecording)}
         sx={{
-          width: { xs: 56, sm: 64 },   
-          height: { xs: 56, sm: 64 },
+          width: { xs: '40px', sm: '56px' },
+          height: { xs: '40px', sm: '56px' },
           borderRadius: '50%',
           backgroundColor: theme => isRecording 
             ? 'error.main'
@@ -251,7 +251,7 @@ function VoiceInput({
             ? '0 0 10px rgba(161, 38, 20, 0.5)'
             : '0 3px 5px rgba(0, 0, 0, 0.2)',
           '& .MuiSvgIcon-root': {
-            fontSize: { xs: '2rem', sm: '2.5rem' },   
+            fontSize: { xs: '1.5rem', sm: '2.5rem' },
             color: '#ffffff',
             transition: 'transform 0.2s ease',
             transform: isRecording ? 'scale(0.9)' : 'scale(1)',

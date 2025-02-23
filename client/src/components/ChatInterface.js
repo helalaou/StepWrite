@@ -504,16 +504,16 @@ function ChatInterface({
               onClick={handleAnswerClick}
               size="large"
               sx={{ 
-                height: '64px',
-                fontSize: '1.2rem',
-                padding: '0 40px',
-                bgcolor: isAnswered ? 'success.main' : undefined,
+                height: { xs: '28px', sm: '64px' },
+                fontSize: { xs: '0.75rem', sm: '1.2rem' },
+                padding: { xs: '0 10px', sm: '0 40px' },
+                bgcolor: isAnswered ? 'success.main' : isAnswering ? 'primary.main' : undefined,
                 '&:hover': {
-                  bgcolor: isAnswered ? 'success.dark' : undefined
+                  bgcolor: isAnswered ? 'success.dark' : isAnswering ? 'primary.dark' : undefined
                 }
               }}
             >
-              {isAnswered ? 'Edit Answer' : 'Answer'}
+              {isAnswered ? 'Edit Answer' : isAnswering ? 'ANSWERING' : 'Answer'}
             </Button>
 
             {currentQuestionIndex > 0 && (
@@ -522,9 +522,9 @@ function ChatInterface({
                 onClick={handleSkip}
                 size="large"
                 sx={{ 
-                  height: '64px',
-                  fontSize: '1.2rem',
-                  padding: '0 40px',
+                  height: { xs: '40px', sm: '64px' },
+                  fontSize: { xs: '0.9rem', sm: '1.2rem' },
+                  padding: { xs: '0 15px', sm: '0 40px' },
                   bgcolor: questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'warning.main' : undefined,
                   '&:hover': {
                     bgcolor: questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'warning.dark' : undefined
@@ -540,19 +540,18 @@ function ChatInterface({
             <Box sx={{ 
               display: 'flex', 
               width: '100%',
-              gap: 2,
+              flexDirection: 'column',
+              gap: { xs: 1, sm: 2 },
               alignItems: 'center',
-              minHeight: '120px'
+              minHeight: { xs: 'auto', sm: 'auto' },
+              position: 'relative'
             }}>
-              {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && isAnswering && (
-                <VoiceInput
-                  onTranscriptionComplete={handleVoiceTranscriptionComplete}
-                  disabled={isLoading}
-                  autoStart={config.input.mode === 'VOICE_ONLY'}
-                  showStopButton={config.input.mode === 'VOICE_ONLY'}
-                />
-              )}
-              {config.input.mode !== 'VOICE_ONLY' && (
+              <Box sx={{
+                display: 'flex',
+                width: '100%',
+                gap: 2,
+                position: 'relative'
+              }}>
                 <TextField
                   fullWidth
                   multiline
@@ -564,29 +563,79 @@ function ChatInterface({
                   placeholder="Type your answer..."
                   disabled={!isAnswering || isLoading}
                   sx={{ 
+                    width: '100%',
+                    maxWidth: { xs: '100%', sm: '92%', md: '94%' },
                     '& .MuiInputBase-input': { 
-                      fontSize: '1.5rem', 
-                      padding: '15px'
+                      fontSize: { xs: '1rem', sm: '1.5rem' },
+                      padding: { xs: '10px', sm: '15px' }
                     },
                     bgcolor: !isAnswering && isAnswered ? 'action.hover' : 'background.paper'
                   }}
                 />
-              )}
-              {isAnswering && config.input.mode !== 'VOICE_ONLY' && (
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={handleSubmit}
-                  disabled={isLoading}
-                  size="large"
-                  sx={{ 
-                    alignSelf: 'stretch',
-                    width: 'auto',
-                    fontSize: '1.2rem'
-                  }}
-                >
-                  {isLoading ? <CircularProgress size={23} /> : 'SAVE'}
-                </Button>
+                {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && isAnswering && (
+                  <Box sx={{
+                    display: { xs: 'none', sm: 'block' },
+                    position: { sm: 'absolute' },
+                    right: { sm: '-32px' },
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                  }}>
+                    <VoiceInput
+                      onTranscriptionComplete={handleVoiceTranscriptionComplete}
+                      disabled={isLoading}
+                      autoStart={config.input.mode === 'VOICE_ONLY'}
+                      showStopButton={config.input.mode === 'VOICE_ONLY'}
+                      sx={{ 
+                        '& .MuiIconButton-root': {
+                          width: { xs: '32px', sm: '48px' },
+                          height: { xs: '32px', sm: '48px' }
+                        }
+                      }}
+                    />
+                  </Box>
+                )}
+              </Box>
+              {isAnswering && (
+                <Box sx={{
+                  display: 'flex',
+                  gap: 2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '100%'
+                }}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleSubmit}
+                    disabled={isLoading}
+                    size="large"
+                    sx={{ 
+                      height: { xs: '32px', sm: '48px' },
+                      fontSize: { xs: '0.8rem', sm: '1rem' },
+                      padding: { xs: '0 12px', sm: '0 24px' },
+                      minWidth: { xs: '80px', sm: '120px' },
+                    }}
+                  >
+                    {isLoading ? <CircularProgress size={16} /> : 'SAVE'}
+                  </Button>
+                  {/* Mobile-only mic button */}
+                  {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && (
+                    <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+                      <VoiceInput
+                        onTranscriptionComplete={handleVoiceTranscriptionComplete}
+                        disabled={isLoading}
+                        autoStart={config.input.mode === 'VOICE_ONLY'}
+                        showStopButton={config.input.mode === 'VOICE_ONLY'}
+                        sx={{ 
+                          '& .MuiIconButton-root': {
+                            width: '32px',
+                            height: '32px'
+                          }
+                        }}
+                      />
+                    </Box>
+                  )}
+                </Box>
               )}
             </Box>
           )}

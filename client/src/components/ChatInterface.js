@@ -518,10 +518,12 @@ function ChatInterface({
             top: '50%',
             transform: 'translateY(-50%)',
           }}>
-            <SpeakButton 
-              text={currentQuestion.questions[currentQuestionIndex]?.question} 
-              disabled={isLoading}
-            />
+            {config.tts.mode === 'ENABLED' && (
+              <SpeakButton 
+                text={currentQuestion.questions[currentQuestionIndex]?.question} 
+                disabled={isLoading}
+              />
+            )}
           </Box>
         </Box>
 

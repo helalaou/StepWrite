@@ -8,10 +8,10 @@ const config = {
     timeout: 70000, // Timeout in milliseconds (range: 10000-120000)
   },
   
-  // Settings to control the input mode
+  // Settings to control the input mode 
   input: {
     // Only uncomment one mode at a time
-    mode: 'TEXT_AND_VOICE',  // Default mode - both text input and voice button
+    mode: process.env.REACT_APP_INPUT_MODE || 'TEXT_AND_VOICE',  // 'TEXT_ONLY', 'VOICE_ONLY', 'TEXT_AND_VOICE'
     // mode: 'TEXT_ONLY',    // Only text input, no voice button
     // mode: 'VOICE_ONLY',   // Only voice input, auto-starts recording
   },
@@ -38,10 +38,16 @@ const config = {
     }
   },
 
+   // TTS configuration
+   tts: {
+    mode: process.env.REACT_APP_TTS_MODE || 'ENABLED',  // 'ENABLED', 'DISABLED'
+  },
+  
+
   // API URL configuration
-  apiUrl: process.env.NODE_ENV === 'production' 
-    ? process.env.REACT_APP_API_URL 
-    : 'http://localhost:3001',   
+  apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3001',   
+
+ 
 };
 
 export default config;

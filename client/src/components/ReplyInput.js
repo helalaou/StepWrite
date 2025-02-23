@@ -53,28 +53,32 @@ function ReplyInput({ onSubmit }) {
       </Typography>
 
       <Box sx={{ 
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1,
         width: '100%',
-        maxWidth: '900px',
+        maxWidth: '600px',
+        margin: '0 auto',
       }}>
         <TextField
           multiline
           fullWidth
-          minRows={10}
-          maxRows={20}
+          minRows={6}
+          maxRows={12}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Your text will appear here..."
           sx={{
             '& .MuiInputBase-root': {
               backgroundColor: 'background.paper',
-              fontSize: '1.3rem',
-              lineHeight: '1.6',
-              padding: '20px',
+              fontSize: { xs: '0.9rem', sm: '1.1rem' },
+              lineHeight: '1.4',
+              padding: { xs: '12px', sm: '16px' },
               '& textarea': {
                 resize: 'vertical',
               }
             },
-            mb: 2,
+            mb: 1,
           }}
         />
 
@@ -82,14 +86,17 @@ function ReplyInput({ onSubmit }) {
           display: 'flex', 
           alignItems: 'center', 
           gap: 1,
-          mb: 3,
-          ml: 2
+          mb: 2,
+          ml: 1,
         }}>
-          <KeyboardIcon sx={{ color: 'text.secondary' }} />
+          <KeyboardIcon sx={{ 
+            color: 'text.secondary',
+            fontSize: { xs: '1rem', sm: '1.2rem' }
+          }} />
           <Typography
             variant="body1"
             sx={{
-              fontSize: '1.2rem',
+              fontSize: { xs: '0.9rem', sm: '1rem' },
               color: 'text.secondary',
             }}
           >
@@ -102,9 +109,9 @@ function ReplyInput({ onSubmit }) {
           size="large"
           onClick={handleSubmit}
           sx={{ 
-            height: '60px',
-            fontSize: '1.2rem',
-            width: '200px',
+            height: { xs: '40px', sm: '50px' },
+            fontSize: { xs: '0.9rem', sm: '1rem' },
+            width: { xs: '140px', sm: '160px' },
             display: 'block',
             margin: '0 auto',
           }}

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import { Box, TextField, Button, Typography, CircularProgress } from '@mui/material';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
+import VoiceInput from './VoiceInput';
 
 function EditTextInput({ onSubmit }) {
   const [text, setText] = useState('');
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = () => {
     if (!text.trim()) {
@@ -16,6 +18,10 @@ function EditTextInput({ onSubmit }) {
     onSubmit(text);
   };
 
+  const handleVoiceTranscriptionComplete = (transcription) => {
+    setText(transcription);
+  };
+
   return (
     <Box sx={{ 
       display: 'flex', 
@@ -23,8 +29,8 @@ function EditTextInput({ onSubmit }) {
       alignItems: 'center',
       justifyContent: 'center',
       height: '100vh',
-      padding: { xs: '20px', sm: '40px' },
-      maxWidth: '1200px',
+      padding: { xs: '4px', sm: '8px' },
+      maxWidth: '400px',
       margin: '0 auto',
       position: 'relative',
     }}>
@@ -38,107 +44,103 @@ function EditTextInput({ onSubmit }) {
         display: 'flex',
         alignItems: 'center',
         backgroundColor: 'background.paper',
-        borderTopRightRadius: '8px',
-        borderBottomRightRadius: '8px',
-        boxShadow: 2,
-        transition: 'all 0.3s ease',
+        borderTopRightRadius: '2px',
+        borderBottomRightRadius: '2px',
+        boxShadow: 1,
         '&:hover': {
-          transform: 'translateY(-50%) translateX(5px)',
-          boxShadow: 4,
+          transform: 'translateY(-50%) translateX(2px)',
+          boxShadow: 2,
         }
       }}>
         <Button
           variant="contained"
           onClick={() => navigate('/')}
           sx={{ 
-            height: '60px',
-            borderTopRightRadius: '8px',
-            borderBottomRightRadius: '8px',
-            borderTopLeftRadius: 0,
-            borderBottomLeftRadius: 0,
-            paddingLeft: 3,
-            paddingRight: 3,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
+            height: { xs: '16px', sm: '20px' },
+            minWidth: { xs: '16px', sm: '20px' },
+            borderRadius: 0,
+            padding: { xs: '2px 4px', sm: '3px 6px' },
+            fontSize: { xs: '0.35rem', sm: '0.4rem' },
           }}
         >
-          <WestIcon />
-          Back to Home
+          <WestIcon sx={{ fontSize: { xs: '0.5rem', sm: '0.6rem' } }} />
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Back</Box>
         </Button>
       </Box>
 
-      <Typography 
-        variant="h4" 
-        gutterBottom 
-        sx={{ 
-          fontSize: { xs: '2rem', sm: '2.5rem' },
-          textAlign: 'center',
-          mb: 4,
-        }}
-      >
-        Paste the text you want to edit here
-      </Typography>
-
       <Box sx={{ 
+        display: 'flex',
+        flexDirection: 'column',
+        gap: { xs: 0.25, sm: 0.5 },
         width: '100%',
-        maxWidth: '900px',
+        maxWidth: { xs: '100%', sm: '250px' },
+        margin: '0 auto',
+        padding: { xs: '2px', sm: '4px' }
       }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            textAlign: 'center',
+            fontSize: { xs: '0.35rem', sm: '0.45rem' },
+            opacity: 0.7,
+            mb: { xs: 0.125, sm: 0.25 }
+          }}
+        >
+          Your text will appear here...
+        </Typography>
+
         <TextField
           multiline
-          fullWidth
-          minRows={10}
-          maxRows={20}
+          rows={{ xs: 1, sm: 2 }}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Your text will appear here..."
+          variant="outlined"
+          placeholder="Start typing or use voice input..."
           sx={{
-            '& .MuiInputBase-root': {
-              backgroundColor: 'background.paper',
-              fontSize: '1.3rem',
-              lineHeight: '1.6',
-              padding: '20px',
-              '& textarea': {
-                resize: 'vertical',
-              }
+            width: '100%',
+            '& .MuiInputBase-input': {
+              fontSize: { xs: '0.35rem', sm: '0.4rem' },
+              lineHeight: { xs: 1.1, sm: 1.2 },
+              padding: { xs: '3px', sm: '4px' }
             },
-            mb: 2,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '2px'
+            }
           }}
         />
 
         <Box sx={{ 
           display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          mb: 3,
-          ml: 2
+          justifyContent: 'center',
+          gap: { xs: 0.25, sm: 0.5 }
         }}>
-          <KeyboardIcon sx={{ color: 'text.secondary' }} />
-          <Typography
-            variant="body1"
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={isLoading || !text.trim()}
             sx={{
-              fontSize: '1.2rem',
-              color: 'text.secondary',
+              height: { xs: '12px', sm: '16px' },
+              fontSize: { xs: '0.325rem', sm: '0.375rem' },
+              padding: { xs: '0 3px', sm: '0 6px' },
+              minWidth: { xs: '25px', sm: '35px' }
             }}
           >
-            Or type it yourself
-          </Typography>
-        </Box>
+            {isLoading ? <CircularProgress size={6} /> : 'Submit'}
+          </Button>
 
-        <Button
-          variant="contained"
-          size="large"
-          onClick={handleSubmit}
-          sx={{ 
-            height: '60px',
-            fontSize: '1.2rem',
-            width: '200px',
-            display: 'block',
-            margin: '0 auto',
-          }}
-        >
-          Submit
-        </Button>
+          {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && (
+            <VoiceInput
+              onTranscriptionComplete={handleVoiceTranscriptionComplete}
+              disabled={isLoading}
+              sx={{ 
+                '& .MuiIconButton-root': {
+                  width: { xs: '12px', sm: '16px' },
+                  height: { xs: '12px', sm: '16px' }
+                }
+              }}
+            />
+          )}
+        </Box>
       </Box>
     </Box>
   );

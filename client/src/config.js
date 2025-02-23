@@ -5,7 +5,7 @@ const config = {
     version: '1.0.0',
   },
   llm: {
-    timeout: 70000, //      70 seconds 
+    timeout: 70000, // Timeout in milliseconds (range: 10000-120000)
   },
   
   // Settings to control the input mode
@@ -14,6 +14,29 @@ const config = {
     mode: 'TEXT_AND_VOICE',  // Default mode - both text input and voice button
     // mode: 'TEXT_ONLY',    // Only text input, no voice button
     // mode: 'VOICE_ONLY',   // Only voice input, auto-starts recording
+  },
+
+  recording: {
+    volumeThreshold: 0.02,        // Threshold for detecting speech (range: 0.01-1.0). Lower = more sensitive
+    fftSize: 1024,               // Size of FFT window (values: 256, 512, 1024, 2048, 4096)
+    audioBitsPerSecond: 128000,   // Audio quality in bits/sec (range: 64000-256000)
+    chunkSize: 3000,             // Milliseconds per audio chunk (range: 1000-10000)
+    logInterval: 300,            // How often to log audio levels in ms (range: 100-1000)
+  
+    noiseReduction: {
+      // How much above noise floor to consider as signal
+      floorMultiplier: 1.2,      // (range: 1.0-3.0) Lower = keep more quiet sounds
+      
+      // maximum % of recording that can be noise before rejecting
+      maxNoisePercent: 80,       // (range: 50-95) Higher = more tolerant of noise
+      
+      // Minimum % of samples that must contain speech
+      minSignificantPercent: 15, // (range: 1-50) Lower = accept shorter speech segments
+      
+      //number of samples to analyze for noise floor
+      sampleSize: 2000           // (range: 500-5000) Higher = more accurate noise detection
+    }
   }
 };
+
 export default config;

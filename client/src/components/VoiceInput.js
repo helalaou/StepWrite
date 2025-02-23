@@ -16,6 +16,7 @@ function VoiceInput({
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioChunks, setAudioChunks] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasDetectedSound, setHasDetectedSound] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -31,51 +32,13 @@ function VoiceInput({
     }
   }, [autoStart, isRecording, disabled, isProcessing]);
 
-  const handleVoiceActivityDetection = (stream) => {
-    const audioContext = new AudioContext();
-    const analyser = audioContext.createAnalyser();
-    const microphone = audioContext.createMediaStreamSource(stream);
-    microphone.connect(analyser);
-    
-    analyser.fftSize = 256;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    
-    let silenceStart = Date.now();
-    const silenceThreshold = 2000; // 2 seconds of silence
-    
-    const checkAudio = () => {
-      if (!isRecording) return;
-      
-      analyser.getByteFrequencyData(dataArray);
-      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-      
-      if (average < 10) { // Silence threshold
-        if (Date.now() - silenceStart > silenceThreshold) {
-          stopRecording();
-          audioContext.close();
-          return;
-        }
-      } else {
-        silenceStart = Date.now();
-      }
-      
-      requestAnimationFrame(checkAudio);
-    };
-    
-    checkAudio();
-  };
-
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
+        mimeType: 'audio/webm',
+        audioBitsPerSecond: config.recording.audioBitsPerSecond,
       });
-      
-      if (autoStart) {
-        handleVoiceActivityDetection(stream);
-      }
       
       const chunks = [];
 
@@ -86,18 +49,22 @@ function VoiceInput({
       };
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        await handleAudioTranscription(audioBlob);
+        const audioBlob = new Blob(chunks, { 
+          type: 'audio/webm; codecs=opus'
+        });
         
-        // Stop all tracks to release the microphone
+        if (audioBlob.size > 0) {
+          await handleAudioTranscription(audioBlob);
+        }
+        
         stream.getTracks().forEach(track => track.stop());
       };
 
-      // Request data every second instead of waiting for stop
-      recorder.start(1000);
+      recorder.start();
       setMediaRecorder(recorder);
       setAudioChunks(chunks);
       setIsRecording(true);
+      setHasDetectedSound(false); // Reset sound detection
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Unable to access microphone. Please check your permissions.');
@@ -113,10 +80,96 @@ function VoiceInput({
 
   const handleAudioTranscription = async (audioBlob) => {
     setIsProcessing(true);
-    
+
     try {
-      // Create file object 
-      const audioFile = new File([audioBlob], 'recording.webm', {
+      const audioContext = new AudioContext();
+      const audioBuffer = await audioContext.decodeAudioData(await audioBlob.arrayBuffer());
+      const rawData = audioBuffer.getChannelData(0);
+      
+      // 1. Calculate noise statistics from the entire recording
+      const amplitudes = rawData.map(Math.abs);
+      const sortedAmplitudes = [...amplitudes].sort((a, b) => a - b);
+      
+      // Get noise floor (using lowest 20% of samples)
+      const noiseFloorIndex = Math.floor(sortedAmplitudes.length * 0.2);
+      const noiseFloor = sortedAmplitudes[noiseFloorIndex];
+      
+      // Get median amplitude
+      const medianAmplitude = sortedAmplitudes[Math.floor(sortedAmplitudes.length * 0.5)];
+      
+      // Calculate percentage of samples that are likely noise
+      const percentNoise = (amplitudes.filter(a => a <= noiseFloor * 2).length / amplitudes.length) * 100;
+      
+      console.log(`Audio stats:
+        Noise floor: ${noiseFloor.toFixed(4)}
+        Median amplitude: ${medianAmplitude.toFixed(4)}
+        Noise percentage: ${percentNoise.toFixed(1)}%`);
+
+      // If most of the recording is at noise level, reject it
+      if (percentNoise > config.recording.noiseReduction.maxNoisePercent) {
+        console.log('Recording is mostly noise, skipping transcription');
+        setIsProcessing(false);
+        return;
+      }
+
+      // 2. Clean the audio
+      const cleanedData = rawData.map(sample => {
+        const amplitude = Math.abs(sample);
+        
+        // Strong noise gate
+        if (amplitude < noiseFloor * config.recording.noiseReduction.floorMultiplier) {
+          return 0;
+        }
+        
+        // Apply noise reduction
+        const scaledSample = sample * (1 - (noiseFloor / amplitude));
+        return scaledSample;
+      });
+
+      // 3. Check if we have enough significant sound after cleaning
+      const significantSamples = cleanedData.filter(sample => 
+        Math.abs(sample) > config.recording.volumeThreshold
+      ).length;
+      
+      const percentSignificant = (significantSamples / cleanedData.length) * 100;
+      
+      console.log(`After cleaning:
+        Significant samples: ${percentSignificant.toFixed(1)}% (threshold: ${config.recording.noiseReduction.minSignificantPercent}%)`);
+
+      if (percentSignificant < config.recording.noiseReduction.minSignificantPercent) {
+        console.log('Not enough significant audio detected - less than 15% of samples contain speech');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Create a new audio buffer with cleaned data
+      const cleanedBuffer = audioContext.createBuffer(
+        audioBuffer.numberOfChannels,
+        audioBuffer.length,
+        audioBuffer.sampleRate
+      );
+      cleanedBuffer.getChannelData(0).set(cleanedData);
+
+      // Convert cleaned buffer back to blob
+      const cleanedBlob = await new Promise(resolve => {
+        const mediaStreamDestination = audioContext.createMediaStreamDestination();
+        const source = audioContext.createBufferSource();
+        source.buffer = cleanedBuffer;
+        source.connect(mediaStreamDestination);
+        source.start();
+
+        const mediaRecorder = new MediaRecorder(mediaStreamDestination.stream);
+        const chunks = [];
+
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = () => resolve(new Blob(chunks, { type: 'audio/webm' }));
+
+        mediaRecorder.start();
+        source.addEventListener('ended', () => mediaRecorder.stop());
+      });
+
+      // Create file object with cleaned audio
+      const audioFile = new File([cleanedBlob], 'recording.webm', {
         type: 'audio/webm',
         lastModified: Date.now()
       });
@@ -124,6 +177,7 @@ function VoiceInput({
       const formData = new FormData();
       formData.append('audio', audioFile);
 
+      // Send cleaned audio to server
       const response = await axios.post(
         `${config.serverUrl}/transcribe-audio`,
         formData,
@@ -138,8 +192,9 @@ function VoiceInput({
         onTranscriptionComplete(response.data.text);
       }
     } catch (error) {
-      console.error('Error transcribing audio:', error);
-      alert('Failed to transcribe audio. Please try again.');
+      if (!(error instanceof RangeError)) {
+        console.error('Error processing audio:', error);
+      }
     } finally {
       setIsProcessing(false);
     }

@@ -280,6 +280,7 @@ app.post('/submit-reply-answer', async (req, res) => {
 // Add this new endpoint
 app.post('/transcribe-audio', upload.single('audio'), async (req, res) => {
   if (!req.file) {
+    console.error('No audio file provided');
     return res.status(400).json({ error: 'No audio file provided' });
   }
 
@@ -293,6 +294,7 @@ app.post('/transcribe-audio', upload.single('audio'), async (req, res) => {
     // Create a file object that OpenAI's API can handle
     const file = fs.createReadStream(tempFilePath);
 
+    console.log('Sending audio file to OpenAI for transcription');
     const transcription = await openai.audio.transcriptions.create({
       file: file,
       model: "whisper-1",
@@ -302,9 +304,10 @@ app.post('/transcribe-audio', upload.single('audio'), async (req, res) => {
     // Clean up: Delete the temporary file
     fs.unlinkSync(tempFilePath);
 
+    console.log('Transcription received:', transcription);
     res.json({ text: transcription });
   } catch (error) {
-    logger.error('Error transcribing audio:', error);
+    console.error('OpenAI API Error:', error);
     res.status(500).json({ 
       error: 'Failed to transcribe audio',
       details: error.message 

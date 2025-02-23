@@ -9,6 +9,7 @@ import NavigationButton from './NavigationButton';
 import VoiceInput from './VoiceInput';
 import config from '../config';
 import SpeakButton from './SpeakButton';
+import ClearIcon from '@mui/icons-material/Clear';
 
 function ChatInterface({
   currentQuestion,
@@ -613,26 +614,59 @@ function ChatInterface({
                 gap: 2,
                 position: 'relative'
               }}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  variant="outlined"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder="Type your answer..."
-                  disabled={!isAnswering || isLoading}
-                  sx={{ 
-                    width: '100%',
-                    maxWidth: { xs: '100%', sm: '92%', md: '94%' },
-                    '& .MuiInputBase-input': { 
-                      fontSize: { xs: '1rem', sm: '1.5rem' },
-                      padding: { xs: '10px', sm: '15px' }
-                    },
-                    bgcolor: !isAnswering && isAnswered ? 'action.hover' : 'background.paper'
-                  }}
-                />
+                <Box sx={{ position: 'relative', width: '100%' }}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    variant="outlined"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Type your answer..."
+                    disabled={!isAnswering || isLoading}
+                    sx={{ 
+                      width: '100%',
+                      maxWidth: { xs: '100%', sm: '92%', md: '94%' },
+                      '& .MuiInputBase-input': { 
+                        fontSize: { xs: '1rem', sm: '1.5rem' },
+                        padding: { xs: '10px', sm: '15px' }
+                      },
+                      bgcolor: !isAnswering && isAnswered ? 'action.hover' : 'background.paper',
+                      '& .MuiOutlinedInput-root': {
+                        position: 'relative'
+                      }
+                    }}
+                  />
+                  {/* Add clear button */}
+                  {isAnswering && input.trim() && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setInput('')}
+                      sx={{
+                        position: 'absolute',
+                        right: { xs: '12px', sm: '50px' },
+                        top: '8px',
+                        transform: 'none',
+                        opacity: 0.7,
+                        padding: '4px',
+                        backgroundColor: 'transparent',
+                        color: theme => theme.palette.primary.main,
+                        '&:hover': {
+                          opacity: 1,
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                        },
+                        '& .MuiSvgIcon-root': {
+                          fontSize: { xs: '1.1rem', sm: '1.3rem' },
+                          color: 'inherit'
+                        },
+                        zIndex: 10
+                      }}
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  )}
+                </Box>
                 {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && isAnswering && (
                   <Box sx={{
                     display: { xs: 'none', sm: 'block' },

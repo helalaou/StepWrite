@@ -12,8 +12,6 @@ const config = {
   input: {
     // Only uncomment one mode at a time
     mode: process.env.REACT_APP_INPUT_MODE || 'TEXT_AND_VOICE',  // 'TEXT_ONLY', 'VOICE_ONLY', 'TEXT_AND_VOICE'
-    // mode: 'TEXT_ONLY',    // Only text input, no voice button
-    // mode: 'VOICE_ONLY',   // Only voice input, auto-starts recording
   },
 
   recording: {
@@ -42,7 +40,7 @@ const config = {
    tts: {
     mode: process.env.REACT_APP_TTS_MODE || 'ENABLED',  // 'ENABLED', 'DISABLED'
   },
-  
+
 
   // API URL configuration
   apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:3001',   

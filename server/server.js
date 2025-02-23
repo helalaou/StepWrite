@@ -368,10 +368,10 @@ app.post('/transcribe-audio', upload.single('audio'), async (req, res) => {
   }
 });
 
- 
-app.use('/tts', express.static(config.audio.tts.tempDir));  // Changed from /audio to /tts
+// Serve static files
+app.use('/tts', express.static(config.audio.tts.tempDir));
 
-/ 
+// Cleanup function
 const cleanupAudioFiles = () => {
   try {
     // Clean up TTS files

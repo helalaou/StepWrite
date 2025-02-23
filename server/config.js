@@ -135,7 +135,7 @@ const config = {
   audio: {
     tts: {
       model: 'tts-1',
-      voice: 'sage',
+      voice: 'nova', // you can find all the supported voices here: https://platform.openai.com/docs/guides/text-to-speech/voices
       format: 'mp3',
       tempDir: './temp/tts',  
       cacheEnabled: true,

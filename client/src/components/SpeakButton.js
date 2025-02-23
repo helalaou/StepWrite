@@ -1,7 +1,37 @@
 import React, { useState, useRef } from 'react';
 import { IconButton, CircularProgress } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import { keyframes } from '@mui/system';
 import config from '../config';
+
+/// Pulse animation fr playing state
+const pulseAnimation = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+`;
+
+// annimation for playing state
+const waveAnimation = keyframes`
+  0% {
+    box-shadow: 0 0 0 0 rgba(161, 38, 20, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(161, 38, 20, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(161, 38, 20, 0);
+  }
+`;
 
 function SpeakButton({ text, disabled = false }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,14 +44,12 @@ function SpeakButton({ text, disabled = false }) {
     try {
       setIsLoading(true);
 
-      // Stop any currently playing audio
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
 
-      // Generate audio
-      const response = await fetch(`${config.apiUrl}/api/tts/generate`, {
+      const response = await fetch(`${config.apiUrl}${config.endpoints.tts}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -39,7 +67,6 @@ function SpeakButton({ text, disabled = false }) {
         throw new Error('No audio URL in response');
       }
 
-      // Create and play audio
       const audio = new Audio(`${config.apiUrl}${data.audioUrl}`);
       audioRef.current = audio;
 
@@ -65,29 +92,64 @@ function SpeakButton({ text, disabled = false }) {
       disabled={disabled || isLoading}
       size="small"
       sx={{
+        position: 'relative',
         color: isPlaying ? 'primary.main' : 'text.secondary',
-        opacity: 0.7,
-        transition: 'all 0.2s ease',
-        padding: { xs: '4px', sm: '8px' },
-        width: { xs: '32px', sm: '40px', md: '48px' },
-        height: { xs: '32px', sm: '40px', md: '48px' },
+        opacity: isLoading ? 0.7 : 1,
+        transition: 'all 0.3s ease',
+        padding: { xs: '8px', sm: '12px' },
+        width: { xs: '40px', sm: '48px', md: '56px' },
+        height: { xs: '40px', sm: '48px', md: '56px' },
+        backgroundColor: 'transparent',
         '&:hover': {
           color: 'primary.main',
-          opacity: 1,
-          transform: 'scale(1.1)',
-          bgcolor: 'transparent'
+          backgroundColor: 'rgba(161, 38, 20, 0.04)',
+          transform: 'scale(1.05)',
+        },
+        '&:active': {
+          transform: 'scale(0.95)',
         },
         '& .MuiSvgIcon-root': {
-          fontSize: { xs: '1.5rem', sm: '2rem', md: '2.4rem' }
-        }
+          fontSize: { xs: '1.5rem', sm: '2rem', md: '2.4rem' },
+          animation: isPlaying ? `${pulseAnimation} 2s infinite ease-in-out` : 'none',
+        },
+        ...(isPlaying && {
+          animation: `${waveAnimation} 2s infinite`,
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderRadius: '50%',
+            border: '2px solid',
+            borderColor: 'primary.main',
+            animation: `${pulseAnimation} 2s infinite`
+          }
+        }),
+        ...(isLoading && {
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            borderRadius: '50%',
+            zIndex: 1
+          }
+        })
       }}
     >
       {isLoading ? (
         <CircularProgress 
-          size={{ xs: 24, sm: 28, md: 32 }}
+          size={24}
+          thickness={4}
           sx={{ 
             color: 'primary.main',
-            opacity: 0.8
+            position: 'relative',
+            zIndex: 2
           }} 
         />
       ) : (

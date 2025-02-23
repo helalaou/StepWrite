@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { IconButton, Box, Typography, CircularProgress } from '@mui/material';
 import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop';
@@ -14,73 +14,10 @@ function VoiceInput({
 }) {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [hasDetectedSound, setHasDetectedSound] = useState(false);
 
-  useEffect(() => {
-    return () => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-      }
-    };
-  }, [mediaRecorder]);
-
-  useEffect(() => {
-    if (autoStart && !isRecording && !disabled && !isProcessing) {
-      startRecording();
-    }
-  }, [autoStart, isRecording, disabled, isProcessing]);
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
-        audioBitsPerSecond: config.recording.audioBitsPerSecond,
-      });
-      
-      const chunks = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunks.push(e.data);
-        }
-      };
-
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(chunks, { 
-          type: 'audio/webm; codecs=opus'
-        });
-        
-        if (audioBlob.size > 0) {
-          await handleAudioTranscription(audioBlob);
-        }
-        
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      recorder.start();
-      setMediaRecorder(recorder);
-      setAudioChunks(chunks);
-      setIsRecording(true);
-      setHasDetectedSound(false); // Reset sound detection
-    } catch (error) {
-      console.error('Error accessing microphone:', error);
-      alert('Unable to access microphone. Please check your permissions.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const handleAudioTranscription = async (audioBlob) => {
+  const handleAudioTranscription = useCallback(async (audioBlob) => {
     setIsProcessing(true);
-
     try {
       const audioContext = new AudioContext();
       const audioBuffer = await audioContext.decodeAudioData(await audioBlob.arrayBuffer());
@@ -198,7 +135,65 @@ function VoiceInput({
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [onTranscriptionComplete]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm',
+        audioBitsPerSecond: config.recording.audioBitsPerSecond,
+      });
+      
+      const chunks = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        const audioBlob = new Blob(chunks, { 
+          type: 'audio/webm; codecs=opus'
+        });
+        
+        if (audioBlob.size > 0) {
+          await handleAudioTranscription(audioBlob);
+        }
+        
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      alert('Unable to access microphone. Please check your permissions.');
+    }
+  }, [handleAudioTranscription]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    }
+  }, [mediaRecorder]);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+    };
+  }, [mediaRecorder]);
+
+  useEffect(() => {
+    if (autoStart && !isRecording && !disabled && !isProcessing) {
+      startRecording();
+    }
+  }, [autoStart, isRecording, disabled, isProcessing, startRecording]);
 
   // Define pulse animation
   const pulseAnimation = keyframes`

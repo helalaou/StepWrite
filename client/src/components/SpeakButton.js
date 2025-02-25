@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { IconButton, CircularProgress } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { keyframes } from '@mui/system';
@@ -33,10 +33,16 @@ const waveAnimation = keyframes`
   }
 `;
 
-function SpeakButton({ text, disabled = false }) {
+function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = null, showAnimation = true }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
+
+  useEffect(() => {
+    if (autoPlay && text && !isLoading && !isPlaying) {
+      generateAndPlayAudio();
+    }
+  }, [autoPlay, text]);
 
   const generateAndPlayAudio = async () => {
     if (isLoading || isPlaying || !text) return;
@@ -70,10 +76,15 @@ function SpeakButton({ text, disabled = false }) {
       const audio = new Audio(`${config.apiUrl}${data.audioUrl}`);
       audioRef.current = audio;
 
-      audio.addEventListener('ended', () => setIsPlaying(false));
+      audio.addEventListener('ended', () => {
+        setIsPlaying(false);
+        if (onComplete) onComplete();
+      });
+      
       audio.addEventListener('error', (e) => {
         setIsPlaying(false);
         console.error('Audio playback error:', e);
+        if (onComplete) onComplete();
       });
 
       await audio.play();
@@ -81,6 +92,7 @@ function SpeakButton({ text, disabled = false }) {
     } catch (error) {
       console.error('Speech generation error:', error);
       setIsPlaying(false);
+      if (onComplete) onComplete();
     } finally {
       setIsLoading(false);
     }
@@ -100,6 +112,7 @@ function SpeakButton({ text, disabled = false }) {
         width: { xs: '40px', sm: '48px', md: '56px' },
         height: { xs: '40px', sm: '48px', md: '56px' },
         backgroundColor: 'transparent',
+        animation: showAnimation && isPlaying ? `${pulseAnimation} 2s infinite ease-in-out` : 'none',
         '&:hover': {
           color: 'primary.main',
           backgroundColor: 'rgba(161, 38, 20, 0.04)',
@@ -108,12 +121,7 @@ function SpeakButton({ text, disabled = false }) {
         '&:active': {
           transform: 'scale(0.95)',
         },
-        '& .MuiSvgIcon-root': {
-          fontSize: { xs: '1.5rem', sm: '2rem', md: '2.4rem' },
-          animation: isPlaying ? `${pulseAnimation} 2s infinite ease-in-out` : 'none',
-        },
-        ...(isPlaying && {
-          animation: `${waveAnimation} 2s infinite`,
+        ...(showAnimation && isPlaying && {
           '&::after': {
             content: '""',
             position: 'absolute',
@@ -125,19 +133,6 @@ function SpeakButton({ text, disabled = false }) {
             border: '2px solid',
             borderColor: 'primary.main',
             animation: `${pulseAnimation} 2s infinite`
-          }
-        }),
-        ...(isLoading && {
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            borderRadius: '50%',
-            zIndex: 1
           }
         })
       }}

@@ -9,8 +9,8 @@ import { keyframes } from '@mui/system';
 function VoiceInput({ 
   onTranscriptionComplete, 
   disabled = false,
-  autoStart = false,
-  showStopButton = false
+  autoStart = config.input.mode === 'HANDS_FREE',
+  showStopButton = config.input.mode === 'HANDS_FREE'
 }) {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -23,15 +23,15 @@ function VoiceInput({
       const audioBuffer = await audioContext.decodeAudioData(await audioBlob.arrayBuffer());
       const rawData = audioBuffer.getChannelData(0);
       
-      // 1. Calculate noise statistics from the entire recording
+      //1. calculate noise statistics from the entire recording
       const amplitudes = rawData.map(Math.abs);
       const sortedAmplitudes = [...amplitudes].sort((a, b) => a - b);
       
-      // Get noise floor (using lowest 20% of samples)
+      // get noise floor (using lowest 20% of samples)
       const noiseFloorIndex = Math.floor(sortedAmplitudes.length * 0.2);
       const noiseFloor = sortedAmplitudes[noiseFloorIndex];
       
-      // Get median amplitude
+      //get median amplitude
       const medianAmplitude = sortedAmplitudes[Math.floor(sortedAmplitudes.length * 0.5)];
       
       // Calculate percentage of samples that are likely noise
@@ -42,14 +42,14 @@ function VoiceInput({
         Median amplitude: ${medianAmplitude.toFixed(4)}
         Noise percentage: ${percentNoise.toFixed(1)}%`);
 
-      // If most of the recording is at noise level, reject it
+      // if most of the recording is at noise level, reject it
       if (percentNoise > config.recording.noiseReduction.maxNoisePercent) {
         console.log('Recording is mostly noise, skipping transcription');
         setIsProcessing(false);
         return;
       }
 
-      // 2. Clean the audio
+      // (2°). Clean the audio
       const cleanedData = rawData.map(sample => {
         const amplitude = Math.abs(sample);
         
@@ -105,7 +105,7 @@ function VoiceInput({
         source.addEventListener('ended', () => mediaRecorder.stop());
       });
 
-      // Create file object with cleaned audio
+      // we create file object with cleaned audio
       const audioFile = new File([cleanedBlob], 'recording.webm', {
         type: 'audio/webm',
         lastModified: Date.now()
@@ -114,7 +114,7 @@ function VoiceInput({
       const formData = new FormData();
       formData.append('audio', audioFile);
 
-      // Send cleaned audio to server
+      //we send cleaned audio to server
       const response = await axios.post(
         `${config.serverUrl}${config.endpoints.transcribe}`,
         formData,
@@ -195,7 +195,7 @@ function VoiceInput({
     }
   }, [autoStart, isRecording, disabled, isProcessing, startRecording]);
 
-  // Define pulse animation
+  // deefine pulse animation
   const pulseAnimation = keyframes`
     0% {
       transform: scale(1);

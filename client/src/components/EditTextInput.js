@@ -128,7 +128,7 @@ function EditTextInput({ onSubmit }) {
             {isLoading ? <CircularProgress size={6} /> : 'Submit'}
           </Button>
 
-          {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && (
+          {(config.input.mode === 'HANDS_FREE' || config.input.mode === 'TEXT_AND_VOICE') && (
             <VoiceInput
               onTranscriptionComplete={handleVoiceTranscriptionComplete}
               disabled={isLoading}

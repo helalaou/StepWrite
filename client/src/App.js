@@ -8,6 +8,8 @@ import { useChatLogic } from './hooks/useChatLogic';
 // import { useEditLogic } from './hooks/useEditLogic';
 // import SplitScreenEdit from './components/SplitScreenEdit';
 import ReplyInput from './components/ReplyInput';
+import HandsFreeInterface from './components/HandsFreeInterface';
+import config from './config';
 
 function WriteFlow() {
   const chatLogic = useChatLogic('write');
@@ -35,6 +37,9 @@ function WriteFlow() {
     setEditorHistory
   } = chatLogic;
 
+  // Add voice-only mode check
+  const isHandsFree = config.input.mode === 'HANDS_FREE';
+
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
     try {
       const result = await submitAnswer(
@@ -60,6 +65,18 @@ function WriteFlow() {
       onPreferencesChange={setEditorPreferences}
       savedHistory={editorHistory}
       onHistoryChange={setEditorHistory}
+    />
+  ) : isHandsFree ? (
+    <HandsFreeInterface
+      mode="write"
+      currentQuestion={conversationPlanning}
+      setInput={setInput}
+      submitAnswer={submitAnswer}
+      sendMessage={handleSendMessage}
+      questionStatus={questionStatus}
+      setQuestionStatus={setQuestionStatus}
+      currentQuestionIndex={currentQuestionIndex}
+      setCurrentQuestionIndex={setCurrentQuestionIndex}
     />
   ) : (
     <ChatInterface
@@ -163,6 +180,9 @@ function ReplyFlow() {
     setEditorPreferences
   } = chatLogic;
 
+  // Add voice-only mode check
+  const isHandsFree = config.input.mode === 'HANDS_FREE';
+
   const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
     try {
       const result = await chatLogic.submitAnswer(
@@ -190,6 +210,18 @@ function ReplyFlow() {
       savedContent={currentEditorContent}
       editorPreferences={editorPreferences}
       onPreferencesChange={setEditorPreferences}
+    />
+  ) : isHandsFree ? (
+    <HandsFreeInterface
+      mode="reply"
+      currentQuestion={conversationPlanning}
+      setInput={setInput}
+      submitAnswer={chatLogic.submitAnswer}
+      sendMessage={handleSendMessage}
+      questionStatus={questionStatus}
+      setQuestionStatus={setQuestionStatus}
+      currentQuestionIndex={currentQuestionIndex}
+      setCurrentQuestionIndex={setCurrentQuestionIndex}
     />
   ) : (
     <ChatInterface

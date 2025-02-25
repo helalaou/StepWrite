@@ -99,7 +99,7 @@ function ChatInterface({
     },
   });
 
-  // Common styles for navigation buttons
+  // cmmoon styles for navigation buttons
   const getNavButtonStyles = (isDisabled) => ({
     height: '100%',
     width: '100%',
@@ -221,13 +221,13 @@ function ChatInterface({
           });
         });
     } else {
-      // If no changes, just update status and move to next question
+      // If no changes, we jkust update status and move to next question
       console.log('No changes detected, skipping backend call');
       setQuestionStatus({
         ...questionStatus,
         [currentQuestionIndex]: { type: 'answered', answer: input }
       });
-      // Move to next question if available
+      //mve to next question if available
       if (currentQuestionIndex < currentQuestion.questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
         const nextAnswer = questionStatus[currentQuestionIndex + 1]?.answer || 
@@ -398,11 +398,10 @@ function ChatInterface({
 
   // Update the handleVoiceTranscriptionComplete function
   const handleVoiceTranscriptionComplete = (text) => {
-    if (config.input.mode === 'VOICE_ONLY') {
+    if (config.input.mode === 'HANDS_FREE') {
       setInput(text);
-      // Auto-submit in voice-only mode
+      // Auto-submit in hands-free mode
       setTimeout(() => {
-        // Use the existing handleSubmit function to maintain all the same logic
         handleSubmit();
       }, 1000);
     } else {
@@ -665,7 +664,7 @@ function ChatInterface({
                     </IconButton>
                   )}
                 </Box>
-                {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && isAnswering && (
+                {(config.input.mode === 'HANDS_FREE' || config.input.mode === 'TEXT_AND_VOICE') && isAnswering && (
                   <Box sx={{
                     display: { xs: 'none', sm: 'block' },
                     position: { sm: 'absolute' },
@@ -676,8 +675,8 @@ function ChatInterface({
                     <VoiceInput
                       onTranscriptionComplete={handleVoiceTranscriptionComplete}
                       disabled={isLoading}
-                      autoStart={config.input.mode === 'VOICE_ONLY'}
-                      showStopButton={config.input.mode === 'VOICE_ONLY'}
+                      autoStart={config.input.mode === 'HANDS_FREE'}
+                      showStopButton={config.input.mode === 'HANDS_FREE'}
                       sx={{ 
                         '& .MuiIconButton-root': {
                           width: { xs: '32px', sm: '48px' },
@@ -712,13 +711,13 @@ function ChatInterface({
                     {isLoading ? <CircularProgress size={16} /> : 'SAVE'}
                   </Button>
                   {/* Mobile-only mic button */}
-                  {(config.input.mode === 'VOICE_ONLY' || config.input.mode === 'TEXT_AND_VOICE') && (
+                  {(config.input.mode === 'HANDS_FREE' || config.input.mode === 'TEXT_AND_VOICE') && (
                     <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
                       <VoiceInput
                         onTranscriptionComplete={handleVoiceTranscriptionComplete}
                         disabled={isLoading}
-                        autoStart={config.input.mode === 'VOICE_ONLY'}
-                        showStopButton={config.input.mode === 'VOICE_ONLY'}
+                        autoStart={config.input.mode === 'HANDS_FREE'}
+                        showStopButton={config.input.mode === 'HANDS_FREE'}
                         sx={{ 
                           '& .MuiIconButton-root': {
                             width: '32px',

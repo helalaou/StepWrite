@@ -53,6 +53,22 @@ const config = {
         ],
         response: 'user has skipped this question'
       },
+      next: {
+        phrases: [
+          'next question',
+          'go to next',
+          'go to next question',
+        ],
+        response: 'Moving to next question'
+      },
+      previous: {
+        phrases: [
+          'previous question',
+          'go to previous',
+          'go to previous question'
+        ],
+        response: 'Moving to previous question'
+      }
     },
     
     // Controls question replay behavior when no speech is detected

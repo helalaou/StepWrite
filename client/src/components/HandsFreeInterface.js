@@ -218,11 +218,23 @@ function HandsFreeInterface({
     }
   };
 
-  // Add this function to check for commands
+  // Update the checkForCommands function
   const checkForCommands = (transcription) => {
     // Check skip command
     const skipPhrases = config.handsFreeMode.commands.skip.phrases;
     const isSkipCommand = skipPhrases.some(phrase => 
+      transcription.toLowerCase().includes(phrase.toLowerCase())
+    );
+
+    // Check next command
+    const nextPhrases = config.handsFreeMode.commands.next.phrases;
+    const isNextCommand = nextPhrases.some(phrase =>
+      transcription.toLowerCase().includes(phrase.toLowerCase())
+    );
+
+    // Check previous command
+    const prevPhrases = config.handsFreeMode.commands.previous.phrases;
+    const isPrevCommand = prevPhrases.some(phrase =>
       transcription.toLowerCase().includes(phrase.toLowerCase())
     );
 
@@ -234,7 +246,42 @@ function HandsFreeInterface({
       };
     }
 
+    if (isNextCommand) {
+      return {
+        isCommand: true,
+        type: 'next',
+        response: config.handsFreeMode.commands.next.response
+      };
+    }
+
+    if (isPrevCommand) {
+      return {
+        isCommand: true,
+        type: 'previous',
+        response: config.handsFreeMode.commands.previous.response
+      };
+    }
+
     return { isCommand: false };
+  };
+
+  // Update the onSpeechEnd callback in startRecording
+  const handleCommandExecution = async (commandCheck) => {
+    if (commandCheck.type === 'skip') {
+      // Existing skip logic...
+      segmentsRef.current = [commandCheck.response];
+      const merged = segmentsRef.current.join(' ');
+      setMergedSpeech(merged);
+      await finalizeAndSubmit();
+    } else if (commandCheck.type === 'next') {
+      if (currentQuestionIndex < currentQuestion.questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
+    } else if (commandCheck.type === 'previous') {
+      if (currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(currentQuestionIndex - 1);
+      }
+    }
   };
 
   //update finalizeAndSubmit to ensure properr cleanup
@@ -392,31 +439,20 @@ function HandsFreeInterface({
               transcription = transcription.replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
               console.log('Segment transcription:', transcription);
 
-              // we reset replay attempts only when we get valid speech
               replayAttemptsRef.current = 0;
               console.log('Valid speech detected, reset replay attempts to 0');
 
-              // ceheck if this is a command
               const commandCheck = checkForCommands(transcription);
               if (commandCheck.isCommand) {
-                if (commandCheck.type === 'skip') {
-                  // use the skip response instead of the transcription
-                  segmentsRef.current = [commandCheck.response];
-                  const merged = segmentsRef.current.join(' ');
-                  setMergedSpeech(merged);
-                  console.log('Skip command detected, using response:', merged);
-                  clearFinalizeTimeout();
-                  // Trigger immediate submission for skip command
-                  await finalizeAndSubmit();
-                  return;
-                }
+                await handleCommandExecution(commandCheck);
+                setIsProcessing(false);
+                return;
               }
 
-              // If not a command -- proceed with normal transcription
+              // Regular transcription handling...
               segmentsRef.current.push(transcription);
               const merged = segmentsRef.current.join(' ');
               setMergedSpeech(merged);
-              console.log('Updated merged sentence:', merged);
               clearFinalizeTimeout();
               finalizeTimeoutRef.current = setTimeout(async () => {
                 await finalizeAndSubmit();

@@ -19,8 +19,7 @@ function HandsFreeInterface({
   setCurrentQuestionIndex,
   hasChanges,
   onBackToEditor,
-  cameFromEditor,
-  // used to update the text state in useChatLogic
+  cameFromEditor, 
   setInput,
 }) {
   const navigate = useNavigate();
@@ -238,6 +237,12 @@ function HandsFreeInterface({
       transcription.toLowerCase().includes(phrase.toLowerCase())
     );
 
+    // Check editor navigation command
+    const toEditorPhrases = config.handsFreeMode.commands.toEditor.phrases;
+    const isToEditorCommand = toEditorPhrases.some(phrase =>
+      transcription.toLowerCase().includes(phrase.toLowerCase())
+    );
+
     if (isSkipCommand) {
       return {
         isCommand: true,
@@ -262,17 +267,31 @@ function HandsFreeInterface({
       };
     }
 
+    // Only allow editor navigation if we're on the last question and can go to editor
+    if (isToEditorCommand && 
+        currentQuestionIndex === currentQuestion.questions.length - 1 &&
+        !hasChanges && 
+        cameFromEditor && 
+        onBackToEditor) {
+      return {
+        isCommand: true,
+        type: 'toEditor',
+        response: config.handsFreeMode.commands.toEditor.response
+      };
+    }
+
     return { isCommand: false };
   };
 
-  // Update the onSpeechEnd callback in startRecording
+ 
   const handleCommandExecution = async (commandCheck) => {
     if (commandCheck.type === 'skip') {
-      // Existing skip logic...
       segmentsRef.current = [commandCheck.response];
       const merged = segmentsRef.current.join(' ');
       setMergedSpeech(merged);
       await finalizeAndSubmit();
+    } else if (commandCheck.type === 'toEditor') {
+      onBackToEditor();
     } else if (commandCheck.type === 'next') {
       if (currentQuestionIndex < currentQuestion.questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);

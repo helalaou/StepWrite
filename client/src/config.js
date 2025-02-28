@@ -68,6 +68,26 @@ const config = {
           'go to previous question'
         ],
         response: 'Moving to previous question'
+      },
+      toEditor: {
+        phrases: [
+          'next',
+          'go to editor',
+          'open editor',
+          'move to editor',
+          'switch to editor',
+          'editor', 
+        ],
+        response: 'Moving to editor'
+      },
+      toQuestions: {
+        phrases: [
+          'previous',
+          'go back',
+          'back to questions',
+          'return to questions',
+        ],
+        response: 'Returning to questions'
       }
     },
     
@@ -81,7 +101,7 @@ const config = {
     // Longer delay = more time for users to think and continue speaking
     // Shorter delay = faster response but might cut off thoughts
     concatenation: {
-      finalizeDelay: 3000,        // Range: 3000-10000ms, Wait time before submitting
+      finalizeDelay: 2700,        // Range: 3000-10000ms, Wait time before submitting
     },
 
     // Audio processing settings for hands-free mode

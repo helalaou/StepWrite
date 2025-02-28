@@ -77,6 +77,9 @@ function WriteFlow() {
       setQuestionStatus={setQuestionStatus}
       currentQuestionIndex={currentQuestionIndex}
       setCurrentQuestionIndex={setCurrentQuestionIndex}
+      hasChanges={hasChanges}
+      onBackToEditor={handleBackToEditor}
+      cameFromEditor={cameFromEditor}
     />
   ) : (
     <ChatInterface

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box, TextField, Button, Typography, IconButton, Tooltip, Divider } from '@mui/material';
 import WestIcon from '@mui/icons-material/West';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -8,6 +8,26 @@ import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
 import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
+import MicIcon from '@mui/icons-material/Mic';
+import config from '../config';
+import axios from 'axios';
+import { keyframes } from '@mui/system';
+
+// Add the pulse animation
+const pulseAnimation = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+`;
 
 function TextEditor({ 
   initialContent, 
@@ -26,6 +46,22 @@ function TextEditor({
   const [oneSentencePerLine, setOneSentencePerLine] = useState(editorPreferences.oneSentencePerLine);
   const [defaultFormat] = useState(savedContent || initialContent);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(true);
+  const [isSpeechActive, setIsSpeechActive] = useState(false);
+  
+  const vadRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Add isHandsFree check
+  const isHandsFree = config.input.mode === 'HANDS_FREE';
+
+  // Add ref to track if component is mounted
+  const isMountedRef = useRef(true);
+
+  // Add ref to track cleanup status
+  const isCleaningUpRef = useRef(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -145,6 +181,222 @@ function TextEditor({
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
+  };
+
+  const safeDestroyVAD = useCallback(async () => {
+    if (!vadRef.current || isCleaningUpRef.current) return;
+    
+    isCleaningUpRef.current = true;
+    try {
+      await vadRef.current.destroy();
+    } catch (error) {
+      console.log('VAD cleanup error (safe to ignore):', error);
+    } finally {
+      vadRef.current = null;
+      isCleaningUpRef.current = false;
+    }
+  }, []);
+
+  const startListening = useCallback(async () => {
+    if (!isEnabled || !isMountedRef.current) return;
+    
+    try {
+      await safeDestroyVAD();
+      
+      setIsSpeechActive(false);
+      setIsListening(false);
+
+      if (isMountedRef.current && isEnabled) {
+        vadRef.current = await window.vad.MicVAD.new({
+          minSpeechFrames: config.handsFreeMode.vad.minSpeechFrames,
+          positiveSpeechThreshold: config.handsFreeMode.vad.positiveSpeechThreshold,
+          negativeSpeechThreshold: config.handsFreeMode.vad.negativeSpeechThreshold,
+          redemptionFrames: config.handsFreeMode.vad.redemptionFrames,
+          vadMode: config.handsFreeMode.vad.mode,
+          logLevel: 3,
+          groupedLogLevel: 3,
+          runtimeLogLevel: 3,
+          runtimeVerboseLevel: 0,
+          onSpeechStart: () => {
+            console.log('Speech segment started...');
+            setIsSpeechActive(true);
+            setIsListening(true);
+          },
+          onSpeechEnd: async (audio) => {
+            console.log('Speech segment ended, transcribing...');
+            setIsSpeechActive(false);
+            setIsListening(false);
+
+            // Check if audio is silent
+            const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
+            if (avgEnergy < config.handsFreeMode.audio.minEnergy) {
+              console.log('Silent segment detected – ignoring');
+              return;
+            }
+
+            try {
+              // Log the audio data for debugging
+              console.log('Audio data:', {
+                length: audio.length,
+                sampleRate: 16000,
+                energy: avgEnergy
+              });
+
+              const formData = new FormData();
+              const wavBlob = float32ArrayToWav(audio);
+              
+              // Log the blob for debugging
+              console.log('WAV blob:', {
+                size: wavBlob.size,
+                type: wavBlob.type
+              });
+              
+              formData.append('audio', wavBlob, 'recording.wav');
+              
+              const response = await axios.post(
+                `${config.apiUrl}${config.endpoints.transcribe}`,
+                formData,
+                { 
+                  headers: { 
+                    'Content-Type': 'multipart/form-data'
+                  },
+                  // Add timeout and response type
+                  timeout: 10000,
+                  responseType: 'json'
+                }
+              );
+
+              if (response.data.text) {
+                const transcription = response.data.text.trim().toLowerCase();
+                console.log('Transcription received:', transcription);
+                
+                // Check for navigation command
+                const toQuestionsCommand = config.handsFreeMode.commands.toQuestions.phrases.some(
+                  phrase => transcription.includes(phrase.toLowerCase())
+                );
+
+                if (toQuestionsCommand) {
+                  console.log('Navigation command detected, going back to questions');
+                  onBack();
+                  return;
+                }
+              }
+            } catch (error) {
+              // More detailed error logging
+              console.error('Transcription error:', {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status,
+                headers: error.response?.headers
+              });
+              console.log('Continuing to listen for navigation commands...');
+            }
+          },
+          onVADMisfire: () => {
+            console.log('VAD misfire – restarting...');
+            setIsSpeechActive(false);
+            setIsListening(false);
+            startListening();
+          }
+        });
+
+        if (isMountedRef.current) {
+          await vadRef.current.start();
+          setIsListening(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error starting VAD:', error);
+      setIsEnabled(false);
+    }
+  }, [isEnabled, safeDestroyVAD, onBack]);
+
+  const toggleMic = useCallback(() => {
+    if (isEnabled) {
+      setIsEnabled(false);
+      setIsListening(false);
+      setIsSpeechActive(false);
+      safeDestroyVAD();
+    } else {
+      setIsEnabled(true);
+    }
+  }, [isEnabled, safeDestroyVAD]);
+
+  // Handle VAD lifecycle
+  useEffect(() => {
+    let mounted = true;
+
+    if (isHandsFree && isEnabled && mounted) {
+      startListening();
+    }
+
+    return () => {
+      mounted = false;
+      // Safe cleanup
+      if (vadRef.current) {
+        // Wrap in try/catch and don't chain catch
+        try {
+          vadRef.current.destroy();
+        } catch (err) {
+          console.log('VAD cleanup error (safe to ignore):', err);
+        }
+        vadRef.current = null;
+      }
+    };
+  }, [isHandsFree, isEnabled, startListening]);
+
+  // Component mount/unmount tracking
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Safe cleanup
+      if (vadRef.current) {
+        // Wrap in try/catch and don't chain catch
+        try {
+          vadRef.current.destroy();
+        } catch (err) {
+          console.log('VAD cleanup error (safe to ignore):', err);
+        }
+        vadRef.current = null;
+      }
+    };
+  }, []);
+
+  // Helper function to convert Float32Array to WAV
+  const float32ArrayToWav = (audio) => {
+    const sampleRate = 16000;
+    
+    const wavBuffer = new ArrayBuffer(44 + audio.length * 2);
+    const view = new DataView(wavBuffer);
+    
+    const writeString = (v, offset, s) => {
+      for (let i = 0; i < s.length; i++) {
+        v.setUint8(offset + i, s.charCodeAt(i));
+      }
+    };
+
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + audio.length * 2, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, audio.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < audio.length; i++) {
+      view.setInt16(offset, audio[i] * 0x7FFF, true);
+      offset += 2;
+    }
+
+    return new Blob([wavBuffer], { type: 'audio/wav' });
   };
 
   return (
@@ -411,6 +663,31 @@ function TextEditor({
               }
             </IconButton>
           </Tooltip>
+
+          {/* Only show mic button in hands-free mode */}
+          {isHandsFree && (
+            <Tooltip title={isEnabled ? "Click to disable voice commands" : "Click to enable voice commands"}>
+              <IconButton
+                onClick={toggleMic}
+                size="small"
+                sx={{
+                  padding: { xs: '4px', sm: '4px' },
+                  color: isEnabled ? 'error.main' : 'action.active',
+                  animation: isSpeechActive ? `${pulseAnimation} 1s infinite` : 'none',
+                  '&:hover': {
+                    backgroundColor: isEnabled ? 'error.light' : 'action.hover',
+                    opacity: 0.8
+                  },
+                }}
+              >
+                <MicIcon sx={{ 
+                  fontSize: { xs: '1.2rem', sm: '1.25rem' },
+                  transform: isEnabled ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease'
+                }} />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
       </Box>
     </Box>

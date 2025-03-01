@@ -6,7 +6,8 @@
   },
   "scripts": {
     "start": "concurrently \"cd server && npm start\" \"cd client && npm start\"",
-    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
+    "update-deps": "npm update && cd client && npm update && cd ../server && npm update"
   },
   "dependencies": {
     "@ricky0123/vad-web": "^0.0.22",
@@ -16,5 +17,9 @@
     "js-cookie": "^3.0.5",
     "multer": "^1.4.5-lts.1",
     "uuid": "^11.1.0"
+  },
+  "overrides": {
+    "postcss": ">=8.4.31",
+    "nth-check": ">=2.0.1"
   }
 }

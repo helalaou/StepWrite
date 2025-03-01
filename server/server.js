@@ -228,7 +228,7 @@ app.post('/api/classify/tone', async (req, res) => {
   }
 });
 
-app.post('/api/check/facts', async (req, res) => {
+app.post('/api/fact-check', async (req, res) => {
   try {
     const { qaFormat, output } = req.body;
     if (!qaFormat || !output) {

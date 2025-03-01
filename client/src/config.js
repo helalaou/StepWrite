@@ -31,7 +31,7 @@ const config = {
     edit: '/api/edit',
     classifyTextType: '/api/classify/text-type',
     classifyTone: '/api/classify/tone',
-    factCheck: '/api/check/facts',
+    factCheck: '/api/fact-check',
     tts: '/api/tts/generate',
     transcribe: '/api/transcribe'
   },

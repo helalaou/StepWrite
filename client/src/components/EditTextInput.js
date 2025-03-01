@@ -4,6 +4,7 @@ import KeyboardIcon from '@mui/icons-material/Keyboard';
 import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
 import VoiceInput from './VoiceInput';
+import config from '../config';
 
 function EditTextInput({ onSubmit }) {
   const [text, setText] = useState('');

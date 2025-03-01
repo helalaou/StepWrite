@@ -25,7 +25,7 @@ export function useEditLogic() {
   const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning) => {
     setIsLoading(true);
     try {
-      const response = await axios.post(`${config.serverUrl}/submit-edit-answer`, {
+      const response = await axios.post(`${config.core.apiUrl}/submit-edit-answer`, {
         originalText,
         conversationPlanning: updatedConversationPlanning,
         changedIndex,

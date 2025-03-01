@@ -55,7 +55,7 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
         audioRef.current.currentTime = 0;
       }
 
-      const response = await fetch(`${config.apiUrl}${config.endpoints.tts}`, {
+      const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -73,7 +73,7 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
         throw new Error('No audio URL in response');
       }
 
-      const audio = new Audio(`${config.apiUrl}${data.audioUrl}`);
+      const audio = new Audio(`${config.core.apiUrl}${data.audioUrl}`);
       audioRef.current = audio;
 
       audio.addEventListener('ended', () => {

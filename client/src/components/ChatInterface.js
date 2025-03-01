@@ -414,7 +414,7 @@ function ChatInterface({
     // Function to clean up audio files
     const cleanupAudio = async () => {
       try {
-        await fetch(`${config.apiUrl}/api/tts/cleanup`, {
+        await fetch(`${config.core.apiUrl}/api/tts/cleanup`, {
           method: 'POST',
           credentials: 'include'
         });

@@ -383,8 +383,8 @@ function HandsFreeInterface({
   // Check if audio is silent.
   const checkAudioSilence = (audio) => {
     const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
-    const isSilent = avgEnergy < config.handsFreeMode.audio.minEnergy;
-    console.log('Audio silence check:', { energy: avgEnergy, threshold: config.handsFreeMode.audio.minEnergy, isSilent });
+    const isSilent = avgEnergy < config.handsFree.audio.minEnergy;
+    console.log('Audio silence check:', { energy: avgEnergy, threshold: config.handsFree.audio.minEnergy, isSilent });
     return isSilent;
   };
 
@@ -412,7 +412,7 @@ function HandsFreeInterface({
           // Start next replay timeout after this one
           startReplayTimeout();
         }
-      }, config.handsFreeMode.replay.interval);
+      }, config.handsFree.speech.replay.interval);
     }
   };
 
@@ -421,8 +421,8 @@ function HandsFreeInterface({
     console.log('Checking for commands in:', transcription);
 
     // Direct check for modify command first
-    if (config.handsFreeMode.commands.modify) {
-      const modifyPhrases = config.handsFreeMode.commands.modify.phrases;
+    if (config.handsFree.commands.modify) {
+      const modifyPhrases = config.handsFree.commands.modify.phrases;
       console.log('Checking modify phrases:', modifyPhrases);
       
       const isModifyCommand = modifyPhrases.some(phrase => 
@@ -434,13 +434,13 @@ function HandsFreeInterface({
         return {
           isCommand: true,
           type: 'modify',
-          response: config.handsFreeMode.commands.modify.response
+          response: config.handsFree.commands.modify.response
         };
       }
     }
 
     // Check each command type from config
-    for (const [commandType, commandConfig] of Object.entries(config.handsFreeMode.commands)) {
+    for (const [commandType, commandConfig] of Object.entries(config.handsFree.commands)) {
       // Skip modify as we already checked it
       if (commandType === 'modify') continue;
       
@@ -765,11 +765,11 @@ function HandsFreeInterface({
       clearFinalizeTimeout();
 
       vadRef.current = await window.vad.MicVAD.new({
-        minSpeechFrames: config.handsFreeMode.vad.minSpeechFrames,
-        positiveSpeechThreshold: config.handsFreeMode.vad.positiveSpeechThreshold,
-        negativeSpeechThreshold: config.handsFreeMode.vad.negativeSpeechThreshold,
-        redemptionFrames: config.handsFreeMode.vad.redemptionFrames,
-        vadMode: config.handsFreeMode.vad.mode,
+        minSpeechFrames: config.handsFree.vad.minSpeechFrames,
+        positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
+        negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
+        redemptionFrames: config.handsFree.vad.redemptionFrames,
+        vadMode: config.handsFree.vad.mode,
         logLevel: 3,
         groupedLogLevel: 3,
         runtimeLogLevel: 3,
@@ -803,7 +803,7 @@ function HandsFreeInterface({
             const wavBlob = float32ArrayToWav(audio);
             formData.append('audio', wavBlob, 'recording.wav');
             const response = await axios.post(
-              `${config.apiUrl}${config.endpoints.transcribe}`,
+              `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
               formData,
               { headers: { 'Content-Type': 'multipart/form-data' } }
             );
@@ -864,7 +864,7 @@ function HandsFreeInterface({
                 finalizeTimeoutRef.current = setTimeout(async () => {
                   console.log("FINALIZING MODIFIED ANSWER");
                   await finalizeAndSubmit();
-                }, config.handsFreeMode.concatenation.finalizeDelay);
+                }, config.handsFree.speech.finalizeDelay);
                 
                 setIsProcessing(false);
                 return;
@@ -903,7 +903,7 @@ function HandsFreeInterface({
               // Set up timeout to finalize the answer
               finalizeTimeoutRef.current = setTimeout(async () => {
                 await finalizeAndSubmit();
-              }, config.handsFreeMode.concatenation.finalizeDelay);
+              }, config.handsFree.speech.finalizeDelay);
             }
           } catch (err) {
             console.error('Transcription error:', err);

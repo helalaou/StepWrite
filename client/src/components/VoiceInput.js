@@ -43,7 +43,7 @@ function VoiceInput({
         Noise percentage: ${percentNoise.toFixed(1)}%`);
 
       // if most of the recording is at noise level, reject it
-      if (percentNoise > config.recording.noiseReduction.maxNoisePercent) {
+      if (percentNoise > config.voiceInput.noiseReduction.maxNoisePercent) {
         console.log('Recording is mostly noise, skipping transcription');
         setIsProcessing(false);
         return;
@@ -54,7 +54,7 @@ function VoiceInput({
         const amplitude = Math.abs(sample);
         
         // Strong noise gate
-        if (amplitude < noiseFloor * config.recording.noiseReduction.floorMultiplier) {
+        if (amplitude < noiseFloor * config.voiceInput.noiseReduction.floorMultiplier) {
           return 0;
         }
         
@@ -65,15 +65,15 @@ function VoiceInput({
 
       // 3. Check if we have enough significant sound after cleaning
       const significantSamples = cleanedData.filter(sample => 
-        Math.abs(sample) > config.recording.volumeThreshold
+        Math.abs(sample) > config.voiceInput.recording.volumeThreshold
       ).length;
       
       const percentSignificant = (significantSamples / cleanedData.length) * 100;
       
       console.log(`After cleaning:
-        Significant samples: ${percentSignificant.toFixed(1)}% (threshold: ${config.recording.noiseReduction.minSignificantPercent}%)`);
+        Significant samples: ${percentSignificant.toFixed(1)}% (threshold: ${config.voiceInput.noiseReduction.minSignificantPercent}%)`);
 
-      if (percentSignificant < config.recording.noiseReduction.minSignificantPercent) {
+      if (percentSignificant < config.voiceInput.noiseReduction.minSignificantPercent) {
         console.log('Not enough significant audio detected - less than 15% of samples contain speech');
         setIsProcessing(false);
         return;
@@ -116,7 +116,7 @@ function VoiceInput({
 
       //we send cleaned audio to server
       const response = await axios.post(
-        `${config.serverUrl}${config.endpoints.transcribe}`,
+        `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
         formData,
         {
           headers: {
@@ -142,7 +142,7 @@ function VoiceInput({
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm',
-        audioBitsPerSecond: config.recording.audioBitsPerSecond,
+        audioBitsPerSecond: config.voiceInput.recording.audioBitsPerSecond,
       });
       
       const chunks = [];

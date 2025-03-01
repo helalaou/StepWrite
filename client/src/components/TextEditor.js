@@ -208,11 +208,11 @@ function TextEditor({
 
       if (isMountedRef.current && isEnabled) {
         vadRef.current = await window.vad.MicVAD.new({
-          minSpeechFrames: config.handsFreeMode.vad.minSpeechFrames,
-          positiveSpeechThreshold: config.handsFreeMode.vad.positiveSpeechThreshold,
-          negativeSpeechThreshold: config.handsFreeMode.vad.negativeSpeechThreshold,
-          redemptionFrames: config.handsFreeMode.vad.redemptionFrames,
-          vadMode: config.handsFreeMode.vad.mode,
+          minSpeechFrames: config.handsFree.vad.minSpeechFrames,
+          positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
+          negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
+          redemptionFrames: config.handsFree.vad.redemptionFrames,
+          vadMode: config.handsFree.vad.mode,
           logLevel: 3,
           groupedLogLevel: 3,
           runtimeLogLevel: 3,
@@ -229,7 +229,7 @@ function TextEditor({
 
             // Check if audio is silent
             const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
-            if (avgEnergy < config.handsFreeMode.audio.minEnergy) {
+            if (avgEnergy < config.handsFree.audio.minEnergy) {
               console.log('Silent segment detected – ignoring');
               return;
             }
@@ -254,7 +254,7 @@ function TextEditor({
               formData.append('audio', wavBlob, 'recording.wav');
               
               const response = await axios.post(
-                `${config.apiUrl}${config.endpoints.transcribe}`,
+                `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
                 formData,
                 { 
                   headers: { 
@@ -271,7 +271,7 @@ function TextEditor({
                 console.log('Transcription received:', transcription);
                 
                 // Check for navigation command
-                const toQuestionsCommand = config.handsFreeMode.commands.toQuestions.phrases.some(
+                const toQuestionsCommand = config.handsFree.commands.toQuestions.phrases.some(
                   phrase => transcription.includes(phrase.toLowerCase())
                 );
 

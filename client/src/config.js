@@ -55,6 +55,7 @@ const config = {
       },
       next: {
         phrases: [
+          'next',
           'next question',
           'go to next',
           'go to next question',
@@ -63,6 +64,7 @@ const config = {
       },
       previous: {
         phrases: [
+          'previous',
           'previous question',
           'go to previous',
           'go to previous question'
@@ -72,6 +74,7 @@ const config = {
       toEditor: {
         phrases: [
           'next',
+          'next question',
           'go to editor',
           'open editor',
           'move to editor',
@@ -83,17 +86,31 @@ const config = {
       toQuestions: {
         phrases: [
           'previous',
+          'previous question',
+          'go back to questions',
           'go back',
           'back to questions',
           'return to questions',
         ],
         response: 'Returning to questions'
+      },
+      modify: {
+        phrases: [
+          'modify',
+          'modify this',
+          'modify this question',
+          'modify question',
+          'modify this response',
+          'i want to modify',
+          'i want to modify this',
+        ],
+        response: 'Modifying this question'
       }
     },
     
     // Controls question replay behavior when no speech is detected
     replay: {
-      interval: 7000,             // Range: 5000-30000ms, Time before replaying question
+      interval: 9000,             // Range: 5000-30000ms, Time before replaying question
       maxAttempts: Infinity       // Number of replay attempts before giving up
     },
     

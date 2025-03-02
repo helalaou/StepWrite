@@ -4,20 +4,24 @@ import { useNavigate } from 'react-router-dom';
 import CreateIcon from '@mui/icons-material/Create';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import ReplyIcon from '@mui/icons-material/Reply';
+import { playClickSound } from '../utils/soundUtils';
 
 function LandingPage() {
   const navigate = useNavigate();
 
   const handleWriteClick = () => {
+    playClickSound();
     navigate('/write');
   };
 
   const handleReplyClick = () => {
+    playClickSound();
     navigate('/reply');
   };
 
   /* Temporarily disabled edit functionality
   const handleEditClick = () => {
+    playClickSound();
     navigate('/edit');
   };
   */

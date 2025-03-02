@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Button, Tooltip } from '@mui/material';
 import WestIcon from '@mui/icons-material/West';
 import EastIcon from '@mui/icons-material/East';
+import { playClickSound } from '../utils/soundUtils';
 
 function NavigationButton({ 
   direction = 'left', 
@@ -10,6 +11,12 @@ function NavigationButton({
   showAt = 'always' // 'always' or 'mobile'
 }) {
   const isLeft = direction === 'left';
+  
+  const handleClick = (e) => {
+    // Play click sound and then execute the original onClick handler
+    playClickSound();
+    if (onClick) onClick(e);
+  };
   
   const containerStyles = {
     position: 'fixed',
@@ -71,7 +78,7 @@ function NavigationButton({
       <Tooltip title={tooltip} placement={isLeft ? "right" : "left"}>
         <Button
           variant="contained"
-          onClick={onClick}
+          onClick={handleClick}
           sx={buttonStyles}
         >
           <Icon sx={{ fontSize: { xs: '1.2rem', lg: '1.8rem' } }} />

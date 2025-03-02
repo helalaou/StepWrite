@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, IconButton, Paper } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -10,6 +10,7 @@ import AudioVisualizer from './AudioVisualizer';
 import config from '../config';
 import axios from 'axios';
 import { keyframes } from '@emotion/react';
+import { playClickSound } from '../utils/soundUtils';
 
 // Animations
 const pulseAnimation = keyframes`
@@ -84,87 +85,6 @@ const replaceAnimation = keyframes`
   }
 `;
 
-// Enhanced feedback component with different styles based on feedback type
-const RecognitionFeedback = ({ text, isVisible, type = 'default' }) => {
-  // Different background colors based on feedback type
-  const getBackgroundColor = () => {
-    switch (type) {
-      case 'transcription':
-        return 'rgba(240, 240, 240, 0.95)';
-      case 'command':
-        return 'rgba(25, 118, 210, 0.1)';
-      case 'success':
-        return 'rgba(46, 125, 50, 0.1)';
-      case 'error':
-        return 'rgba(211, 47, 47, 0.1)';
-      default:
-        return 'rgba(255, 255, 255, 0.95)';
-    }
-  };
-
-  // Get appropriate icon based on type
-  const getIcon = () => {
-    switch (type) {
-      case 'transcription':
-        return <span style={{ marginRight: '8px', opacity: 0.7 }}>🎤</span>;
-      case 'command':
-        return <span style={{ marginRight: '8px', opacity: 0.7 }}>⚡</span>;
-      case 'success':
-        return <span style={{ marginRight: '8px', opacity: 0.7 }}>✓</span>;
-      case 'error':
-        return <span style={{ marginRight: '8px', opacity: 0.7 }}>⚠️</span>;
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <Box
-      sx={{
-        position: 'fixed',
-        bottom: 40,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-        opacity: isVisible ? 1 : 0,
-        visibility: isVisible ? 'visible' : 'hidden',
-        transition: 'opacity 0.3s ease, visibility 0.3s ease',
-      }}
-    >
-      <Paper
-        elevation={3}
-        sx={{
-          px: 3,
-          py: 2,
-          backgroundColor: getBackgroundColor(),
-          backdropFilter: 'blur(8px)',
-          borderRadius: 2,
-          animation: `${floatInAnimation} 0.3s ease-out`,
-          maxWidth: '90vw',
-          margin: '0 auto',
-          borderLeft: type === 'transcription' ? '3px solid rgba(0, 0, 0, 0.12)' :
-            type === 'command' ? '3px solid #1976d2' :
-              type === 'success' ? '3px solid #2e7d32' :
-                type === 'error' ? '3px solid #d32f2f' : 'none',
-        }}
-      >
-        <Typography
-          variant="body1"
-          sx={{
-            color: 'text.primary',
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          {getIcon()}
-          {text}
-        </Typography>
-      </Paper>
-    </Box>
-  );
-};
-
 function HandsFreeInterface({
   currentQuestion,
   sendMessage,
@@ -172,7 +92,7 @@ function HandsFreeInterface({
   questionStatus,
   setQuestionStatus,
   currentQuestionIndex,
-  setCurrentQuestionIndex,
+  setCurrentQuestionIndex: parentSetCurrentQuestionIndex,
   hasChanges,
   onBackToEditor,
   cameFromEditor,
@@ -210,6 +130,35 @@ function HandsFreeInterface({
 
   // Add a state to track which questions have been modified
   const [modifiedQuestions, setModifiedQuestions] = useState(new Set());
+
+  // Create a wrapped version of the setCurrentQuestionIndex function to add debugging
+  const setCurrentQuestionIndexWithDebug = (newIndex) => {
+    // Only log in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Navigation: Changing question index from ${currentQuestionIndex} to ${newIndex}`);
+    }
+    parentSetCurrentQuestionIndex(newIndex);
+  };
+  
+  // Replace all uses of setCurrentQuestionIndex with the debug version
+  const setCurrentQuestionIndex = setCurrentQuestionIndexWithDebug;
+  
+  // Add debug logging to track changes to currentQuestionIndex
+  useEffect(() => {
+    // Keep minimal effect logging
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Navigation: Question index updated to ${currentQuestionIndex}`);
+    }
+  }, [currentQuestionIndex]);
+  
+  // Debug navigate function
+  const safeNavigate = useCallback((route) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Navigation: Navigating to ${route}`);
+    }
+    playClickSound();
+    navigate(route);
+  }, [navigate]);
 
   // Clear timeout helpers
   const clearFinalizeTimeout = () => {
@@ -301,6 +250,9 @@ function HandsFreeInterface({
 
   // Update the useEffect that handles question changes
   useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Question changed to index: ${currentQuestionIndex}`);
+    }
     if (!currentQuestion?.questions) return;
 
     // Reset all voice-related state when question changes
@@ -390,11 +342,15 @@ function HandsFreeInterface({
 
   // Update the startReplayTimeout function
   const startReplayTimeout = (attempt = 0) => {
-    console.log('Starting replay timeout, attempt:', attempt);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Starting replay timeout, attempt: ${attempt}`);
+    }
     
     // Don't start replay if this question has been modified
     if (modifiedQuestions.has(currentQuestionIndex)) {
-      console.log('Skipping replay for modified question:', currentQuestionIndex);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Skipping replay for modified question: ${currentQuestionIndex}`);
+      }
       return;
     }
     
@@ -402,11 +358,11 @@ function HandsFreeInterface({
 
     // Only start replay if we have no speech segments
     if (segmentsRef.current.length === 0) {
-      console.log('Starting replay timeout, attempt:', replayAttemptsRef.current);
-
       replayTimeoutRef.current = setTimeout(() => {
         if (!isSpeechActive && !isProcessing) {
-          console.log('No valid speech, replaying question TTS...');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('No valid speech, replaying question TTS...');
+          }
           setIsTTSPlaying(true);
           replayAttemptsRef.current += 1;
           // Start next replay timeout after this one
@@ -416,21 +372,26 @@ function HandsFreeInterface({
     }
   };
 
-  // Update the checkForCommands function for better debugging
+  // Update the checkForCommands function to handle both general and specific commands
   const checkForCommands = (transcription) => {
-    console.log('Checking for commands in:', transcription);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Checking for commands in: ${transcription}`);
+    }
 
-    // Direct check for modify command first
+    // First check for context-specific commands that take precedence
+
+    // 1. Direct check for modify command first (highest priority)
     if (config.handsFree.commands.modify) {
       const modifyPhrases = config.handsFree.commands.modify.phrases;
-      console.log('Checking modify phrases:', modifyPhrases);
       
       const isModifyCommand = modifyPhrases.some(phrase => 
         transcription.toLowerCase().includes(phrase.toLowerCase())
       );
       
       if (isModifyCommand) {
-        console.log('MODIFY command detected');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('MODIFY command detected');
+        }
         return {
           isCommand: true,
           type: 'modify',
@@ -439,17 +400,94 @@ function HandsFreeInterface({
       }
     }
 
-    // Check each command type from config
+    // 2. Check for specific "go to editor" commands when on last question
+    if (currentQuestionIndex === currentQuestion.questions.length - 1 && 
+        !hasChanges && cameFromEditor && onBackToEditor) {
+      const editorPhrases = ['go to editor', 'back to editor', 'open editor', 'editor view'];
+      const isEditorCommand = editorPhrases.some(phrase => 
+        transcription.toLowerCase().includes(phrase.toLowerCase())
+      );
+      
+      if (isEditorCommand) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('GO TO EDITOR command detected');
+        }
+        return {
+          isCommand: true,
+          type: 'toEditor',
+          response: "Going to editor view"
+        };
+      }
+    }
+
+    // 3. Check for specific "return to home" commands when on first question
+    if (currentQuestionIndex === 0) {
+      const homeReturnPhrases = ['return to home', 'return to landing', 'back to home', 'home page', 'landing page'];
+      const isHomeReturnCommand = homeReturnPhrases.some(phrase => 
+        transcription.toLowerCase().includes(phrase.toLowerCase())
+      );
+      
+      if (isHomeReturnCommand) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('RETURN TO HOME command detected');
+        }
+        return {
+          isCommand: true,
+          type: 'returnToHome',
+          response: "Returning to home page"
+        };
+      }
+    }
+
+    // 4. Now check for general navigation commands
+
+    // First check for "next" command
+    const nextPhrases = ['next', 'next question', 'go next', 'continue'];
+    const isNextCommand = nextPhrases.some(phrase => 
+      transcription.toLowerCase().includes(phrase.toLowerCase())
+    );
+    
+    if (isNextCommand) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('NEXT command detected');
+      }
+      return {
+        isCommand: true,
+        type: 'next',
+        response: config.handsFree.commands.next?.response || "Moving to next question"
+      };
+    }
+
+    // Check for "previous" command
+    const prevPhrases = ['previous', 'go back', 'back', 'prev'];
+    const isPrevCommand = prevPhrases.some(phrase => 
+      transcription.toLowerCase().includes(phrase.toLowerCase())
+    );
+    
+    if (isPrevCommand) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('PREVIOUS command detected');
+      }
+      return {
+        isCommand: true,
+        type: 'previous',
+        response: config.handsFree.commands.previous?.response || "Moving to previous question"
+      };
+    }
+
+    // 5. Check remaining commands from config
     for (const [commandType, commandConfig] of Object.entries(config.handsFree.commands)) {
-      // Skip modify as we already checked it
-      if (commandType === 'modify') continue;
+      // Skip modify, next, and previous as we already checked them
+      if (['modify', 'next', 'previous'].includes(commandType)) continue;
       
       const isCommand = commandConfig.phrases.some(phrase =>
         transcription.toLowerCase().includes(phrase.toLowerCase())
       );
 
       if (isCommand) {
-        console.log(`${commandType} command detected`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`${commandType} command detected`);
+        }
         return {
           isCommand: true,
           type: commandType,
@@ -458,27 +496,37 @@ function HandsFreeInterface({
       }
     }
 
-    console.log('No commands detected');
     return { isCommand: false };
   };
 
-  // Update command execution handler
+  // Improve the handleCommandExecution function with better error handling
   const handleCommandExecution = async (commandCheck) => {
-    console.log('Executing command:', commandCheck.type);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Executing command: ${commandCheck.type}`);
+    }
     
+    // Play sound first for all commands
+    try {
+      const commandSound = new Audio('/click.mp3');
+      await commandSound.play();
+    } catch (error) {
+      // Continue even if sound fails
+      console.warn('Command sound failed to play:', error);
+    }
+    
+    // Execute the command based on type with availability checks
     switch (commandCheck.type) {
       case 'skip':
-        // Skip the current question
+        // Skip is always available
         segmentsRef.current = [commandCheck.response];
         const merged = segmentsRef.current.join(' ');
         setMergedSpeech(merged);
         displayFeedback("Skipping this question...", 'command');
-        await finalizeAndSubmit();
+        finalizeAndSubmit();
         break;
         
       case 'modify':
-        // Enter modifying mode
-        console.log('Setting modify mode to TRUE');
+        // Modify is available when we have an answer to modify or a new answer to create
         setIsModifying(true);
         isModifyingRef.current = true;
         segmentsRef.current = [];
@@ -497,53 +545,82 @@ function HandsFreeInterface({
           window.speechSynthesis.cancel();
         }
         
-        // Log the state to verify
         setTimeout(() => {
-          console.log('Confirmed modifying mode state:', isModifying);
-        }, 100);
-        
-        // Restart recording to capture the new answer
-        setTimeout(() => {
-          console.log('Restarting recording for modify mode');
           startRecording();
         }, 500);
         break;
         
-      case 'toEditor':
-        displayFeedback("Moving to editor view...", 'command');
-        onBackToEditor();
-        break;
-        
       case 'next':
-        // Check if we're on the last question
-        if (currentQuestionIndex >= currentQuestion.questions.length - 1) {
-          // If we're on the last question, move to editor
-          displayFeedback("Moving to editor view...", 'command');
-          onBackToEditor();
-        } else {
-          // Otherwise, move to next question
+        // Check if next button is available (not on last question)
+        if (currentQuestionIndex < currentQuestion.questions.length - 1) {
           displayFeedback("Moving to next question...", 'command');
           setCurrentQuestionIndex(currentQuestionIndex + 1);
+        } else {
+          // If at last question, check if we can go to editor
+          if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
+             !hasChanges && cameFromEditor && onBackToEditor) {
+            displayFeedback("Moving to editor view...", 'command');
+            onBackToEditor();
+          } else {
+            // Not available
+            displayFeedback("No more questions available yet", 'error');
+            // Force feedback to show
+            setShowFeedback(false);
+            setTimeout(() => {
+              displayFeedback("No more questions available yet", 'error');
+            }, 50);
+          }
         }
         break;
         
       case 'previous':
+        // Check if previous button is available (not on first question)
         if (currentQuestionIndex > 0) {
           displayFeedback("Moving to previous question...", 'command');
           setCurrentQuestionIndex(currentQuestionIndex - 1);
+        } else {
+          // Not available - give feedback
+          displayFeedback("This is the first question", 'error');
         }
         break;
         
+      case 'toEditor':
+        // Check if editor button is available
+        if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
+            !hasChanges && cameFromEditor && onBackToEditor) {
+          displayFeedback("Moving to editor view...", 'command');
+          onBackToEditor();
+        } else {
+          // Not available
+          displayFeedback("Editor not available here", 'error');
+        }
+        break;
+        
+      case 'toQuestions':
+        // This would be for going from editor back to questions
+        // Not directly applicable in the current view
+        displayFeedback("Already in questions view", 'error');
+        break;
+        
+      case 'toHome':
+        // Always allow going back to home
+        displayFeedback("Returning to home page...", 'command');
+        safeNavigate('/');
+        break;
+        
       default:
-        console.warn('Unknown command type:', commandCheck.type);
+        console.warn(`Unknown command type: ${commandCheck.type}`);
+        displayFeedback("Unknown command", 'error');
     }
   };
 
-  // Update finalizeAndSubmit to properly handle modification
+  // Add sound to finalizeAndSubmit without changing core logic
   const finalizeAndSubmit = async () => {
     const finalAnswer = segmentsRef.current.join(' ');
-    console.log('Final merged answer after silence:', finalAnswer);
-    console.log('Current modifying state during finalization:', isModifying);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Final merged answer after silence:', finalAnswer);
+      console.log('Current modifying state during finalization:', isModifying);
+    }
 
     setIsPreviewMode(true);
     displayFeedback("Saving your answer...", 'success');
@@ -552,7 +629,9 @@ function HandsFreeInterface({
 
     try {
       if (isModifying || isModifyingRef.current) {
-        console.log('Submitting MODIFIED answer');
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('Submitting MODIFIED answer');
+        }
         await handleModifySubmit(finalAnswer);
       } else if (currentQuestionIndex === 0) {
         // Special handling for the first question
@@ -580,6 +659,8 @@ function HandsFreeInterface({
         setIsRecording(false);
         if (setInput) setInput('');
 
+        // Play sound before moving to next question
+        playClickSound();
         setCurrentQuestionIndex(1);
       } else if (!questionStatus[currentQuestionIndex]?.answer) {
         // If question is unanswered, submit and potentially move to next question
@@ -596,14 +677,13 @@ function HandsFreeInterface({
       console.error('Error submitting final speech:', error);
       startReplayTimeout();
     } finally {
-      console.log('Resetting modifying mode to FALSE');
       setIsModifying(false);
       isModifyingRef.current = false;
       setIsPreviewMode(false);
     }
   };
 
-  // Update handleModifySubmit to properly update the parent component's state
+  // Add sound to handleModifySubmit without changing core logic
   const handleModifySubmit = async (text) => {
     setIsProcessing(true);
     try {
@@ -666,6 +746,8 @@ function HandsFreeInterface({
         currentQuestion.followup_needed = false;
         
         setTimeout(() => {
+          // Play sound when moving to editor
+          playClickSound();
           onBackToEditor();
         }, 1500); // Short delay to let the user see the success message
       }
@@ -679,6 +761,8 @@ function HandsFreeInterface({
             return updated;
           });
           
+          // Play sound when advancing to next question
+          playClickSound();
           setCurrentQuestionIndex(newLength - 1);
         }, 1500); // Short delay to let the user see the success message
       }
@@ -691,8 +775,12 @@ function HandsFreeInterface({
     }
   };
 
-  // Submission handler. For Q1 (index 0), call submitAnswer then auto-advance.
+  // Simplify handleSubmitAnswer - keep only essential logging
   const handleSubmitAnswer = async (text) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Submitting answer for question ${currentQuestionIndex}: "${text.substring(0, 30)}..."`);
+    }
+    
     setIsProcessing(true);
     try {
       const updatedQuestions = [...currentQuestion.questions];
@@ -714,29 +802,71 @@ function HandsFreeInterface({
         questions: updatedQuestions
       };
 
-      console.log('Submitting answer for question index', currentQuestionIndex, {
-        text,
-        updatedConversationPlanning
-      });
-
-      const newLength = await sendMessage(currentQuestionIndex, updatedConversationPlanning);
-      if (newLength && newLength > currentQuestionIndex + 1) {
-        setCurrentQuestionIndex(newLength - 1);
-        if (setInput) setInput('');
-      }
-
+      // Update question status immediately
       setQuestionStatus({
         ...questionStatus,
         [currentQuestionIndex]: { type: 'answered', answer: text }
       });
 
-      // Auto-advance to next question if this wasn't in editing mode
-      if (!isModifying && currentQuestionIndex < currentQuestion.questions.length - 1) {
+      // Handle backend communication
+      const newLength = await sendMessage(currentQuestionIndex, updatedConversationPlanning);
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Backend returned new question count: ${newLength}`);
+      }
+
+      // Clear any input
+      if (setInput) {
+        setInput('');
+      }
+
+      // Auto-advance to next question - ONLY if:
+      // 1. We're not editing
+      // 2. The backend has returned a new length
+      // 3. Our current index is less than the new total length - 1
+      if (!isModifying && newLength && currentQuestionIndex < newLength - 1) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Auto-advancing to next question (index ${currentQuestionIndex + 1})`);
+        }
+        
+        // Display feedback
         displayFeedback("Answer saved. Moving to next question.", 'success');
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        
+        // Create a new Audio instance for this specific navigation
+        try {
+          const navigationSound = new Audio('/click.mp3');
+          
+          // When sound ends, then navigate
+          navigationSound.addEventListener('ended', () => {
+            // Set a very short timeout to ensure sound is fully complete
+            setTimeout(() => {
+              setCurrentQuestionIndex(currentQuestionIndex + 1);
+            }, 50);
+          });
+          
+          // Handle any errors
+          navigationSound.addEventListener('error', () => {
+            // If sound fails, still navigate
+            setCurrentQuestionIndex(currentQuestionIndex + 1);
+          });
+          
+          // Play the sound - navigation will happen in the 'ended' event
+          navigationSound.play().catch(() => {
+            // If sound fails to play, still navigate
+            setCurrentQuestionIndex(currentQuestionIndex + 1);
+          });
+        } catch (error) {
+          // If there's any error with the sound, still navigate
+          setCurrentQuestionIndex(currentQuestionIndex + 1);
+        }
+      } else if (process.env.NODE_ENV !== 'production') {
+        console.log('Auto-advance conditions not met:');
+        console.log(`- Is modifying: ${isModifying}`);
+        console.log(`- Backend returned newLength: ${!!newLength}`);
+        console.log(`- Current index < new length - 1: ${currentQuestionIndex < (newLength ? newLength - 1 : 0)}`);
       }
     } catch (error) {
-      console.error('Error submitting answer:', error);
+      console.error(`Error submitting answer: ${error}`);
       setQuestionStatus({
         ...questionStatus,
         [currentQuestionIndex]: { type: 'answering', answer: text }
@@ -775,7 +905,9 @@ function HandsFreeInterface({
         runtimeLogLevel: 3,
         runtimeVerboseLevel: 0,
         onSpeechStart: () => {
-          console.log('Speech segment started...');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Speech segment started...');
+          }
           setIsSpeechActive(true);
           setIsRecording(true);
           clearFinalizeTimeout();
@@ -783,13 +915,17 @@ function HandsFreeInterface({
         },
         // Updated onSpeechEnd handler with fixed editing mode logic
         onSpeechEnd: async (audio) => {
-          console.log('Speech segment ended, transcribing...');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Speech segment ended, transcribing...');
+          }
           setIsSpeechActive(false);
           setIsRecording(false);
           setIsProcessing(true);
 
           if (checkAudioSilence(audio)) {
-            console.log('Silent segment detected – ignoring and waiting for new input');
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('Silent segment detected – ignoring and waiting for new input');
+            }
             setIsProcessing(false);
             // Only start replay if not in editing mode
             if (!isModifying && !isModifyingRef.current) {
@@ -811,16 +947,19 @@ function HandsFreeInterface({
             if (response.data.text) {
               let transcription = response.data.text.trim().toLowerCase();
               transcription = transcription.replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
-              console.log('Segment transcription:', transcription);
-              console.log('Current modifying mode:', isModifying, 'ref:', isModifyingRef.current);
+              
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`Segment transcription: "${transcription}"`);
+              }
 
               replayAttemptsRef.current = 0;
-              console.log('Valid speech detected, reset replay attempts to 0');
 
               // SPECIAL CASE: Direct modify command detection for questions with existing answers
               if (questionStatus[currentQuestionIndex]?.answer && !isModifying && !isModifyingRef.current) {
                 if (transcription.toLowerCase().includes("modify")) {
-                  console.log("MODIFY command directly detected");
+                  if (process.env.NODE_ENV !== 'production') {
+                    console.log("MODIFY command directly detected");
+                  }
                   setIsModifying(true);
                   isModifyingRef.current = true; // Immediate update
                   segmentsRef.current = [];
@@ -840,7 +979,6 @@ function HandsFreeInterface({
                   }
                   
                   setTimeout(() => {
-                    console.log('Restarting recording for modify mode');
                     startRecording();
                   }, 500);
                   
@@ -851,7 +989,9 @@ function HandsFreeInterface({
 
               // CASE 1: We're in modify mode - collect speech for the modified answer
               if (isModifying || isModifyingRef.current) {
-                console.log("PROCESSING SPEECH IN MODIFY MODE");
+                if (process.env.NODE_ENV !== 'production') {
+                  console.log("Processing speech in modify mode");
+                }
                 // Regular transcription handling for modifying
                 segmentsRef.current.push(transcription);
                 const merged = segmentsRef.current.join(' ');
@@ -862,7 +1002,6 @@ function HandsFreeInterface({
                 clearFinalizeTimeout();
                 
                 finalizeTimeoutRef.current = setTimeout(async () => {
-                  console.log("FINALIZING MODIFIED ANSWER");
                   await finalizeAndSubmit();
                 }, config.handsFree.speech.finalizeDelay);
                 
@@ -882,7 +1021,7 @@ function HandsFreeInterface({
                 return;
               }
 
-              // CASE 3: New question with no answer yet - check for commands first then sopeech
+              // CASE 3: New question with no answer yet - check for commands first then speech
               const commandCheck = checkForCommands(transcription);
               if (commandCheck.isCommand) {
                 await handleCommandExecution(commandCheck);
@@ -915,13 +1054,18 @@ function HandsFreeInterface({
           }
         },
         onVADMisfire: () => {
-          console.log('VAD misfire – restarting recording...');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('VAD misfire – restarting recording...');
+          }
           setIsSpeechActive(false);
           setIsRecording(false);
           startRecording();
         }
       });
-      console.log('Starting VAD...');
+      
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Starting VAD...');
+      }
       await vadRef.current.start();
     } catch (err) {
       console.error('Error starting VAD:', err);
@@ -935,6 +1079,40 @@ function HandsFreeInterface({
       clearReplayTimeout();
     };
   }, []);
+
+  // Fix component mount effect to have proper dependencies
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Component updated with new props/state');
+    }
+  }, [currentQuestionIndex, currentQuestion, questionStatus]);
+
+  // Update the button click handlers for consistency
+  const handlePrevClick = () => {
+    if (currentQuestionIndex > 0) {
+      playClickSound();
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    } else if (currentQuestionIndex === 0) {
+      // First question - go to home
+      playClickSound();
+      safeNavigate('/');
+    }
+  };
+
+  const handleNextClick = () => {
+    if (currentQuestionIndex < currentQuestion.questions.length - 1) {
+      playClickSound();
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
+               !hasChanges && cameFromEditor && onBackToEditor) {
+      // Last question with editor available - go to editor
+      playClickSound();
+      onBackToEditor();
+    } else {
+      // Last question but editor not available
+      displayFeedback("No more questions available yet", 'error');
+    }
+  };
 
   return (
     <Box
@@ -968,9 +1146,7 @@ function HandsFreeInterface({
         )}
       <Box sx={getNavStyles(true)}>
         <IconButton
-          onClick={() => {
-            if (currentQuestionIndex > 0) setCurrentQuestionIndex(currentQuestionIndex - 1);
-          }}
+          onClick={handlePrevClick}
           disabled={currentQuestionIndex === 0}
           sx={getNavButtonStyles(currentQuestionIndex === 0)}
         >
@@ -979,10 +1155,7 @@ function HandsFreeInterface({
       </Box>
       <Box sx={getNavStyles(false)}>
         <IconButton
-          onClick={() => {
-            if (currentQuestionIndex < currentQuestion.questions.length - 1)
-              setCurrentQuestionIndex(currentQuestionIndex + 1);
-          }}
+          onClick={handleNextClick}
           disabled={currentQuestionIndex === currentQuestion.questions.length - 1}
           sx={getNavButtonStyles(currentQuestionIndex === currentQuestion.questions.length - 1)}
         >
@@ -1179,5 +1352,86 @@ function HandsFreeInterface({
     </Box>
   );
 }
+
+// Enhanced feedback component with different styles based on feedback type
+const RecognitionFeedback = ({ text, isVisible, type = 'default' }) => {
+  // Different background colors based on feedback type
+  const getBackgroundColor = () => {
+    switch (type) {
+      case 'transcription':
+        return 'rgba(240, 240, 240, 0.95)';
+      case 'command':
+        return 'rgba(25, 118, 210, 0.1)';
+      case 'success':
+        return 'rgba(46, 125, 50, 0.1)';
+      case 'error':
+        return 'rgba(211, 47, 47, 0.1)';
+      default:
+        return 'rgba(255, 255, 255, 0.95)';
+    }
+  };
+
+  // Get appropriate icon based on type
+  const getIcon = () => {
+    switch (type) {
+      case 'transcription':
+        return <span style={{ marginRight: '8px', opacity: 0.7 }}>🎤</span>;
+      case 'command':
+        return <span style={{ marginRight: '8px', opacity: 0.7 }}>⚡</span>;
+      case 'success':
+        return <span style={{ marginRight: '8px', opacity: 0.7 }}>✓</span>;
+      case 'error':
+        return <span style={{ marginRight: '8px', opacity: 0.7 }}>⚠️</span>;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        bottom: 40,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+        opacity: isVisible ? 1 : 0,
+        visibility: isVisible ? 'visible' : 'hidden',
+        transition: 'opacity 0.3s ease, visibility 0.3s ease',
+      }}
+    >
+      <Paper
+        elevation={3}
+        sx={{
+          px: 3,
+          py: 2,
+          backgroundColor: getBackgroundColor(),
+          backdropFilter: 'blur(8px)',
+          borderRadius: 2,
+          animation: `${floatInAnimation} 0.3s ease-out`,
+          maxWidth: '90vw',
+          margin: '0 auto',
+          borderLeft: type === 'transcription' ? '3px solid rgba(0, 0, 0, 0.12)' :
+            type === 'command' ? '3px solid #1976d2' :
+              type === 'success' ? '3px solid #2e7d32' :
+                type === 'error' ? '3px solid #d32f2f' : 'none',
+        }}
+      >
+        <Typography
+          variant="body1"
+          sx={{
+            color: 'text.primary',
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {getIcon()}
+          {text}
+        </Typography>
+      </Paper>
+    </Box>
+  );
+};
 
 export default HandsFreeInterface;

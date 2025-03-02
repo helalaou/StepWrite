@@ -8,6 +8,7 @@ import VoiceInput from './VoiceInput';
 import config from '../config';
 import SpeakButton from './SpeakButton';
 import ClearIcon from '@mui/icons-material/Clear';
+import { playClickSound } from '../utils/soundUtils';
 
 function ChatInterface({
   currentQuestion,
@@ -175,6 +176,9 @@ function ChatInterface({
       return;
     }
 
+    // Play click sound for save action
+    playClickSound();
+
     // Check if the answer actually changed
     const hasChanged = input !== originalAnswer;
     console.log('Submitting answer:', {
@@ -241,6 +245,9 @@ function ChatInterface({
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
+      // Play click sound for previous navigation
+      playClickSound();
+      
       // Reset editing state if user was editing
       if (questionStatus[currentQuestionIndex]?.type === 'answering') {
         setQuestionStatus({
@@ -264,6 +271,9 @@ function ChatInterface({
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < currentQuestion.questions.length - 1) {
+      // Play click sound for next navigation
+      playClickSound();
+      
       // Reset editing state if user was editing
       if (questionStatus[currentQuestionIndex]?.type === 'answering') {
         setQuestionStatus({
@@ -286,6 +296,9 @@ function ChatInterface({
   };
 
   const handleAnswerClick = () => {
+    // Play click sound for answer/edit answer button
+    playClickSound();
+    
     const currentIndex = currentQuestionIndex;
     
     // If skipped, immediately switch to answering mode with empty input
@@ -331,6 +344,9 @@ function ChatInterface({
 
   const handleSkip = () => {
     if (questionStatus[currentQuestionIndex]?.type !== 'skipped') {
+      // Play click sound for skip button
+      playClickSound();
+      
       console.log('Skipping Question:', {
         questionIndex: currentQuestionIndex,
         previousStatus: questionStatus[currentQuestionIndex]?.type,
@@ -432,6 +448,12 @@ function ChatInterface({
       cleanupAudio();
     };
   }, []);
+
+  // Add a handler for the clear button to play sound
+  const handleClearText = () => {
+    playClickSound();
+    setInput('');
+  };
 
   return (
     <Box sx={{ 
@@ -639,7 +661,7 @@ function ChatInterface({
                   {isAnswering && input.trim() && (
                     <IconButton
                       size="small"
-                      onClick={() => setInput('')}
+                      onClick={handleClearText}
                       sx={{
                         position: 'absolute',
                         right: { xs: '12px', sm: '50px' },

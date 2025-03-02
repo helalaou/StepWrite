@@ -3,6 +3,7 @@ import { Box, TextField, Button, Typography } from '@mui/material';
 import KeyboardIcon from '@mui/icons-material/Keyboard';
 import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
+import { playClickSound } from '../utils/soundUtils';
 
 function ReplyInput({ onSubmit }) {
   const [text, setText] = useState('');
@@ -13,6 +14,10 @@ function ReplyInput({ onSubmit }) {
       alert('Please paste the text you want to reply to');
       return;
     }
+    
+    // Play click sound for submit button
+    playClickSound();
+    
     if (typeof onSubmit === 'function') {
       onSubmit(text);
     } else {

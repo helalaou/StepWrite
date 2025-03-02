@@ -12,6 +12,7 @@ import MicIcon from '@mui/icons-material/Mic';
 import config from '../config';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
+import { playClickSound } from '../utils/soundUtils';
 
 // Add the pulse animation
 const pulseAnimation = keyframes`
@@ -399,6 +400,12 @@ function TextEditor({
     return new Blob([wavBuffer], { type: 'audio/wav' });
   };
 
+  // Add a handler for the back button to play sound
+  const handleBackClick = () => {
+    playClickSound();
+    if (onBack) onBack();
+  };
+
   return (
     <Box sx={{ 
       display: 'flex',
@@ -442,7 +449,7 @@ function TextEditor({
         <Tooltip title="Back to Questions" placement="right">
           <Button
             variant="contained"
-            onClick={onBack}
+            onClick={handleBackClick}
             sx={{ 
               minWidth: { xs: '40px', lg: '65px' },
               width: { xs: '40px', lg: '65px' },

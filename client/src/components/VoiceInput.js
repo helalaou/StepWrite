@@ -5,6 +5,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import axios from 'axios';
 import config from '../config';
 import { keyframes } from '@mui/system';
+import { playClickSound } from '../utils/soundUtils';
 
 function VoiceInput({ 
   onTranscriptionComplete, 
@@ -138,6 +139,11 @@ function VoiceInput({
   }, [onTranscriptionComplete]);
 
   const startRecording = useCallback(async () => {
+    // Play click sound when manually starting recording
+    if (!autoStart) {
+      playClickSound();
+    }
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream, {
@@ -172,14 +178,19 @@ function VoiceInput({
       console.error('Error accessing microphone:', error);
       alert('Unable to access microphone. Please check your permissions.');
     }
-  }, [handleAudioTranscription]);
+  }, [handleAudioTranscription, autoStart]);
 
   const stopRecording = useCallback(() => {
+    // Play click sound when manually stopping recording
+    if (showStopButton) {
+      playClickSound();
+    }
+    
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop();
       setIsRecording(false);
     }
-  }, [mediaRecorder]);
+  }, [mediaRecorder, showStopButton]);
 
   useEffect(() => {
     return () => {

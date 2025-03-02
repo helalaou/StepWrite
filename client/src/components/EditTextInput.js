@@ -5,6 +5,7 @@ import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
 import VoiceInput from './VoiceInput';
 import config from '../config';
+import { playClickSound } from '../utils/soundUtils';
 
 function EditTextInput({ onSubmit }) {
   const [text, setText] = useState('');
@@ -16,11 +17,21 @@ function EditTextInput({ onSubmit }) {
       alert('Please paste the text you want to edit');
       return;
     }
+    
+    // Play click sound for submit button
+    playClickSound();
+    
     onSubmit(text);
   };
 
   const handleVoiceTranscriptionComplete = (transcription) => {
     setText(transcription);
+  };
+
+  const handleBackClick = () => {
+    // Play click sound for back button
+    playClickSound();
+    navigate('/');
   };
 
   return (
@@ -55,7 +66,7 @@ function EditTextInput({ onSubmit }) {
       }}>
         <Button
           variant="contained"
-          onClick={() => navigate('/')}
+          onClick={handleBackClick}
           sx={{ 
             height: { xs: '16px', sm: '20px' },
             minWidth: { xs: '16px', sm: '20px' },

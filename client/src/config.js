@@ -124,6 +124,7 @@ const config = {
           'move to editor',
           'switch to editor',
           'editor', 
+          'back to editor'
         ],
         response: 'Moving to editor'
       },
@@ -137,6 +138,21 @@ const config = {
           'return to questions',
         ],
         response: 'Returning to questions'
+      },
+      toHome: {
+        phrases: [
+          'go home',
+          'home page',
+          'homepage',
+          'return home',
+          'back to home',
+          'return to home',
+          'go to home',
+          'landing page',
+          'return to landing',
+          'go to landing'
+        ],
+        response: 'Returning to home page'
       },
       modify: {
         phrases: [

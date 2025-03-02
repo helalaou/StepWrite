@@ -75,11 +75,13 @@ const config = {
     
     // Controls when to finalize and submit speech
     speech: {
-      finalizeDelay: 2700,            // Range: 3000-10000ms, Wait time before submitting
+      finalizeDelay: 3000,            // Range: 3000-10000ms, Wait time before submitting
       // Controls question replay behavior when no speech is detected
       replay: {
         interval: 9000,               // Range: 5000-30000ms, Time before replaying question
-        maxAttempts: Infinity         // Number of replay attempts before giving up
+        maxAttempts: Infinity,        // Number of replay attempts before giving up
+        minimumQuietPeriod: 12000,    // Range: 5000-20000ms, Minimum silence required after speech detection before TTS can play again / prevents TTS from interrupting during natural pauses in speech
+        extendedIntervalMultiplier: 3 // Range: 1.5-5.0, // Multiplies the base interval after any speech is detected
       },
     },
     

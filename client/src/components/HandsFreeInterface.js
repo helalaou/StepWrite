@@ -124,6 +124,12 @@ function HandsFreeInterface({
 
   // Add a counter for replay attempts
   const replayAttemptsRef = useRef(0);
+  
+  // Track last speech detection time to maintain a minimum quiet period
+  const lastSpeechDetectionTimeRef = useRef(0);
+  
+  // Track if extended replay interval should be used
+  const useExtendedIntervalRef = useRef(false);
 
   // Add ref to track modification mode in real-time
   const isModifyingRef = useRef(false);
@@ -173,6 +179,12 @@ function HandsFreeInterface({
       clearTimeout(replayTimeoutRef.current);
       replayTimeoutRef.current = null;
     }
+  };
+  
+  // Helper to update the speech detection time
+  const updateSpeechDetectionTime = () => {
+    lastSpeechDetectionTimeRef.current = Date.now();
+    useExtendedIntervalRef.current = true;
   };
 
   // Show feedback briefly with type
@@ -340,7 +352,7 @@ function HandsFreeInterface({
     return isSilent;
   };
 
-  // Update the startReplayTimeout function
+  // Update the startReplayTimeout function with extended interval logic
   const startReplayTimeout = (attempt = 0) => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Starting replay timeout, attempt: ${attempt}`);
@@ -354,21 +366,61 @@ function HandsFreeInterface({
       return;
     }
     
+    // Don't start replay if we're in modifying mode
+    if (isModifying || isModifyingRef.current) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Skipping replay while in modification mode`);
+      }
+      return;
+    }
+    
     clearReplayTimeout();
 
+    // Check if enough time has passed since last speech detection
+    const timeSinceLastSpeech = Date.now() - lastSpeechDetectionTimeRef.current;
+    const minimumQuietPeriod = config.handsFree.speech.replay.minimumQuietPeriod; // Use config value
+    
+    if (timeSinceLastSpeech < minimumQuietPeriod && lastSpeechDetectionTimeRef.current > 0) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Not enough quiet time has passed (${timeSinceLastSpeech}ms < ${minimumQuietPeriod}ms), delaying TTS replay`);
+      }
+      
+      // Set a timeout to check again after the remaining quiet period
+      replayTimeoutRef.current = setTimeout(() => {
+        startReplayTimeout(attempt);
+      }, minimumQuietPeriod - timeSinceLastSpeech + 500); // Add 500ms buffer
+      
+      return;
+    }
+    
     // Only start replay if we have no speech segments
     if (segmentsRef.current.length === 0) {
+      // Determine the appropriate interval - use extended interval if speech was detected
+      const baseInterval = config.handsFree.speech.replay.interval;
+      const multiplier = config.handsFree.speech.replay.extendedIntervalMultiplier; // Use config value
+      const interval = useExtendedIntervalRef.current 
+        ? baseInterval * multiplier  // Use config multiplier
+        : baseInterval;
+        
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`Using ${useExtendedIntervalRef.current ? 'extended' : 'standard'} replay interval: ${interval}ms`);
+      }
+      
       replayTimeoutRef.current = setTimeout(() => {
         if (!isSpeechActive && !isProcessing) {
           if (process.env.NODE_ENV !== 'production') {
             console.log('No valid speech, replaying question TTS...');
           }
+          
+          // Reset extended interval flag after playing TTS
+          useExtendedIntervalRef.current = false;
+          
           setIsTTSPlaying(true);
           replayAttemptsRef.current += 1;
           // Start next replay timeout after this one
           startReplayTimeout();
         }
-      }, config.handsFree.speech.replay.interval);
+      }, interval);
     }
   };
 
@@ -514,6 +566,11 @@ function HandsFreeInterface({
       console.warn('Command sound failed to play:', error);
     }
     
+    // Reset replay timer for all commands and update speech detection time
+    clearReplayTimeout();
+    replayAttemptsRef.current = 0;
+    updateSpeechDetectionTime();
+    
     // Execute the command based on type with availability checks
     switch (commandCheck.type) {
       case 'skip':
@@ -614,13 +671,18 @@ function HandsFreeInterface({
     }
   };
 
-  // Add sound to finalizeAndSubmit without changing core logic
+  // Update the finalizeAndSubmit function to reset the replay timer when an answer is submitted
   const finalizeAndSubmit = async () => {
     const finalAnswer = segmentsRef.current.join(' ');
     if (process.env.NODE_ENV !== 'production') {
       console.log('Final merged answer after silence:', finalAnswer);
       console.log('Current modifying state during finalization:', isModifying);
     }
+
+    // Reset replay timer after submission and update speech detection time
+    clearReplayTimeout();
+    replayAttemptsRef.current = 0;
+    updateSpeechDetectionTime();
 
     setIsPreviewMode(true);
     displayFeedback("Saving your answer...", 'success');
@@ -683,103 +745,16 @@ function HandsFreeInterface({
     }
   };
 
-  // Add sound to handleModifySubmit without changing core logic
-  const handleModifySubmit = async (text) => {
-    setIsProcessing(true);
-    try {
-      // Create a deep copy of the questions array
-      const updatedQuestions = [...currentQuestion.questions];
-      
-      // Update the current question's response
-      updatedQuestions[currentQuestionIndex] = {
-        ...updatedQuestions[currentQuestionIndex],
-        response: text
-      };
-
-      // Clear subsequent responses
-      for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
-        updatedQuestions[i] = {
-          ...updatedQuestions[i],
-          response: ''
-        };
-      }
-
-      // Create the updated conversation planning object
-      const updatedConversationPlanning = {
-        ...currentQuestion,
-        questions: updatedQuestions,
-        followup_needed: true // Force the backend to regenerate subsequent questions
-      };
-
-      console.log('Submitting modified answer for question index', currentQuestionIndex);
-      console.log('Updated conversation planning:', updatedConversationPlanning);
-
-      // Send the updated conversation to the backend with the changedIndex parameter
-      // This tells the backend which question was modified
-      const newLength = await submitAnswer(
-        updatedQuestions[currentQuestionIndex].id,
-        text,
-        currentQuestionIndex,  // Explicitly pass the changedIndex
-        updatedConversationPlanning
-      );
-
-      // Update question status immediately
-      const newQuestionStatus = { ...questionStatus };
-      newQuestionStatus[currentQuestionIndex] = { type: 'answered', answer: text };
-
-      // Clear subsequent question statuses
-      for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
-        delete newQuestionStatus[i];
-      }
-
-      setQuestionStatus(newQuestionStatus);
-      displayFeedback("Answer updated successfully and saved to conversation.", 'success');
-      
-      // Check if the LLM decided to end the conversation
-      if (newLength === null) {
-        // LLM set followup_needed to false, move to editor
-        displayFeedback("Moving to editor view...", 'success');
-        
-        // IMPORTANT: Update the currentQuestion object to remove questions after the modified one
-        // This ensures the parent component's state is updated correctly
-        currentQuestion.questions = currentQuestion.questions.slice(0, currentQuestionIndex + 1);
-        currentQuestion.followup_needed = false;
-        
-        setTimeout(() => {
-          // Play sound when moving to editor
-          playClickSound();
-          onBackToEditor();
-        }, 1500); // Short delay to let the user see the success message
-      }
-      // Otherwise, if there are more questions, advance to the next one
-      else if (newLength && newLength > currentQuestionIndex + 1) {
-        setTimeout(() => {
-          // Clear the modified state for the current question when moving to the next
-          setModifiedQuestions(prev => {
-            const updated = new Set(prev);
-            updated.delete(currentQuestionIndex);
-            return updated;
-          });
-          
-          // Play sound when advancing to next question
-          playClickSound();
-          setCurrentQuestionIndex(newLength - 1);
-        }, 1500); // Short delay to let the user see the success message
-      }
-
-    } catch (error) {
-      console.error('Error submitting modified answer:', error);
-      displayFeedback("Failed to update. Please try again.", 'error');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Simplify handleSubmitAnswer - keep only essential logging
+  // Update the handleSubmitAnswer function to also reset the replay timer
   const handleSubmitAnswer = async (text) => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Submitting answer for question ${currentQuestionIndex}: "${text.substring(0, 30)}..."`);
     }
+    
+    // Reset replay timer after submitting an answer and update speech detection time
+    clearReplayTimeout();
+    replayAttemptsRef.current = 0;
+    updateSpeechDetectionTime();
     
     setIsProcessing(true);
     try {
@@ -876,6 +851,103 @@ function HandsFreeInterface({
     }
   };
 
+  // Update handleModifySubmit to reset replay timer
+  const handleModifySubmit = async (text) => {
+    // Reset replay timer after submitting a modified answer and update speech detection time
+    clearReplayTimeout();
+    replayAttemptsRef.current = 0;
+    updateSpeechDetectionTime();
+    
+    setIsProcessing(true);
+    try {
+      // Create a deep copy of the questions array
+      const updatedQuestions = [...currentQuestion.questions];
+      
+      // Update the current question's response
+      updatedQuestions[currentQuestionIndex] = {
+        ...updatedQuestions[currentQuestionIndex],
+        response: text
+      };
+
+      // Clear subsequent responses
+      for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
+        updatedQuestions[i] = {
+          ...updatedQuestions[i],
+          response: ''
+        };
+      }
+
+      // Create the updated conversation planning object
+      const updatedConversationPlanning = {
+        ...currentQuestion,
+        questions: updatedQuestions,
+        followup_needed: true // Force the backend to regenerate subsequent questions
+      };
+
+      console.log('Submitting modified answer for question index', currentQuestionIndex);
+      console.log('Updated conversation planning:', updatedConversationPlanning);
+
+      // Send the updated conversation to the backend with the changedIndex parameter
+      // This tells the backend which question was modified
+      const newLength = await submitAnswer(
+        updatedQuestions[currentQuestionIndex].id,
+        text,
+        currentQuestionIndex,  // Explicitly pass the changedIndex
+        updatedConversationPlanning
+      );
+
+      // Update question status immediately
+      const newQuestionStatus = { ...questionStatus };
+      newQuestionStatus[currentQuestionIndex] = { type: 'answered', answer: text };
+
+      // Clear subsequent question statuses
+      for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
+        delete newQuestionStatus[i];
+      }
+
+      setQuestionStatus(newQuestionStatus);
+      displayFeedback("Answer updated successfully and saved to conversation.", 'success');
+      
+      // Check if the LLM decided to end the conversation
+      if (newLength === null) {
+        // LLM set followup_needed to false, move to editor
+        displayFeedback("Moving to editor view...", 'success');
+        
+        // IMPORTANT: Update the currentQuestion object to remove questions after the modified one
+        // This ensures the parent component's state is updated correctly
+        currentQuestion.questions = currentQuestion.questions.slice(0, currentQuestionIndex + 1);
+        currentQuestion.followup_needed = false;
+        
+        setTimeout(() => {
+          // Play sound when moving to editor
+          playClickSound();
+          onBackToEditor();
+        }, 1500); // Short delay to let the user see the success message
+      }
+      // Otherwise, if there are more questions, advance to the next one
+      else if (newLength && newLength > currentQuestionIndex + 1) {
+        setTimeout(() => {
+          // Clear the modified state for the current question when moving to the next
+          setModifiedQuestions(prev => {
+            const updated = new Set(prev);
+            updated.delete(currentQuestionIndex);
+            return updated;
+          });
+          
+          // Play sound when advancing to next question
+          playClickSound();
+          setCurrentQuestionIndex(newLength - 1);
+        }, 1500); // Short delay to let the user see the success message
+      }
+
+    } catch (error) {
+      console.error('Error submitting modified answer:', error);
+      displayFeedback("Failed to update. Please try again.", 'error');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Start voice recording using VAD.
   const startRecording = async () => {
     try {
@@ -911,7 +983,11 @@ function HandsFreeInterface({
           setIsSpeechActive(true);
           setIsRecording(true);
           clearFinalizeTimeout();
+          
+          // Reset the replay timer whenever speech is detected and update speech detection time
           clearReplayTimeout();
+          replayAttemptsRef.current = 0;
+          updateSpeechDetectionTime();
         },
         // Updated onSpeechEnd handler with fixed editing mode logic
         onSpeechEnd: async (audio) => {

@@ -56,10 +56,10 @@ const config = {
     // Voice Activity Detection settings
     vad: {
       minSpeechFrames: 3,             // Range: 3-30, Minimum frames for speech detection
-      preSpeechPadFrames: 2,          // Range: 1-10, Frames to keep before speech
-      positiveSpeechThreshold: 0.70,  // Range: 0.5-0.95, Confidence for positive detection
+      preSpeechPadFrames: 7,          // Range: 1-10, Frames to keep before speech (increased from 2 to 7)
+      positiveSpeechThreshold: 0.65,  // Range: 0.5-0.95, Confidence for positive detection (lowered from 0.70 to 0.65)
       negativeSpeechThreshold: 0.60,  // Range: 0.5-0.90, Confidence for negative detection
-      redemptionFrames: 3,            // Range: 1-10, Frames to wait before confirming end
+      redemptionFrames: 5,            // Range: 1-10, Frames to wait before confirming end (increased from 3 to 5)
       mode: 3,                        // Range: 0-3, VAD aggressiveness (3 = most aggressive)
     },
     

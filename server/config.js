@@ -143,7 +143,12 @@ const config = {
     },
     stt: {
       tempDir: './temp/stt',  
-      format: 'webm'
+      format: 'webm',
+      whisper: {
+        model: 'whisper-1',
+        language: 'en',     // Force English language for transcription
+        response_format: 'text'
+      }
     }
   },
 };

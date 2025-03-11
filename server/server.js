@@ -385,6 +385,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
     const transcription = await openai.audio.transcriptions.create({
       file: file,
       model: "whisper-1",
+      language: "en",
       response_format: "text"
     });
 

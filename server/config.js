@@ -146,7 +146,7 @@ const config = {
       format: 'webm',
       whisper: {
         model: 'whisper-1',
-        language: 'en',     // Force English language for transcription
+        language: 'en',   
         response_format: 'text'
       }
     }

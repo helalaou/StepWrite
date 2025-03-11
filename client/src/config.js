@@ -81,7 +81,7 @@ const config = {
       replay: {
         maxAttempts: Infinity,        // Number of replay attempts before giving up
         minimumQuietPeriod: 12000,    // Range: 5000-20000ms, Minimum silence required after speech detection before TTS can play again / prevents TTS from interrupting during natural pauses in speech
-        nonFirstQuestionDelay: 1000,  // Range: 500-3000ms, delay before playing TTS for non-first questions to ensure the audio clips are generated
+        nonFirstQuestionDelay: 1500,  // Range: 500-3000ms, delay before playing TTS for non-first questions to ensure the audio clips are generated
       },
     },
     
@@ -167,6 +167,29 @@ const config = {
           'i want to modify this',
         ],
         response: 'Modifying this question'
+      },
+      pause: {
+        phrases: [
+          'pause',
+          'pause test',
+          'pause experiment',
+          'pause flow',
+          'stop listening',
+          'take a break'
+        ],
+        response: 'Experiment paused. Say continue to resume.'
+      },
+      continue: {
+        phrases: [
+          'continue',
+          'resume',
+          'resume test',
+          'resume experiment',
+          'resume flow',
+          'start listening',
+          'continue experiment'
+        ],
+        response: 'Resuming experiment.'
       }
     },
     
@@ -175,7 +198,8 @@ const config = {
       messages: {
         waiting: 'Waiting for speech...',
         recording: 'Recording...',
-        processing: 'Processing...'
+        processing: 'Processing...',
+        paused: 'Experiment paused. Say "continue" to resume...'
       }
     }
   },

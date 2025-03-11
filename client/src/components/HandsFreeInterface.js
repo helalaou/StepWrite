@@ -3,6 +3,7 @@ import { Box, Typography, IconButton, Paper } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EditIcon from '@mui/icons-material/Edit';
+import MicIcon from '@mui/icons-material/Mic';
 import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
 import SpeakButton from './SpeakButton';
@@ -110,6 +111,8 @@ function HandsFreeInterface({
   const [recognitionFeedback, setRecognitionFeedback] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackType, setFeedbackType] = useState('default');
+  const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
 
   // Speech processing and recognition
   const segmentsRef = useRef([]);
@@ -379,7 +382,46 @@ function HandsFreeInterface({
       console.log(`Checking for commands in: ${transcription}`);
     }
 
-    // Priority-ordered command detection
+    // Check for continue command when paused (highest priority)
+    if (isPaused || isPausedRef.current) {
+      const continuePhrases = config.handsFree.commands.continue.phrases;
+      const isContinueCommand = continuePhrases.some(phrase => 
+        transcription.toLowerCase().includes(phrase.toLowerCase())
+      );
+      
+      if (isContinueCommand) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('CONTINUE command detected');
+        }
+        return {
+          isCommand: true,
+          type: 'continue',
+          response: config.handsFree.commands.continue.response
+        };
+      }
+      
+      // if paused and not a continue command, wedontt process other commands
+      return { isCommand: false };
+    }
+
+    // Check for pause command
+    const pausePhrases = config.handsFree.commands.pause.phrases;
+    const isPauseCommand = pausePhrases.some(phrase => 
+      transcription.toLowerCase().includes(phrase.toLowerCase())
+    );
+    
+    if (isPauseCommand) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('PAUSE command detected');
+      }
+      return {
+        isCommand: true,
+        type: 'pause',
+        response: config.handsFree.commands.pause.response
+      };
+    }
+
+    // Priority-ordered command detection for other commands
     
     // 1. Modify command (highest priority)
     if (config.handsFree.commands.modify) {
@@ -518,6 +560,39 @@ function HandsFreeInterface({
     updateSpeechDetectionTime();
     
     switch (commandCheck.type) {
+      case 'pause':
+        setIsPaused(true);
+        isPausedRef.current = true;
+        displayFeedback(config.handsFree.ui.messages.paused, 'command');
+        
+        // Stop VAD/speech recognition
+        if (vadRef.current) {
+          await vadRef.current.destroy();
+          vadRef.current = null;
+        }
+        
+        // Keep a minimal recording active just to listen for the continue command
+        setTimeout(() => {
+          startPausedRecording();
+        }, 500);
+        break;
+        
+      case 'continue':
+        setIsPaused(false);
+        isPausedRef.current = false;
+        displayFeedback("Resuming experiment...", 'command');
+        
+        // Restart normal recording
+        if (vadRef.current) {
+          await vadRef.current.destroy();
+          vadRef.current = null;
+        }
+        
+        setTimeout(() => {
+          startRecording();
+        }, 500);
+        break;
+        
       case 'skip':
         segmentsRef.current = [commandCheck.response];
         const merged = segmentsRef.current.join(' ');
@@ -843,8 +918,114 @@ function HandsFreeInterface({
     }
   };
 
+  // A simplified recording mode that only listens for the continue command (pop-up overlay)
+  const startPausedRecording = async () => {
+    try {
+      if (vadRef.current) {
+        await vadRef.current.destroy();
+        vadRef.current = null;
+      }
+
+      setIsSpeechActive(false);
+      setIsRecording(false);
+      segmentsRef.current = [];
+      setMergedSpeech('');
+
+      clearFinalizeTimeout();
+
+      vadRef.current = await window.vad.MicVAD.new({
+        minSpeechFrames: config.handsFree.vad.minSpeechFrames,
+        positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
+        negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
+        redemptionFrames: config.handsFree.vad.redemptionFrames,
+        vadMode: config.handsFree.vad.mode,
+        logLevel: 3,
+        groupedLogLevel: 3,
+        runtimeLogLevel: 3,
+        runtimeVerboseLevel: 0,
+        onSpeechStart: () => {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Speech segment started in paused mode...');
+          }
+          setIsSpeechActive(true);
+          
+          // Cancel TTS when user starts speaking
+          if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+          }
+          setIsTTSPlaying(false);
+          
+          updateSpeechDetectionTime();
+        },
+        onSpeechEnd: async (audio) => {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('Speech segment ended in paused mode...');
+          }
+          setIsSpeechActive(false);
+          
+          // Only process if we're still in paused mode
+          if (!isPaused && !isPausedRef.current) return;
+          
+          // Check if audio is silent or too short
+          if (checkAudioSilence(audio)) {
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('Audio segment was silent or too short, ignoring');
+            }
+            return;
+          }
+          
+          // Convert audio to WAV format
+          const wavBuffer = float32ArrayToWav(audio);
+          const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+          
+          // Create form data for API request
+          const formData = new FormData();
+          formData.append('audio', wavBlob, 'speech.wav');
+          
+          try {
+            // Send audio for transcription
+            const response = await axios.post(
+              `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
+              formData,
+              { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+            
+            if (response.data.text) {
+              let transcription = response.data.text.trim().toLowerCase();
+              transcription = transcription.replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
+              
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`Paused mode transcription: "${transcription}"`);
+              }
+              
+              // Check specifically for continue command
+              const commandCheck = checkForCommands(transcription);
+              if (commandCheck.isCommand) {
+                await handleCommandExecution(commandCheck);
+              }
+            }
+          } catch (error) {
+            console.error('Error transcribing audio in paused mode:', error);
+          }
+        }
+      });
+      
+      await vadRef.current.start();
+      
+    } catch (error) {
+      console.error('Error starting paused recording:', error);
+      displayFeedback("Error starting recording. Please try again.", 'error');
+    }
+  };
+
   // Initialize voice activity detection and speech processing
   const startRecording = async () => {
+    // Don't start normal recording if we're in paused mode
+    if (isPaused || isPausedRef.current) {
+      startPausedRecording();
+      return;
+    }
+    
     try {
       if (vadRef.current) {
         await vadRef.current.destroy();
@@ -1046,12 +1227,31 @@ function HandsFreeInterface({
     }
   };
 
-  // Cleanup on component unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (vadRef.current) vadRef.current.destroy();
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('HandsFreeInterface unmounting, cleaning up resources');
+      }
+      
       clearFinalizeTimeout();
       clearReplayTimeout();
+      
+      if (vadRef.current) {
+        vadRef.current.destroy().catch(err => {
+          console.error('Error destroying VAD on unmount:', err);
+        });
+        vadRef.current = null;
+      }
+      
+      // Reset pause state
+      setIsPaused(false);
+      isPausedRef.current = false;
+      
+      // Cancel any ongoing TTS
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     };
   }, []);
 
@@ -1104,6 +1304,91 @@ function HandsFreeInterface({
         overflow: 'hidden'
       }}
     >
+      {/* pause overlay - only visible when paused */}
+      {isPaused && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: 'fadeIn 0.3s ease-in-out',
+            '@keyframes fadeIn': {
+              from: { opacity: 0 },
+              to: { opacity: 1 }
+            }
+          }}
+        >
+          <Box
+            sx={{
+              backgroundColor: 'white',
+              borderRadius: 2,
+              p: 4,
+              maxWidth: '80%',
+              textAlign: 'center',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+              animation: 'slideIn 0.3s ease-out',
+              '@keyframes slideIn': {
+                from: { transform: 'translateY(-20px)', opacity: 0 },
+                to: { transform: 'translateY(0)', opacity: 1 }
+              }
+            }}
+          >
+            <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold' }}>
+              Experiment Paused
+            </Typography>
+            
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                mb: 3,
+                animation: 'pulse 1.5s infinite ease-in-out',
+                '@keyframes pulse': {
+                  '0%': { transform: 'scale(1)' },
+                  '50%': { transform: 'scale(1.1)' },
+                  '100%': { transform: 'scale(1)' }
+                }
+              }}
+            >
+              <MicIcon sx={{ fontSize: 60, color: '#1976d2' }} />
+            </Box>
+            
+            <Typography variant="body1" sx={{ mb: 3 }}>
+              Say <strong>"continue"</strong> or <strong>"resume"</strong> to continue the experiment.
+            </Typography>
+            
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: 2,
+                borderRadius: 1,
+                backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                animation: isSpeechActive ? 'listening 1.5s infinite ease-in-out' : 'none',
+                '@keyframes listening': {
+                  '0%': { backgroundColor: 'rgba(25, 118, 210, 0.1)' },
+                  '50%': { backgroundColor: 'rgba(25, 118, 210, 0.3)' },
+                  '100%': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
+                }
+              }}
+            >
+              <Typography variant="body2" sx={{ color: isSpeechActive ? '#1976d2' : 'text.secondary' }}>
+                {isSpeechActive ? 'Listening...' : 'Waiting for voice command...'}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
       {/* Navigation controls */}
       {currentQuestionIndex === 0 && (
         <NavigationButton
@@ -1249,6 +1534,47 @@ function HandsFreeInterface({
               ? mergedSpeech
               : questionStatus[currentQuestionIndex]?.answer || 'Waiting for your answer...'}
           </Typography>
+
+          {/* Mic status indicator */}
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 10,
+              right: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              padding: '4px 8px',
+              borderRadius: 8,
+              backgroundColor: isPaused ? 'rgba(211, 47, 47, 0.1)' : 
+                                isSpeechActive ? 'rgba(46, 125, 50, 0.1)' : 
+                                'rgba(0, 0, 0, 0.05)',
+              transition: 'all 0.3s ease',
+            }}
+          >
+            <MicIcon 
+              sx={{ 
+                fontSize: 18, 
+                color: isPaused ? '#d32f2f' : 
+                       isSpeechActive ? '#2e7d32' : 
+                       'rgba(0, 0, 0, 0.4)',
+                animation: isSpeechActive && !isPaused ? 'pulse 1.5s infinite ease-in-out' : 'none',
+              }} 
+            />
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: isPaused ? '#d32f2f' : 
+                       isSpeechActive ? '#2e7d32' : 
+                       'rgba(0, 0, 0, 0.6)',
+                fontWeight: 500,
+              }}
+            >
+              {isPaused ? 'Paused' : 
+               isSpeechActive ? 'Listening' : 
+               'Ready'}
+            </Typography>
+          </Box>
 
           {/* New answer preview when editing */}
           {isModifying && mergedSpeech && questionStatus[currentQuestionIndex]?.answer && (

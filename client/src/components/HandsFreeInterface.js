@@ -100,64 +100,44 @@ function HandsFreeInterface({
 }) {
   const navigate = useNavigate();
 
-  // Process indicators
+  // UI state indicators
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTTSPlaying, setIsTTSPlaying] = useState(false);
   const [isSpeechActive, setIsSpeechActive] = useState(false);
-
-  // New state for editing mode
   const [isModifying, setIsModifying] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [recognitionFeedback, setRecognitionFeedback] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackType, setFeedbackType] = useState('default');
 
-  // Recognized segments (preserved in recorded order)
+  // Speech processing and recognition
   const segmentsRef = useRef([]);
   const [mergedSpeech, setMergedSpeech] = useState('');
-
-  // Refs for VAD and timeouts
   const vadRef = useRef(null);
   const replayTimeoutRef = useRef(null);
   const finalizeTimeoutRef = useRef(null);
-
-  // Add a counter for replay attempts
   const replayAttemptsRef = useRef(0);
-  
-  // Track last speech detection time to maintain a minimum quiet period
   const lastSpeechDetectionTimeRef = useRef(0);
-  
-  // Track if extended replay interval should be used
-  const useExtendedIntervalRef = useRef(false);
-
-  // Add ref to track modification mode in real-time
   const isModifyingRef = useRef(false);
-
-  // Add a state to track which questions have been modified
   const [modifiedQuestions, setModifiedQuestions] = useState(new Set());
 
-  // Create a wrapped version of the setCurrentQuestionIndex function to add debugging
+  // Debug wrapper for question navigation
   const setCurrentQuestionIndexWithDebug = (newIndex) => {
-    // Only log in development
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Navigation: Changing question index from ${currentQuestionIndex} to ${newIndex}`);
     }
     parentSetCurrentQuestionIndex(newIndex);
   };
   
-  // Replace all uses of setCurrentQuestionIndex with the debug version
   const setCurrentQuestionIndex = setCurrentQuestionIndexWithDebug;
   
-  // Add debug logging to track changes to currentQuestionIndex
   useEffect(() => {
-    // Keep minimal effect logging
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Navigation: Question index updated to ${currentQuestionIndex}`);
     }
   }, [currentQuestionIndex]);
   
-  // Debug navigate function
   const safeNavigate = useCallback((route) => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Navigation: Navigating to ${route}`);
@@ -166,7 +146,7 @@ function HandsFreeInterface({
     navigate(route);
   }, [navigate]);
 
-  // Clear timeout helpers
+  // Timer management functions
   const clearFinalizeTimeout = () => {
     if (finalizeTimeoutRef.current) {
       clearTimeout(finalizeTimeoutRef.current);
@@ -181,13 +161,11 @@ function HandsFreeInterface({
     }
   };
   
-  // Helper to update the speech detection time
   const updateSpeechDetectionTime = () => {
     lastSpeechDetectionTimeRef.current = Date.now();
-    useExtendedIntervalRef.current = true;
   };
 
-  // Show feedback briefly with type
+  // Display user feedback with auto-hide after 3 seconds
   const displayFeedback = (message, type = 'default') => {
     setRecognitionFeedback(message);
     setFeedbackType(type);
@@ -260,24 +238,25 @@ function HandsFreeInterface({
     }
   });
 
-  // Update the useEffect that handles question changes
+  // Reset state and configure TTS when question changes
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Question changed to index: ${currentQuestionIndex}`);
     }
     if (!currentQuestion?.questions) return;
 
-    // Reset all voice-related state when question changes
+    // Reset voice-related state
     segmentsRef.current = [];
     setMergedSpeech('');
     setIsSpeechActive(false);
     setIsRecording(false);
     setIsProcessing(false);
-    setIsModifying(false); // Reset editing mode
-    replayAttemptsRef.current = 0; // Reset replay attempts counter
+    setIsModifying(false);
+    replayAttemptsRef.current = 0;
     clearFinalizeTimeout();
     clearReplayTimeout();
 
+    // Update question status based on existing responses
     const newStatus = {};
     currentQuestion.questions.forEach((q, index) => {
       if (q.response && q.response.trim() !== '') {
@@ -289,22 +268,11 @@ function HandsFreeInterface({
     });
     setQuestionStatus(newStatus);
 
-    // Start replay timer if no speech detected
     startReplayTimeout();
 
-    // Force TTS to play for new question
-    setIsTTSPlaying(true);
-
-    // Stop any existing VAD
-    if (vadRef.current) {
-      vadRef.current.destroy();
-      vadRef.current = null;
-    }
-
-    // Reset modified state for the previous question when navigating away
+    // Clean up modified questions tracking
     setModifiedQuestions(prev => {
       const updated = new Set(prev);
-      // Only keep the current question in the set if it's already there
       Array.from(prev).forEach(idx => {
         if (idx !== currentQuestionIndex) {
           updated.delete(idx);
@@ -312,9 +280,25 @@ function HandsFreeInterface({
       });
       return updated;
     });
+
+    // Delay TTS for non-first questions to ensure content is loaded
+    const shouldDelay = currentQuestionIndex > 0;
+    if (shouldDelay) {
+      setTimeout(() => {
+        setIsTTSPlaying(true);
+      }, config.handsFree.speech.replay.nonFirstQuestionDelay);
+    } else {
+      setIsTTSPlaying(true);
+    }
+
+    // Clean up Voice Activity Detection
+    if (vadRef.current) {
+      vadRef.current.destroy();
+      vadRef.current = null;
+    }
   }, [currentQuestionIndex, currentQuestion]);
 
-  // Convert float32Array audio to WAV Blob.
+  // Convert audio data to WAV format for transcription
   const float32ArrayToWav = (audio) => {
     const wavBuffer = new ArrayBuffer(44 + audio.length * 2);
     const view = new DataView(wavBuffer);
@@ -344,7 +328,7 @@ function HandsFreeInterface({
     return new Blob([wavBuffer], { type: 'audio/wav' });
   };
 
-  // Check if audio is silent.
+  // Detect silent audio to avoid processing background noise
   const checkAudioSilence = (audio) => {
     const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
     const isSilent = avgEnergy < config.handsFree.audio.minEnergy;
@@ -352,90 +336,54 @@ function HandsFreeInterface({
     return isSilent;
   };
 
-  // Update the startReplayTimeout function with extended interval logic
-  const startReplayTimeout = (attempt = 0) => {
+  // Schedule periodic TTS replays when no user speech is detected
+  const startReplayTimeout = () => {
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`Starting replay timeout, attempt: ${attempt}`);
+      console.log(`Starting replay timeout check`);
     }
     
-    // Don't start replay if this question has been modified
-    if (modifiedQuestions.has(currentQuestionIndex)) {
+    // Skip replay for modified questions or in editing mode
+    if (modifiedQuestions.has(currentQuestionIndex) || isModifying || isModifyingRef.current) {
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`Skipping replay for modified question: ${currentQuestionIndex}`);
-      }
-      return;
-    }
-    
-    // Don't start replay if we're in modifying mode
-    if (isModifying || isModifyingRef.current) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`Skipping replay while in modification mode`);
+        console.log(`Skipping replay for modified question or in modification mode`);
       }
       return;
     }
     
     clearReplayTimeout();
 
-    // Check if enough time has passed since last speech detection
-    const timeSinceLastSpeech = Date.now() - lastSpeechDetectionTimeRef.current;
-    const minimumQuietPeriod = config.handsFree.speech.replay.minimumQuietPeriod; // Use config value
-    
-    if (timeSinceLastSpeech < minimumQuietPeriod && lastSpeechDetectionTimeRef.current > 0) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`Not enough quiet time has passed (${timeSinceLastSpeech}ms < ${minimumQuietPeriod}ms), delaying TTS replay`);
-      }
+    // Play TTS if no speech and sufficient quiet time has passed
+    if (segmentsRef.current.length === 0 && !isSpeechActive && !isProcessing) {
+      const timeSinceLastSpeech = Date.now() - lastSpeechDetectionTimeRef.current;
+      const minimumQuietPeriod = config.handsFree.speech.replay.minimumQuietPeriod;
       
-      // Set a timeout to check again after the remaining quiet period
-      replayTimeoutRef.current = setTimeout(() => {
-        startReplayTimeout(attempt);
-      }, minimumQuietPeriod - timeSinceLastSpeech + 500); // Add 500ms buffer
-      
-      return;
-    }
-    
-    // Only start replay if we have no speech segments
-    if (segmentsRef.current.length === 0) {
-      // Determine the appropriate interval - use extended interval if speech was detected
-      const baseInterval = config.handsFree.speech.replay.interval;
-      const multiplier = config.handsFree.speech.replay.extendedIntervalMultiplier; // Use config value
-      const interval = useExtendedIntervalRef.current 
-        ? baseInterval * multiplier  // Use config multiplier
-        : baseInterval;
-        
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`Using ${useExtendedIntervalRef.current ? 'extended' : 'standard'} replay interval: ${interval}ms`);
-      }
-      
-      replayTimeoutRef.current = setTimeout(() => {
-        if (!isSpeechActive && !isProcessing) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('No valid speech, replaying question TTS...');
-          }
-          
-          // Reset extended interval flag after playing TTS
-          useExtendedIntervalRef.current = false;
-          
-          setIsTTSPlaying(true);
-          replayAttemptsRef.current += 1;
-          // Start next replay timeout after this one
-          startReplayTimeout();
+      if (lastSpeechDetectionTimeRef.current === 0 || timeSinceLastSpeech >= minimumQuietPeriod) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('No speech detected, replaying question TTS...');
         }
-      }, interval);
+        
+        setIsTTSPlaying(true);
+        replayAttemptsRef.current += 1;
+      }
     }
+    
+    // Schedule next replay check
+    replayTimeoutRef.current = setTimeout(() => {
+      startReplayTimeout();
+    }, config.handsFree.speech.replay.minimumQuietPeriod);
   };
 
-  // Update the checkForCommands function to handle both general and specific commands
+  // Detect voice commands in transcribed speech
   const checkForCommands = (transcription) => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Checking for commands in: ${transcription}`);
     }
 
-    // First check for context-specific commands that take precedence
-
-    // 1. Direct check for modify command first (highest priority)
+    // Priority-ordered command detection
+    
+    // 1. Modify command (highest priority)
     if (config.handsFree.commands.modify) {
       const modifyPhrases = config.handsFree.commands.modify.phrases;
-      
       const isModifyCommand = modifyPhrases.some(phrase => 
         transcription.toLowerCase().includes(phrase.toLowerCase())
       );
@@ -551,30 +499,26 @@ function HandsFreeInterface({
     return { isCommand: false };
   };
 
-  // Improve the handleCommandExecution function with better error handling
+  // Handle detected voice commands
   const handleCommandExecution = async (commandCheck) => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Executing command: ${commandCheck.type}`);
     }
     
-    // Play sound first for all commands
+    // Play feedback sound
     try {
       const commandSound = new Audio('/click.mp3');
       await commandSound.play();
     } catch (error) {
-      // Continue even if sound fails
       console.warn('Command sound failed to play:', error);
     }
     
-    // Reset replay timer for all commands and update speech detection time
     clearReplayTimeout();
     replayAttemptsRef.current = 0;
     updateSpeechDetectionTime();
     
-    // Execute the command based on type with availability checks
     switch (commandCheck.type) {
       case 'skip':
-        // Skip is always available
         segmentsRef.current = [commandCheck.response];
         const merged = segmentsRef.current.join(' ');
         setMergedSpeech(merged);
@@ -583,21 +527,18 @@ function HandsFreeInterface({
         break;
         
       case 'modify':
-        // Modify is available when we have an answer to modify or a new answer to create
         setIsModifying(true);
         isModifyingRef.current = true;
         segmentsRef.current = [];
         setMergedSpeech('');
         displayFeedback("Now modifying. Speak your new answer.", 'command');
         
-        // Mark this question as modified to prevent TTS replay
         setModifiedQuestions(prev => {
           const updated = new Set(prev);
           updated.add(currentQuestionIndex);
           return updated;
         });
         
-        // Stop any ongoing TTS playback
         if (window.speechSynthesis) {
           window.speechSynthesis.cancel();
         }
@@ -608,20 +549,16 @@ function HandsFreeInterface({
         break;
         
       case 'next':
-        // Check if next button is available (not on last question)
         if (currentQuestionIndex < currentQuestion.questions.length - 1) {
           displayFeedback("Moving to next question...", 'command');
           setCurrentQuestionIndex(currentQuestionIndex + 1);
         } else {
-          // If at last question, check if we can go to editor
           if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
              !hasChanges && cameFromEditor && onBackToEditor) {
             displayFeedback("Moving to editor view...", 'command');
             onBackToEditor();
           } else {
-            // Not available
             displayFeedback("No more questions available yet", 'error');
-            // Force feedback to show
             setShowFeedback(false);
             setTimeout(() => {
               displayFeedback("No more questions available yet", 'error');
@@ -631,36 +568,29 @@ function HandsFreeInterface({
         break;
         
       case 'previous':
-        // Check if previous button is available (not on first question)
         if (currentQuestionIndex > 0) {
           displayFeedback("Moving to previous question...", 'command');
           setCurrentQuestionIndex(currentQuestionIndex - 1);
         } else {
-          // Not available - give feedback
           displayFeedback("This is the first question", 'error');
         }
         break;
         
       case 'toEditor':
-        // Check if editor button is available
         if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
             !hasChanges && cameFromEditor && onBackToEditor) {
           displayFeedback("Moving to editor view...", 'command');
           onBackToEditor();
         } else {
-          // Not available
           displayFeedback("Editor not available here", 'error');
         }
         break;
         
       case 'toQuestions':
-        // This would be for going from editor back to questions
-        // Not directly applicable in the current view
         displayFeedback("Already in questions view", 'error');
         break;
         
       case 'toHome':
-        // Always allow going back to home
         displayFeedback("Returning to home page...", 'command');
         safeNavigate('/');
         break;
@@ -671,7 +601,7 @@ function HandsFreeInterface({
     }
   };
 
-  // Update the finalizeAndSubmit function to reset the replay timer when an answer is submitted
+  // Process and submit the final answer
   const finalizeAndSubmit = async () => {
     const finalAnswer = segmentsRef.current.join(' ');
     if (process.env.NODE_ENV !== 'production') {
@@ -679,7 +609,6 @@ function HandsFreeInterface({
       console.log('Current modifying state during finalization:', isModifying);
     }
 
-    // Reset replay timer after submission and update speech detection time
     clearReplayTimeout();
     replayAttemptsRef.current = 0;
     updateSpeechDetectionTime();
@@ -714,21 +643,18 @@ function HandsFreeInterface({
           updatedConversationPlanning
         );
 
-        // Clear state before moving to next question
+        // Reset state and move to the next question
         segmentsRef.current = [];
         setMergedSpeech('');
         setIsSpeechActive(false);
         setIsRecording(false);
         if (setInput) setInput('');
 
-        // Play sound before moving to next question
         playClickSound();
         setCurrentQuestionIndex(1);
       } else if (!questionStatus[currentQuestionIndex]?.answer) {
-        // If question is unanswered, submit and potentially move to next question
         await handleSubmitAnswer(finalAnswer);
 
-        // Clear state after submitting
         segmentsRef.current = [];
         setMergedSpeech('');
         setIsSpeechActive(false);
@@ -745,13 +671,12 @@ function HandsFreeInterface({
     }
   };
 
-  // Update the handleSubmitAnswer function to also reset the replay timer
+  // Submit the user's answer and handle automatic navigation
   const handleSubmitAnswer = async (text) => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Submitting answer for question ${currentQuestionIndex}: "${text.substring(0, 30)}..."`);
     }
     
-    // Reset replay timer after submitting an answer and update speech detection time
     clearReplayTimeout();
     replayAttemptsRef.current = 0;
     updateSpeechDetectionTime();
@@ -764,7 +689,7 @@ function HandsFreeInterface({
         response: text
       };
 
-      // Remove responses for any subsequent questions
+      // Clear subsequent question responses
       for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
         updatedQuestions[i] = {
           ...updatedQuestions[i],
@@ -777,61 +702,47 @@ function HandsFreeInterface({
         questions: updatedQuestions
       };
 
-      // Update question status immediately
+      // Update local state immediately
       setQuestionStatus({
         ...questionStatus,
         [currentQuestionIndex]: { type: 'answered', answer: text }
       });
 
-      // Handle backend communication
       const newLength = await sendMessage(currentQuestionIndex, updatedConversationPlanning);
       
       if (process.env.NODE_ENV !== 'production') {
         console.log(`Backend returned new question count: ${newLength}`);
       }
 
-      // Clear any input
       if (setInput) {
         setInput('');
       }
 
-      // Auto-advance to next question - ONLY if:
-      // 1. We're not editing
-      // 2. The backend has returned a new length
-      // 3. Our current index is less than the new total length - 1
+      // Auto-advance to next question if conditions met
       if (!isModifying && newLength && currentQuestionIndex < newLength - 1) {
         if (process.env.NODE_ENV !== 'production') {
           console.log(`Auto-advancing to next question (index ${currentQuestionIndex + 1})`);
         }
         
-        // Display feedback
         displayFeedback("Answer saved. Moving to next question.", 'success');
         
-        // Create a new Audio instance for this specific navigation
         try {
           const navigationSound = new Audio('/click.mp3');
           
-          // When sound ends, then navigate
           navigationSound.addEventListener('ended', () => {
-            // Set a very short timeout to ensure sound is fully complete
             setTimeout(() => {
               setCurrentQuestionIndex(currentQuestionIndex + 1);
             }, 50);
           });
           
-          // Handle any errors
           navigationSound.addEventListener('error', () => {
-            // If sound fails, still navigate
             setCurrentQuestionIndex(currentQuestionIndex + 1);
           });
           
-          // Play the sound - navigation will happen in the 'ended' event
           navigationSound.play().catch(() => {
-            // If sound fails to play, still navigate
             setCurrentQuestionIndex(currentQuestionIndex + 1);
           });
         } catch (error) {
-          // If there's any error with the sound, still navigate
           setCurrentQuestionIndex(currentQuestionIndex + 1);
         }
       } else if (process.env.NODE_ENV !== 'production') {
@@ -851,25 +762,21 @@ function HandsFreeInterface({
     }
   };
 
-  // Update handleModifySubmit to reset replay timer
+  // Handle modification of previously submitted answers
   const handleModifySubmit = async (text) => {
-    // Reset replay timer after submitting a modified answer and update speech detection time
     clearReplayTimeout();
     replayAttemptsRef.current = 0;
     updateSpeechDetectionTime();
     
     setIsProcessing(true);
     try {
-      // Create a deep copy of the questions array
       const updatedQuestions = [...currentQuestion.questions];
       
-      // Update the current question's response
       updatedQuestions[currentQuestionIndex] = {
         ...updatedQuestions[currentQuestionIndex],
         response: text
       };
 
-      // Clear subsequent responses
       for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
         updatedQuestions[i] = {
           ...updatedQuestions[i],
@@ -877,30 +784,25 @@ function HandsFreeInterface({
         };
       }
 
-      // Create the updated conversation planning object
       const updatedConversationPlanning = {
         ...currentQuestion,
         questions: updatedQuestions,
-        followup_needed: true // Force the backend to regenerate subsequent questions
+        followup_needed: true
       };
 
       console.log('Submitting modified answer for question index', currentQuestionIndex);
       console.log('Updated conversation planning:', updatedConversationPlanning);
 
-      // Send the updated conversation to the backend with the changedIndex parameter
-      // This tells the backend which question was modified
       const newLength = await submitAnswer(
         updatedQuestions[currentQuestionIndex].id,
         text,
-        currentQuestionIndex,  // Explicitly pass the changedIndex
+        currentQuestionIndex,
         updatedConversationPlanning
       );
 
-      // Update question status immediately
       const newQuestionStatus = { ...questionStatus };
       newQuestionStatus[currentQuestionIndex] = { type: 'answered', answer: text };
 
-      // Clear subsequent question statuses
       for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
         delete newQuestionStatus[i];
       }
@@ -908,36 +810,29 @@ function HandsFreeInterface({
       setQuestionStatus(newQuestionStatus);
       displayFeedback("Answer updated successfully and saved to conversation.", 'success');
       
-      // Check if the LLM decided to end the conversation
       if (newLength === null) {
-        // LLM set followup_needed to false, move to editor
+        // LLM decided to end conversation
         displayFeedback("Moving to editor view...", 'success');
         
-        // IMPORTANT: Update the currentQuestion object to remove questions after the modified one
-        // This ensures the parent component's state is updated correctly
         currentQuestion.questions = currentQuestion.questions.slice(0, currentQuestionIndex + 1);
         currentQuestion.followup_needed = false;
         
         setTimeout(() => {
-          // Play sound when moving to editor
           playClickSound();
           onBackToEditor();
-        }, 1500); // Short delay to let the user see the success message
+        }, 1500);
       }
-      // Otherwise, if there are more questions, advance to the next one
       else if (newLength && newLength > currentQuestionIndex + 1) {
         setTimeout(() => {
-          // Clear the modified state for the current question when moving to the next
           setModifiedQuestions(prev => {
             const updated = new Set(prev);
             updated.delete(currentQuestionIndex);
             return updated;
           });
           
-          // Play sound when advancing to next question
           playClickSound();
           setCurrentQuestionIndex(newLength - 1);
-        }, 1500); // Short delay to let the user see the success message
+        }, 1500);
       }
 
     } catch (error) {
@@ -948,7 +843,7 @@ function HandsFreeInterface({
     }
   };
 
-  // Start voice recording using VAD.
+  // Initialize voice activity detection and speech processing
   const startRecording = async () => {
     try {
       if (vadRef.current) {
@@ -956,7 +851,6 @@ function HandsFreeInterface({
         vadRef.current = null;
       }
 
-      // Only clear segments if not in editing mode or if this is a brand new recording
       if (!isModifying || segmentsRef.current.length === 0) {
         setIsSpeechActive(false);
         setIsRecording(false);
@@ -984,12 +878,17 @@ function HandsFreeInterface({
           setIsRecording(true);
           clearFinalizeTimeout();
           
-          // Reset the replay timer whenever speech is detected and update speech detection time
+          // Cancel TTS when user starts speaking
+          if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+          }
+          setIsTTSPlaying(false);
+          
           clearReplayTimeout();
           replayAttemptsRef.current = 0;
           updateSpeechDetectionTime();
         },
-        // Updated onSpeechEnd handler with fixed editing mode logic
+        // Speech end handler with transcription
         onSpeechEnd: async (audio) => {
           if (process.env.NODE_ENV !== 'production') {
             console.log('Speech segment ended, transcribing...');
@@ -1003,7 +902,6 @@ function HandsFreeInterface({
               console.log('Silent segment detected – ignoring and waiting for new input');
             }
             setIsProcessing(false);
-            // Only start replay if not in editing mode
             if (!isModifying && !isModifyingRef.current) {
               startReplayTimeout();
             }
@@ -1148,6 +1046,7 @@ function HandsFreeInterface({
     }
   };
 
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
       if (vadRef.current) vadRef.current.destroy();
@@ -1156,20 +1055,18 @@ function HandsFreeInterface({
     };
   }, []);
 
-  // Fix component mount effect to have proper dependencies
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
       console.log('Component updated with new props/state');
     }
   }, [currentQuestionIndex, currentQuestion, questionStatus]);
 
-  // Update the button click handlers for consistency
+  // Navigation button handlers
   const handlePrevClick = () => {
     if (currentQuestionIndex > 0) {
       playClickSound();
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     } else if (currentQuestionIndex === 0) {
-      // First question - go to home
       playClickSound();
       safeNavigate('/');
     }
@@ -1181,11 +1078,9 @@ function HandsFreeInterface({
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
                !hasChanges && cameFromEditor && onBackToEditor) {
-      // Last question with editor available - go to editor
       playClickSound();
       onBackToEditor();
     } else {
-      // Last question but editor not available
       displayFeedback("No more questions available yet", 'error');
     }
   };
@@ -1202,7 +1097,7 @@ function HandsFreeInterface({
         overflow: 'hidden'
       }}
     >
-      {/* Navigation Buttons */}
+      {/* Navigation controls */}
       {currentQuestionIndex === 0 && (
         <NavigationButton
           direction="left"
@@ -1248,7 +1143,7 @@ function HandsFreeInterface({
           zIndex: 1
         }}
       >
-        {/* Display Current Question */}
+        {/* Current question display */}
         <Box sx={{ position: 'relative', width: '100%', mb: 4 }}>
           <Typography
             variant="h4"
@@ -1278,7 +1173,7 @@ function HandsFreeInterface({
           </Box>
         </Box>
 
-        {/* Answer Display Section */}
+        {/* Answer display area */}
         <Paper
           elevation={isModifying ? 4 : 1}
           sx={{
@@ -1305,7 +1200,7 @@ function HandsFreeInterface({
             margin: '0 auto',
           }}
         >
-          {/* Status Badge */}
+          {/* Editing mode indicator */}
           {isModifying && (
             <Box
               sx={{
@@ -1326,7 +1221,7 @@ function HandsFreeInterface({
             </Box>
           )}
 
-          {/* Answer Content */}
+          {/* Current or existing answer */}
           <Typography
             variant="body1"
             sx={{
@@ -1349,7 +1244,7 @@ function HandsFreeInterface({
               : questionStatus[currentQuestionIndex]?.answer || 'Waiting for your answer...'}
           </Typography>
 
-          {/* New Answer Preview During Editing */}
+          {/* New answer preview when editing */}
           {isModifying && mergedSpeech && questionStatus[currentQuestionIndex]?.answer && (
             <Typography
               variant="body1"
@@ -1372,7 +1267,7 @@ function HandsFreeInterface({
             </Typography>
           )}
 
-          {/* Recognition Status */}
+          {/* Edit status message */}
           {isModifying && mergedSpeech && (
             <Typography
               variant="body2"
@@ -1391,7 +1286,7 @@ function HandsFreeInterface({
             </Typography>
           )}
 
-          {/* Edit Icon */}
+          {/* Edit icon */}
           {questionStatus[currentQuestionIndex]?.answer && !isModifying && (
             <Box
               sx={{
@@ -1406,7 +1301,7 @@ function HandsFreeInterface({
           )}
         </Paper>
 
-        {/* Visualizer and Status */}
+        {/* Audio visualizer and status */}
         <Box sx={{ mt: 3, textAlign: 'center' }}>
           <AudioVisualizer isSpeechDetected={isSpeechActive} />
           <Typography sx={{ mb: 2 }}>
@@ -1419,7 +1314,7 @@ function HandsFreeInterface({
         </Box>
       </Box>
 
-      {/* Recognition Feedback component */}
+      {/* Floating feedback display */}
       <RecognitionFeedback
         text={recognitionFeedback}
         isVisible={showFeedback}
@@ -1429,9 +1324,9 @@ function HandsFreeInterface({
   );
 }
 
-// Enhanced feedback component with different styles based on feedback type
+// Visual feedback component for speech recognition and commands
 const RecognitionFeedback = ({ text, isVisible, type = 'default' }) => {
-  // Different background colors based on feedback type
+  // Select background color based on feedback type
   const getBackgroundColor = () => {
     switch (type) {
       case 'transcription':
@@ -1447,7 +1342,7 @@ const RecognitionFeedback = ({ text, isVisible, type = 'default' }) => {
     }
   };
 
-  // Get appropriate icon based on type
+  // Select appropriate icon for feedback type
   const getIcon = () => {
     switch (type) {
       case 'transcription':

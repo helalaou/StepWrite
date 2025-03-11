@@ -56,10 +56,10 @@ const config = {
     // Voice Activity Detection settings
     vad: {
       minSpeechFrames: 3,             // Range: 3-30, Minimum frames for speech detection
-      preSpeechPadFrames: 7,          // Range: 1-10, Frames to keep before speech (increased from 2 to 7)
-      positiveSpeechThreshold: 0.65,  // Range: 0.5-0.95, Confidence for positive detection (lowered from 0.70 to 0.65)
+      preSpeechPadFrames: 10,          // Range: 1-10, Frames to keep before speech 
+      positiveSpeechThreshold: 0.65,  // Range: 0.5-0.95, Confidence for positive detection 
       negativeSpeechThreshold: 0.60,  // Range: 0.5-0.90, Confidence for negative detection
-      redemptionFrames: 5,            // Range: 1-10, Frames to wait before confirming end (increased from 3 to 5)
+      redemptionFrames: 10,            // Range: 1-10, Frames to wait before confirming end 
       mode: 3,                        // Range: 0-3, VAD aggressiveness (3 = most aggressive)
     },
     
@@ -75,13 +75,12 @@ const config = {
     
     // Controls when to finalize and submit speech
     speech: {
-      finalizeDelay: 3000,            // Range: 3000-10000ms, Wait time before submitting
+      finalizeDelay: 2500,            // Range: 3000-10000ms, Wait time before submitting
       // Controls question replay behavior when no speech is detected
       replay: {
-        interval: 9000,               // Range: 5000-30000ms, Time before replaying question
         maxAttempts: Infinity,        // Number of replay attempts before giving up
         minimumQuietPeriod: 12000,    // Range: 5000-20000ms, Minimum silence required after speech detection before TTS can play again / prevents TTS from interrupting during natural pauses in speech
-        extendedIntervalMultiplier: 3 // Range: 1.5-5.0, // Multiplies the base interval after any speech is detected
+        nonFirstQuestionDelay: 1000,  // Range: 500-3000ms, delay before playing TTS for non-first questions to ensure the audio clips are generated
       },
     },
     

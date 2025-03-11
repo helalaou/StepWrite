@@ -1072,6 +1072,13 @@ function HandsFreeInterface({
     }
   };
 
+  // Start VAD detection when TTS starts playing
+  useEffect(() => {
+    if (isTTSPlaying) {
+      startRecording();
+    }
+  }, [isTTSPlaying]);
+
   const handleNextClick = () => {
     if (currentQuestionIndex < currentQuestion.questions.length - 1) {
       playClickSound();
@@ -1163,7 +1170,6 @@ function HandsFreeInterface({
                 text={currentQuestion.questions[currentQuestionIndex]?.question}
                 onComplete={() => {
                   setIsTTSPlaying(false);
-                  startRecording();
                 }}
                 autoPlay={isTTSPlaying}
                 showAnimation={isTTSPlaying}

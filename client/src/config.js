@@ -45,6 +45,7 @@ const config = {
   // Used in: SpeakButton.js
   tts: {
     mode: getEnvVar('REACT_APP_TTS_MODE', 'ENABLED'),  // 'ENABLED' | 'DISABLED'
+    outputPrefix: getEnvVar('REACT_APP_TEXT_EDITOR_TTS_PREFIX', 'The final output is:'), // Prefix text before playing the output to the user
   },
   
   // ====== VOICE INPUT MODES ======

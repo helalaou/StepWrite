@@ -9,6 +9,7 @@ import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import MicIcon from '@mui/icons-material/Mic';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import config from '../config';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
@@ -44,12 +45,16 @@ function TextEditor({
   const [currentIndex, setCurrentIndex] = useState(savedHistory ? savedHistory.length - 1 : 0);
   const [content, setContent] = useState(savedContent || initialContent);
   const [fontSize, setFontSize] = useState(editorPreferences.fontSize || 1.1);
-  const [oneSentencePerLine, setOneSentencePerLine] = useState(editorPreferences.oneSentencePerLine);
   const [defaultFormat] = useState(savedContent || initialContent);
   const [copySuccess, setCopySuccess] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const [isSpeechActive, setIsSpeechActive] = useState(false);
+  const [isTTSPlaying, setIsTTSPlaying] = useState(false);
+  const [isTTSLoading, setIsTTSLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const audioRef = useRef(null);
   
   const vadRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -86,6 +91,8 @@ function TextEditor({
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   }, []);
 
+  // Commented out one sentence per line formatting functions
+  /*
   const formatToOneSentencePerLine = (text) => {
     return text
       .replace(/\n\s*\n/g, '\n[PARAGRAPH]\n')
@@ -122,6 +129,7 @@ function TextEditor({
     onContentChange(newContent);
     onHistoryChange(updatedHistory);
   };
+  */
 
   const handleContentChange = (e) => {
     const newContent = e.target.value;
@@ -406,6 +414,117 @@ function TextEditor({
     if (onBack) onBack();
   };
 
+  // Auto-play TTS when audio is ready and component has just mounted
+  useEffect(() => {
+    // Only auto-play if we have an audio URL and we haven't auto-played before
+    if (audioUrl && !hasInitiallyLoaded && !isTTSPlaying && config.tts.mode === 'ENABLED') {
+      // Set a small delay to ensure everything is rendered properly
+      const timer = setTimeout(() => {
+        playTTS();
+        setHasInitiallyLoaded(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [audioUrl]);
+
+  // TTS generation function - generates audio when content changes
+  useEffect(() => {
+    if (content.trim() && config.tts.mode === 'ENABLED') {
+      generateTTSAudio(content);
+    }
+  }, [content]);
+
+  // Function to generate TTS audio
+  const generateTTSAudio = async (text) => {
+    try {
+      setIsTTSLoading(true);
+      
+      // Add the prefix to the text
+      const textWithPrefix = `${config.tts.outputPrefix} ${text}`;
+      
+      const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ text: textWithPrefix })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (!data.audioUrl) {
+        throw new Error('No audio URL in response');
+      }
+
+      setAudioUrl(`${config.core.apiUrl}${data.audioUrl}`);
+    } catch (error) {
+      console.error('TTS generation error:', error);
+    } finally {
+      setIsTTSLoading(false);
+    }
+  };
+
+  // Function to play TTS audio
+  const playTTS = async () => {
+    if (isTTSPlaying || !audioUrl) return;
+    
+    try {
+      // If we have an existing audio element playing, stop it
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+
+      // Create new audio element
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      // Play sound on button click
+      playClickSound();
+      
+      // Add event listeners
+      audio.addEventListener('ended', () => {
+        setIsTTSPlaying(false);
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('Audio playback error:', e);
+        setIsTTSPlaying(false);
+      });
+
+      // Play the audio
+      await audio.play();
+      setIsTTSPlaying(true);
+    } catch (error) {
+      console.error('Error playing TTS:', error);
+      setIsTTSPlaying(false);
+    }
+  };
+
+  // Function to stop TTS playback
+  const stopTTS = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsTTSPlaying(false);
+    }
+  };
+  
+  // Stop TTS when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <Box sx={{ 
       display: 'flex',
@@ -578,6 +697,7 @@ function TextEditor({
             </span>
           </Tooltip>
 
+          {/*one sentence per line logic -- temporarily disabled
           <Tooltip title={`${oneSentencePerLine ? 'Disable' : 'Enable'} one sentence per line`}>
             <IconButton
               onClick={handleToggleFormat}
@@ -592,6 +712,7 @@ function TextEditor({
               <FormatLineSpacingIcon sx={{ fontSize: { xs: '1.2rem', sm: '1.25rem' } }} />
             </IconButton>
           </Tooltip>
+          */}
 
           <Box sx={{ 
             display: 'flex', 
@@ -690,6 +811,32 @@ function TextEditor({
                 <MicIcon sx={{ 
                   fontSize: { xs: '1.2rem', sm: '1.25rem' },
                   transform: isEnabled ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease'
+                }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          
+          {/* TTS button */}
+          {config.tts.mode === 'ENABLED' && (
+            <Tooltip title={isTTSPlaying ? "Stop playback" : "Play text aloud"}>
+              <IconButton
+                onClick={isTTSPlaying ? stopTTS : playTTS}
+                disabled={isTTSLoading || !content.trim()}
+                size="small"
+                sx={{
+                  padding: { xs: '4px', sm: '4px' },
+                  color: isTTSPlaying ? 'primary.main' : 'action.active',
+                  animation: isTTSPlaying ? `${pulseAnimation} 1s infinite` : 'none',
+                  '&:hover': {
+                    backgroundColor: isTTSPlaying ? 'primary.light' : 'action.hover',
+                    opacity: 0.8
+                  },
+                }}
+              >
+                <VolumeUpIcon sx={{ 
+                  fontSize: { xs: '1.2rem', sm: '1.25rem' },
+                  transform: isTTSPlaying ? 'scale(1.1)' : 'scale(1)',
                   transition: 'transform 0.2s ease'
                 }} />
               </IconButton>

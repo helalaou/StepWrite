@@ -1238,9 +1238,17 @@ function HandsFreeInterface({
       clearReplayTimeout();
       
       if (vadRef.current) {
-        vadRef.current.destroy().catch(err => {
-          console.error('Error destroying VAD on unmount:', err);
-        });
+        try {
+          const destroyPromise = vadRef.current.destroy();
+          // Only call catch if destroy returns a promise
+          if (destroyPromise && typeof destroyPromise.catch === 'function') {
+            destroyPromise.catch(err => {
+              console.error('Error destroying VAD on unmount:', err);
+            });
+          }
+        } catch (err) {
+          console.error('Error calling destroy on VAD:', err);
+        }
         vadRef.current = null;
       }
       

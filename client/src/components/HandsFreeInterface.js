@@ -670,6 +670,11 @@ function HandsFreeInterface({
         safeNavigate('/');
         break;
         
+      case 'returnToHome':
+        displayFeedback("Returning to home page...", 'command');
+        safeNavigate('/');
+        break;
+        
       default:
         console.warn(`Unknown command type: ${commandCheck.type}`);
         displayFeedback("Unknown command", 'error');

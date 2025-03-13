@@ -58,9 +58,9 @@ const config = {
     vad: {
       minSpeechFrames: 3,             // Range: 3-30, Minimum frames for speech detection
       preSpeechPadFrames: 10,          // Range: 1-10, Frames to keep before speech 
-      positiveSpeechThreshold: 0.65,  // Range: 0.5-0.95, Confidence for positive detection 
+      positiveSpeechThreshold: 0.7,  // Range: 0.5-0.95, Confidence for positive detection 
       negativeSpeechThreshold: 0.60,  // Range: 0.5-0.90, Confidence for negative detection
-      redemptionFrames: 10,            // Range: 1-10, Frames to wait before confirming end 
+      redemptionFrames: 6,            // Range: 1-10, Frames to wait before confirming end 
       mode: 3,                        // Range: 0-3, VAD aggressiveness (3 = most aggressive)
     },
     

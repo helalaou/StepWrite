@@ -1358,15 +1358,26 @@ function HandsFreeInterface({
                 display: 'flex', 
                 justifyContent: 'center', 
                 mb: 3,
-                animation: 'pulse 1.5s infinite ease-in-out',
+                animation: isSpeechActive 
+                  ? 'activeListening 1s infinite ease-in-out'
+                  : 'pulse 1.5s infinite ease-in-out',
                 '@keyframes pulse': {
                   '0%': { transform: 'scale(1)' },
                   '50%': { transform: 'scale(1.1)' },
                   '100%': { transform: 'scale(1)' }
+                },
+                '@keyframes activeListening': {
+                  '0%': { transform: 'scale(1)', color: '#1976d2' },
+                  '50%': { transform: 'scale(1.2)', color: '#2e7d32' },
+                  '100%': { transform: 'scale(1)', color: '#1976d2' }
                 }
               }}
             >
-              <MicIcon sx={{ fontSize: 60, color: '#1976d2' }} />
+              <MicIcon sx={{ 
+                fontSize: 60, 
+                color: isSpeechActive ? '#2e7d32' : '#1976d2',
+                transition: 'color 0.3s ease'
+              }} />
             </Box>
             
             <Typography variant="body1" sx={{ mb: 3 }}>
@@ -1380,19 +1391,51 @@ function HandsFreeInterface({
                 justifyContent: 'center',
                 p: 2,
                 borderRadius: 1,
-                backgroundColor: 'rgba(25, 118, 210, 0.1)',
-                animation: isSpeechActive ? 'listening 1.5s infinite ease-in-out' : 'none',
-                '@keyframes listening': {
-                  '0%': { backgroundColor: 'rgba(25, 118, 210, 0.1)' },
-                  '50%': { backgroundColor: 'rgba(25, 118, 210, 0.3)' },
-                  '100%': { backgroundColor: 'rgba(25, 118, 210, 0.1)' }
+                backgroundColor: isSpeechActive 
+                  ? 'rgba(46, 125, 50, 0.15)'
+                  : 'rgba(25, 118, 210, 0.1)',
+                border: isSpeechActive 
+                  ? '1px solid rgba(46, 125, 50, 0.3)'
+                  : '1px solid rgba(25, 118, 210, 0.2)',
+                transition: 'all 0.3s ease',
+                animation: isSpeechActive 
+                  ? 'listeningPulse 1.5s infinite ease-in-out'
+                  : 'none',
+                '@keyframes listeningPulse': {
+                  '0%': { backgroundColor: 'rgba(46, 125, 50, 0.1)', boxShadow: '0 0 0 0 rgba(46, 125, 50, 0.2)' },
+                  '50%': { backgroundColor: 'rgba(46, 125, 50, 0.25)', boxShadow: '0 0 0 10px rgba(46, 125, 50, 0)' },
+                  '100%': { backgroundColor: 'rgba(46, 125, 50, 0.1)', boxShadow: '0 0 0 0 rgba(46, 125, 50, 0)' }
                 }
               }}
             >
-              <Typography variant="body2" sx={{ color: isSpeechActive ? '#1976d2' : 'text.secondary' }}>
-                {isSpeechActive ? 'Listening...' : 'Waiting for voice command...'}
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: isSpeechActive ? '#2e7d32' : '#1976d2',
+                  fontWeight: isSpeechActive ? 600 : 400,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                {isSpeechActive ? (
+                  <>
+                    <Box component="span" sx={{ 
+                      width: 8, 
+                      height: 8, 
+                      borderRadius: '50%', 
+                      backgroundColor: '#2e7d32',
+                      display: 'inline-block',
+                      animation: 'blink 1s infinite'
+                    }} />
+                    Listening...
+                  </>
+                ) : (
+                  'Waiting for voice command...'
+                )}
               </Typography>
             </Box>
+            
           </Box>
         </Box>
       )}

@@ -55,6 +55,7 @@ function TextEditor({
   const [audioUrl, setAudioUrl] = useState(null);
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
   const audioRef = useRef(null);
+  const ttsButtonRef = useRef(null);
   
   const vadRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -280,13 +281,49 @@ function TextEditor({
                 console.log('Transcription received:', transcription);
                 
                 // Check for navigation command
-                const toQuestionsCommand = config.handsFree.commands.toQuestions.phrases.some(
+                const toQuestionsCommand = config.handsFree.commands.textEditor.toQuestions.phrases.some(
                   phrase => transcription.includes(phrase.toLowerCase())
                 );
 
                 if (toQuestionsCommand) {
                   console.log('Navigation command detected, going back to questions');
                   onBack();
+                  return;
+                }
+
+                // Check for play or stop TTS commands
+                const playTTSCommand = config.handsFree.commands.textEditor.play.phrases.some(
+                  phrase => transcription.includes(phrase.toLowerCase())
+                );
+                
+                const stopTTSCommand = config.handsFree.commands.textEditor.stop.phrases.some(
+                  phrase => transcription.includes(phrase.toLowerCase())
+                );
+                
+                // Only execute play command if not already playing
+                if (playTTSCommand && config.tts.mode === 'ENABLED' && !isTTSPlaying) {
+                  const audioIsPlaying = audioRef.current && !audioRef.current.paused;
+                  
+                  if (!audioIsPlaying) {
+                    if (ttsButtonRef.current && !ttsButtonRef.current.disabled) {
+                      ttsButtonRef.current.click();
+                    }
+                  }
+                  return;
+                }
+                 
+                if (stopTTSCommand && config.tts.mode === 'ENABLED') { 
+                  const audioIsPlaying = audioRef.current && !audioRef.current.paused;
+                  
+                  if (audioIsPlaying || isTTSPlaying) {
+                    // direct control of audio element for reliability
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                      audioRef.current.currentTime = 0;
+                    }
+                     
+                    setIsTTSPlaying(false);
+                  }
                   return;
                 }
               }
@@ -511,8 +548,8 @@ function TextEditor({
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
-      setIsTTSPlaying(false);
     }
+    setIsTTSPlaying(false);
   };
   
   // Stop TTS when component unmounts
@@ -821,6 +858,7 @@ function TextEditor({
           {config.tts.mode === 'ENABLED' && (
             <Tooltip title={isTTSPlaying ? "Stop playback" : "Play text aloud"}>
               <IconButton
+                ref={ttsButtonRef}
                 onClick={isTTSPlaying ? stopTTS : playTTS}
                 disabled={isTTSLoading || !content.trim()}
                 size="small"

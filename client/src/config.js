@@ -87,109 +87,144 @@ const config = {
     
     // Voice commands configuration
     commands: {
-      skip: {
-        phrases: [
-          'skip',
-          'skip question', 
-          'skip this',
-          'skip this question',
-          'i want to skip',
-          'i want to skip this',
-          'i want to skip this question'
-        ],
-        response: 'user has skipped this question'
+      // HandsFree interface commands
+      handsFree: {
+        skip: {
+          phrases: [
+            'skip',
+            'skip question', 
+            'skip this',
+            'skip this question',
+            'i want to skip',
+            'i want to skip this',
+            'i want to skip this question'
+          ],
+          response: 'user has skipped this question'
+        },
+        next: {
+          phrases: [
+            'next',
+            'next question',
+            'go to next',
+            'go to next question',
+          ],
+          response: 'Moving to next question'
+        },
+        previous: {
+          phrases: [
+            'previous',
+            'previous question',
+            'go to previous',
+            'go to previous question',
+            'go back to previous'
+          ],
+          response: 'Moving to previous question'
+        },
+        toEditor: {
+          phrases: [
+            'next',
+            'next question',
+            'go to editor',
+            'open editor',
+            'move to editor',
+            'switch to editor',
+            'editor', 
+            'back to editor'
+          ],
+          response: 'Moving to editor'
+        },
+        toHome: {
+          phrases: [
+            'go home',
+            'home page',
+            'homepage',
+            'return home',
+            'back to home',
+            'return to home',
+            'go to home',
+            'landing page',
+            'return to landing',
+            'go to landing'
+          ],
+          response: 'Returning to home page'
+        },
+        modify: {
+          phrases: [
+            'modify',
+            'modify this',
+            'modify this question',
+            'modify question',
+            'modify this response',
+            'i want to modify',
+            'i want to modify this',
+          ],
+          response: 'Modifying this question'
+        },
+        pause: {
+          phrases: [
+            'pause',
+            'pause test',
+            'pause experiment',
+            'pause flow',
+            'stop listening',
+            'take a break'
+          ],
+          response: 'Experiment paused. Say continue to resume.'
+        },
+        continue: {
+          phrases: [
+            'continue',
+            'resume',
+            'resume test',
+            'resume experiment',
+            'resume flow',
+            'start listening',
+            'continue experiment'
+          ],
+          response: 'Resuming experiment.'
+        }
       },
-      next: {
-        phrases: [
-          'next',
-          'next question',
-          'go to next',
-          'go to next question',
-        ],
-        response: 'Moving to next question'
-      },
-      previous: {
-        phrases: [
-          'previous',
-          'previous question',
-          'go to previous',
-          'go to previous question'
-        ],
-        response: 'Moving to previous question'
-      },
-      toEditor: {
-        phrases: [
-          'next',
-          'next question',
-          'go to editor',
-          'open editor',
-          'move to editor',
-          'switch to editor',
-          'editor', 
-          'back to editor'
-        ],
-        response: 'Moving to editor'
-      },
-      toQuestions: {
-        phrases: [
-          'previous',
-          'previous question',
-          'go back to questions',
-          'go back',
-          'back to questions',
-          'return to questions',
-        ],
-        response: 'Returning to questions'
-      },
-      toHome: {
-        phrases: [
-          'go home',
-          'home page',
-          'homepage',
-          'return home',
-          'back to home',
-          'return to home',
-          'go to home',
-          'landing page',
-          'return to landing',
-          'go to landing'
-        ],
-        response: 'Returning to home page'
-      },
-      modify: {
-        phrases: [
-          'modify',
-          'modify this',
-          'modify this question',
-          'modify question',
-          'modify this response',
-          'i want to modify',
-          'i want to modify this',
-        ],
-        response: 'Modifying this question'
-      },
-      pause: {
-        phrases: [
-          'pause',
-          'pause test',
-          'pause experiment',
-          'pause flow',
-          'stop listening',
-          'take a break'
-        ],
-        response: 'Experiment paused. Say continue to resume.'
-      },
-      continue: {
-        phrases: [
-          'continue',
-          'resume',
-          'resume test',
-          'resume experiment',
-          'resume flow',
-          'start listening',
-          'continue experiment'
-        ],
-        response: 'Resuming experiment.'
+      
+      // TextEditor interface commands
+      textEditor: {
+        toQuestions: {
+          phrases: [
+            'previous',
+            'previous question',
+            'go back to questions',
+            'go back',
+            'back to questions',
+            'return to questions',
+          ],
+          response: 'Returning to questions'
+        },
+        play: {
+          phrases: [
+            'play that again',
+            'say that again',
+            'play audio',
+            'repeat that',
+            'read it again',
+            'speak it again',
+            'read it to me',
+            'say it again',
+            'read out loud',
+          ],
+          response: 'Playing audio'
+        },
+        stop: {
+          phrases: [
+            'stop',
+            'stop speaking',
+            'stop reading',
+            'stop talking',
+            'stop audio',
+            'stop playback',
+            'be quiet',
+            'silence'
+          ],
+          response: 'Stopping audio'
+        }
       }
     },
     

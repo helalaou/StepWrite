@@ -384,7 +384,7 @@ function HandsFreeInterface({
 
     // Check for continue command when paused (highest priority)
     if (isPaused || isPausedRef.current) {
-      const continuePhrases = config.handsFree.commands.continue.phrases;
+      const continuePhrases = config.handsFree.commands.handsFree.continue.phrases;
       const isContinueCommand = continuePhrases.some(phrase => 
         transcription.toLowerCase().includes(phrase.toLowerCase())
       );
@@ -396,7 +396,7 @@ function HandsFreeInterface({
         return {
           isCommand: true,
           type: 'continue',
-          response: config.handsFree.commands.continue.response
+          response: config.handsFree.commands.handsFree.continue.response
         };
       }
       
@@ -405,7 +405,7 @@ function HandsFreeInterface({
     }
 
     // Check for pause command
-    const pausePhrases = config.handsFree.commands.pause.phrases;
+    const pausePhrases = config.handsFree.commands.handsFree.pause.phrases;
     const isPauseCommand = pausePhrases.some(phrase => 
       transcription.toLowerCase().includes(phrase.toLowerCase())
     );
@@ -417,15 +417,15 @@ function HandsFreeInterface({
       return {
         isCommand: true,
         type: 'pause',
-        response: config.handsFree.commands.pause.response
+        response: config.handsFree.commands.handsFree.pause.response
       };
     }
 
     // Priority-ordered command detection for other commands
     
     // 1. Modify command (highest priority)
-    if (config.handsFree.commands.modify) {
-      const modifyPhrases = config.handsFree.commands.modify.phrases;
+    if (config.handsFree.commands.handsFree.modify) {
+      const modifyPhrases = config.handsFree.commands.handsFree.modify.phrases;
       const isModifyCommand = modifyPhrases.some(phrase => 
         transcription.toLowerCase().includes(phrase.toLowerCase())
       );
@@ -437,7 +437,7 @@ function HandsFreeInterface({
         return {
           isCommand: true,
           type: 'modify',
-          response: config.handsFree.commands.modify.response
+          response: config.handsFree.commands.handsFree.modify.response
         };
       }
     }
@@ -445,7 +445,7 @@ function HandsFreeInterface({
     // 2. Check for specific "go to editor" commands when on last question
     if (currentQuestionIndex === currentQuestion.questions.length - 1 && 
         !hasChanges && cameFromEditor && onBackToEditor) {
-      const editorPhrases = ['go to editor', 'back to editor', 'open editor', 'editor view'];
+      const editorPhrases = config.handsFree.commands.handsFree.toEditor.phrases;
       const isEditorCommand = editorPhrases.some(phrase => 
         transcription.toLowerCase().includes(phrase.toLowerCase())
       );
@@ -457,14 +457,14 @@ function HandsFreeInterface({
         return {
           isCommand: true,
           type: 'toEditor',
-          response: "Going to editor view"
+          response: config.handsFree.commands.handsFree.toEditor.response
         };
       }
     }
 
     // 3. Check for specific "return to home" commands when on first question
     if (currentQuestionIndex === 0) {
-      const homeReturnPhrases = ['return to home', 'return to landing', 'back to home', 'home page', 'landing page'];
+      const homeReturnPhrases = config.handsFree.commands.handsFree.toHome.phrases;
       const isHomeReturnCommand = homeReturnPhrases.some(phrase => 
         transcription.toLowerCase().includes(phrase.toLowerCase())
       );
@@ -476,7 +476,7 @@ function HandsFreeInterface({
         return {
           isCommand: true,
           type: 'returnToHome',
-          response: "Returning to home page"
+          response: config.handsFree.commands.handsFree.toHome.response
         };
       }
     }
@@ -484,7 +484,7 @@ function HandsFreeInterface({
     // 4. Now check for general navigation commands
 
     // First check for "next" command
-    const nextPhrases = ['next', 'next question', 'go next', 'continue'];
+    const nextPhrases = config.handsFree.commands.handsFree.next.phrases;
     const isNextCommand = nextPhrases.some(phrase => 
       transcription.toLowerCase().includes(phrase.toLowerCase())
     );
@@ -496,12 +496,12 @@ function HandsFreeInterface({
       return {
         isCommand: true,
         type: 'next',
-        response: config.handsFree.commands.next?.response || "Moving to next question"
+        response: config.handsFree.commands.handsFree.next.response || "Moving to next question"
       };
     }
 
     // Check for "previous" command
-    const prevPhrases = ['previous', 'go back', 'back', 'prev'];
+    const prevPhrases = config.handsFree.commands.handsFree.previous.phrases;
     const isPrevCommand = prevPhrases.some(phrase => 
       transcription.toLowerCase().includes(phrase.toLowerCase())
     );
@@ -513,14 +513,14 @@ function HandsFreeInterface({
       return {
         isCommand: true,
         type: 'previous',
-        response: config.handsFree.commands.previous?.response || "Moving to previous question"
+        response: config.handsFree.commands.handsFree.previous.response || "Moving to previous question"
       };
     }
 
     // 5. Check remaining commands from config
-    for (const [commandType, commandConfig] of Object.entries(config.handsFree.commands)) {
-      // Skip modify, next, and previous as we already checked them
-      if (['modify', 'next', 'previous'].includes(commandType)) continue;
+    for (const [commandType, commandConfig] of Object.entries(config.handsFree.commands.handsFree)) {
+      // Skip commands we've already checked
+      if (['modify', 'next', 'previous', 'pause', 'continue'].includes(commandType)) continue;
       
       const isCommand = commandConfig.phrases.some(phrase =>
         transcription.toLowerCase().includes(phrase.toLowerCase())

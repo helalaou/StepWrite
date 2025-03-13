@@ -1643,13 +1643,15 @@ function HandsFreeInterface({
 
         {/* Audio visualizer and status */}
         <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <AudioVisualizer isSpeechDetected={isSpeechActive} />
+          {!isPaused && <AudioVisualizer isSpeechDetected={isSpeechActive} />}
           <Typography sx={{ mb: 2 }}>
             {isProcessing
               ? 'Processing...'
               : isRecording
                 ? 'Recording...'
-                : 'Waiting for speech...'}
+                : isPaused
+                  ? 'Paused'
+                  : 'Waiting for speech...'}
           </Typography>
         </Box>
       </Box>

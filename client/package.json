@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@babel/helpers": "^7.26.10",
+    "@babel/runtime": "^7.26.10",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^6.1.4",
@@ -49,8 +51,6 @@
   },
   "overrides": {
     "postcss": ">=8.4.31",
-    "nth-check": ">=2.0.1",
-    "@babel/helpers": ">=7.26.10",
-    "@babel/runtime": ">=7.26.10"
+    "nth-check": ">=2.0.1"
   }
 }

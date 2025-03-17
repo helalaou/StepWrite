@@ -301,6 +301,33 @@ function HandsFreeInterface({
     }
   }, [currentQuestionIndex, currentQuestion]);
 
+  // Detect silent audio to avoid processing background noise
+  const checkAudioSilence = (audio) => {
+    //calculate avg energy
+    const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
+    
+    // significant samples (samples above threshold)
+    const significantSamples = audio.filter(sample => 
+      Math.abs(sample) > config.handsFree.vad.significantThreshold
+    );
+    const significantRatio = significantSamples.length / audio.length;
+    
+    //check if audio is silent based on both energy and significant samples
+    const isSilent = avgEnergy < config.handsFree.vad.minEnergy || 
+                    significantRatio < config.handsFree.vad.minSignificantRatio;
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Audio silence check:', { 
+        energy: avgEnergy, 
+        threshold: config.handsFree.vad.minEnergy,
+        significantRatio,
+        minSignificantRatio: config.handsFree.vad.minSignificantRatio,
+        isSilent 
+      });
+    }
+    return isSilent;
+  };
+
   // Convert audio data to WAV format for transcription
   const float32ArrayToWav = (audio) => {
     const wavBuffer = new ArrayBuffer(44 + audio.length * 2);
@@ -316,9 +343,9 @@ function HandsFreeInterface({
     writeString(view, 12, 'fmt ');
     view.setUint16(16, 16, true);
     view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, 16000, true);
-    view.setUint32(28, 32000, true);
+    view.setUint16(22, config.handsFree.vad.channels, true);
+    view.setUint32(24, config.handsFree.vad.sampleRate, true);
+    view.setUint32(28, config.handsFree.vad.sampleRate * 2, true);
     view.setUint16(32, 2, true);
     view.setUint16(34, 16, true);
     writeString(view, 36, 'data');
@@ -329,14 +356,6 @@ function HandsFreeInterface({
       index += 2;
     }
     return new Blob([wavBuffer], { type: 'audio/wav' });
-  };
-
-  // Detect silent audio to avoid processing background noise
-  const checkAudioSilence = (audio) => {
-    const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
-    const isSilent = avgEnergy < config.handsFree.vad.minEnergy;
-    console.log('Audio silence check:', { energy: avgEnergy, threshold: config.handsFree.vad.minEnergy, isSilent });
-    return isSilent;
   };
 
   // Schedule periodic TTS replays when no user speech is detected
@@ -940,13 +959,14 @@ function HandsFreeInterface({
 
       vadRef.current = await window.vad.MicVAD.new({
         minSpeechFrames: config.handsFree.vad.minSpeechFrames,
+        preSpeechPadFrames: config.handsFree.vad.preSpeechPadFrames,
         positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
         negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
         redemptionFrames: config.handsFree.vad.redemptionFrames,
         vadMode: config.handsFree.vad.mode,
-        logLevel: 3,
-        groupedLogLevel: 3,
-        runtimeLogLevel: 3,
+        logLevel: 3,   
+        groupedLogLevel: 3,  
+        runtimeLogLevel: 3,   
         runtimeVerboseLevel: 0,
         onSpeechStart: () => {
           if (process.env.NODE_ENV !== 'production') {
@@ -1048,14 +1068,15 @@ function HandsFreeInterface({
 
       vadRef.current = await window.vad.MicVAD.new({
         minSpeechFrames: config.handsFree.vad.minSpeechFrames,
+        preSpeechPadFrames: config.handsFree.vad.preSpeechPadFrames,
         positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
         negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
         redemptionFrames: config.handsFree.vad.redemptionFrames,
         vadMode: config.handsFree.vad.mode,
-        logLevel: 3,
-        groupedLogLevel: 3,
-        runtimeLogLevel: 3,
-        runtimeVerboseLevel: 0,
+        logLevel: 3,  // Hardcoded for development
+        groupedLogLevel: 3,  // Hardcoded for development
+        runtimeLogLevel: 3,  // Hardcoded for development
+        runtimeVerboseLevel: 0,  // Hardcoded for development
         onSpeechStart: () => {
           if (process.env.NODE_ENV !== 'production') {
             console.log('Speech segment started...');

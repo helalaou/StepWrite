@@ -63,6 +63,8 @@ const config = {
       negativeSpeechThreshold: 0.60,  // Range: 0.5-0.90, Confidence for negative detection
       redemptionFrames: 12,           // Range: 1-10, Frames to wait before confirming end 
       mode: 3,                        // Range: 0-3, VAD aggressiveness (3 = most aggressive)
+      
+      // Energy-based speech detection
       minEnergy: 0.005,               // Range: 0.001-0.1, Minimum amplitude for valid speech
       significantThreshold: 0.005,    // Range: 0.001-0.1, Threshold for significant audio
       minSignificantRatio: 0.1,       // Range: 0.1-0.5, Minimum ratio of significant samples

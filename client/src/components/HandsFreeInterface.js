@@ -334,8 +334,8 @@ function HandsFreeInterface({
   // Detect silent audio to avoid processing background noise
   const checkAudioSilence = (audio) => {
     const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
-    const isSilent = avgEnergy < config.handsFree.audio.minEnergy;
-    console.log('Audio silence check:', { energy: avgEnergy, threshold: config.handsFree.audio.minEnergy, isSilent });
+    const isSilent = avgEnergy < config.handsFree.vad.minEnergy;
+    console.log('Audio silence check:', { energy: avgEnergy, threshold: config.handsFree.vad.minEnergy, isSilent });
     return isSilent;
   };
 

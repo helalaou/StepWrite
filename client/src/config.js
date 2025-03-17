@@ -54,24 +54,22 @@ const config = {
   // 1. HANDS-FREE MODE SETTINGS
   // Used in: HandsFreeInterface.js, TextEditor.js (for voice commands)
   handsFree: {
-    // Voice Activity Detection settings
+    // Voice Activity Detection and Audio Processing settings
     vad: {
+      // Speech detection settings
       minSpeechFrames: 3,             // Range: 3-30, Minimum frames for speech detection
-      preSpeechPadFrames: 10,          // Range: 1-10, Frames to keep before speech 
-      positiveSpeechThreshold: 0.7,  // Range: 0.5-0.95, Confidence for positive detection 
+      preSpeechPadFrames: 10,         // Range: 1-10, Frames to keep before speech 
+      positiveSpeechThreshold: 0.7,   // Range: 0.5-0.95, Confidence for positive detection 
       negativeSpeechThreshold: 0.60,  // Range: 0.5-0.90, Confidence for negative detection
-      redemptionFrames: 12,            // Range: 1-10, Frames to wait before confirming end 
+      redemptionFrames: 12,           // Range: 1-10, Frames to wait before confirming end 
       mode: 3,                        // Range: 0-3, VAD aggressiveness (3 = most aggressive)
-    },
-    
-    // Audio processing settings
-    audio: {
       minEnergy: 0.005,               // Range: 0.001-0.1, Minimum amplitude for valid speech
       significantThreshold: 0.005,    // Range: 0.001-0.1, Threshold for significant audio
       minSignificantRatio: 0.1,       // Range: 0.1-0.5, Minimum ratio of significant samples
+      
+      // Audio quality settings
       sampleRate: 16000,              // Sample rate for audio processing
       channels: 1,                    // Mono audio
-      audioBitsPerSecond: 128000      // Audio quality in bits/sec
     },
     
     // Controls when to finalize and submit speech

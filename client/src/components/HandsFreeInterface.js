@@ -132,15 +132,15 @@ function HandsFreeInterface({
     }
     parentSetCurrentQuestionIndex(newIndex);
   };
-  
+
   const setCurrentQuestionIndex = setCurrentQuestionIndexWithDebug;
-  
+
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Navigation: Question index updated to ${currentQuestionIndex}`);
     }
   }, [currentQuestionIndex]);
-  
+
   const safeNavigate = useCallback((route) => {
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Navigation: Navigating to ${route}`);
@@ -163,7 +163,7 @@ function HandsFreeInterface({
       replayTimeoutRef.current = null;
     }
   };
-  
+
   const updateSpeechDetectionTime = () => {
     lastSpeechDetectionTimeRef.current = Date.now();
   };
@@ -305,24 +305,24 @@ function HandsFreeInterface({
   const checkAudioSilence = (audio) => {
     //calculate avg energy
     const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
-    
+
     // significant samples (samples above threshold)
-    const significantSamples = audio.filter(sample => 
+    const significantSamples = audio.filter(sample =>
       Math.abs(sample) > config.handsFree.vad.significantThreshold
     );
     const significantRatio = significantSamples.length / audio.length;
-    
+
     //check if audio is silent based on both energy and significant samples
-    const isSilent = avgEnergy < config.handsFree.vad.minEnergy || 
-                    significantRatio < config.handsFree.vad.minSignificantRatio;
-    
+    const isSilent = avgEnergy < config.handsFree.vad.minEnergy ||
+      significantRatio < config.handsFree.vad.minSignificantRatio;
+
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Audio silence check:', { 
-        energy: avgEnergy, 
+      console.log('Audio silence check:', {
+        energy: avgEnergy,
         threshold: config.handsFree.vad.minEnergy,
         significantRatio,
         minSignificantRatio: config.handsFree.vad.minSignificantRatio,
-        isSilent 
+        isSilent
       });
     }
     return isSilent;
@@ -363,7 +363,7 @@ function HandsFreeInterface({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Starting replay timeout check`);
     }
-    
+
     // Skip replay for modified questions or in editing mode
     if (modifiedQuestions.has(currentQuestionIndex) || isModifying || isModifyingRef.current) {
       if (process.env.NODE_ENV !== 'production') {
@@ -371,24 +371,24 @@ function HandsFreeInterface({
       }
       return;
     }
-    
+
     clearReplayTimeout();
 
     // Play TTS if no speech and sufficient quiet time has passed
     if (segmentsRef.current.length === 0 && !isSpeechActive && !isProcessing) {
       const timeSinceLastSpeech = Date.now() - lastSpeechDetectionTimeRef.current;
       const minimumQuietPeriod = config.handsFree.speech.replay.minimumQuietPeriod;
-      
+
       if (lastSpeechDetectionTimeRef.current === 0 || timeSinceLastSpeech >= minimumQuietPeriod) {
         if (process.env.NODE_ENV !== 'production') {
           console.log('No speech detected, replaying question TTS...');
         }
-        
+
         setIsTTSPlaying(true);
         replayAttemptsRef.current += 1;
       }
     }
-    
+
     // Schedule next replay check
     replayTimeoutRef.current = setTimeout(() => {
       startReplayTimeout();
@@ -401,13 +401,63 @@ function HandsFreeInterface({
       console.log(`Checking for commands in: ${transcription}`);
     }
 
+    // Get command matching settings from config
+    const commandSettings = config.handsFree.commands.behavior;
+    const matchingMode = commandSettings.matching.mode;
+    const minConfidence = commandSettings.matching.minConfidence;
+    const ignoreArticles = commandSettings.matching.ignoreArticles;
+
+    // Prepare transcription for matching (always case insensitive, always ignore punctuation)
+    let processedTranscription = transcription.toLowerCase().replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
+
+    if (ignoreArticles) {
+      processedTranscription = processedTranscription.replace(/\b(a|an|the)\b/g, '').replace(/\s+/g, ' ').trim();
+    }
+
+    const doesMatch = (phrase, transcription) => {
+      let processedPhrase = phrase.toLowerCase();
+
+      // remove articles if configured
+      if (ignoreArticles) {
+        processedPhrase = processedPhrase.replace(/\b(a|an|the)\b/g, '').replace(/\s+/g, ' ').trim();
+      }
+
+      switch (matchingMode) {
+        case 'EXACT_MATCH':
+          //  entire transcription must exactly match the command phrase
+          return transcription === processedPhrase;
+
+        case 'CONTAINS':
+          //command phrase must be contained in the transcription
+          return transcription.includes(processedPhrase);
+
+        case 'FUZZY': {
+          //word-by-word matching for fuzzy mode
+          const words1 = transcription.split(' ');
+          const words2 = processedPhrase.split(' ');
+          let matches = 0;
+
+          for (const word2 of words2) {
+            if (words1.includes(word2)) {
+              matches++;
+            }
+          }
+
+          // Calculate match percentage and compare to threshold
+          return matches / words2.length >= minConfidence;
+        }
+
+        default:
+          // Default to exact match if mode is not recognized
+          return transcription === processedPhrase;
+      }
+    };
+
     // Check for continue command when paused (highest priority)
     if (isPaused || isPausedRef.current) {
       const continuePhrases = config.handsFree.commands.handsFree.continue.phrases;
-      const isContinueCommand = continuePhrases.some(phrase => 
-        transcription.toLowerCase().includes(phrase.toLowerCase())
-      );
-      
+      const isContinueCommand = continuePhrases.some(phrase => doesMatch(phrase, processedTranscription));
+
       if (isContinueCommand) {
         if (process.env.NODE_ENV !== 'production') {
           console.log('CONTINUE command detected');
@@ -418,17 +468,15 @@ function HandsFreeInterface({
           response: config.handsFree.commands.handsFree.continue.response
         };
       }
-      
-      // if paused and not a continue command, wedontt process other commands
+
+      // if paused and not a continue command, we don't process other commands
       return { isCommand: false };
     }
 
     // Check for pause command
     const pausePhrases = config.handsFree.commands.handsFree.pause.phrases;
-    const isPauseCommand = pausePhrases.some(phrase => 
-      transcription.toLowerCase().includes(phrase.toLowerCase())
-    );
-    
+    const isPauseCommand = pausePhrases.some(phrase => doesMatch(phrase, processedTranscription));
+
     if (isPauseCommand) {
       if (process.env.NODE_ENV !== 'production') {
         console.log('PAUSE command detected');
@@ -441,14 +489,12 @@ function HandsFreeInterface({
     }
 
     // Priority-ordered command detection for other commands
-    
+
     // 1. Modify command (highest priority)
     if (config.handsFree.commands.handsFree.modify) {
       const modifyPhrases = config.handsFree.commands.handsFree.modify.phrases;
-      const isModifyCommand = modifyPhrases.some(phrase => 
-        transcription.toLowerCase().includes(phrase.toLowerCase())
-      );
-      
+      const isModifyCommand = modifyPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+
       if (isModifyCommand) {
         if (process.env.NODE_ENV !== 'production') {
           console.log('MODIFY command detected');
@@ -462,13 +508,11 @@ function HandsFreeInterface({
     }
 
     // 2. Check for specific "go to editor" commands when on last question
-    if (currentQuestionIndex === currentQuestion.questions.length - 1 && 
-        !hasChanges && cameFromEditor && onBackToEditor) {
+    if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
+      !hasChanges && cameFromEditor && onBackToEditor) {
       const editorPhrases = config.handsFree.commands.handsFree.toEditor.phrases;
-      const isEditorCommand = editorPhrases.some(phrase => 
-        transcription.toLowerCase().includes(phrase.toLowerCase())
-      );
-      
+      const isEditorCommand = editorPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+
       if (isEditorCommand) {
         if (process.env.NODE_ENV !== 'production') {
           console.log('GO TO EDITOR command detected');
@@ -484,10 +528,8 @@ function HandsFreeInterface({
     // 3. Check for specific "return to home" commands when on first question
     if (currentQuestionIndex === 0) {
       const homeReturnPhrases = config.handsFree.commands.handsFree.toHome.phrases;
-      const isHomeReturnCommand = homeReturnPhrases.some(phrase => 
-        transcription.toLowerCase().includes(phrase.toLowerCase())
-      );
-      
+      const isHomeReturnCommand = homeReturnPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+
       if (isHomeReturnCommand) {
         if (process.env.NODE_ENV !== 'production') {
           console.log('RETURN TO HOME command detected');
@@ -504,10 +546,8 @@ function HandsFreeInterface({
 
     // First check for "next" command
     const nextPhrases = config.handsFree.commands.handsFree.next.phrases;
-    const isNextCommand = nextPhrases.some(phrase => 
-      transcription.toLowerCase().includes(phrase.toLowerCase())
-    );
-    
+    const isNextCommand = nextPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+
     if (isNextCommand) {
       if (process.env.NODE_ENV !== 'production') {
         console.log('NEXT command detected');
@@ -521,10 +561,8 @@ function HandsFreeInterface({
 
     // Check for "previous" command
     const prevPhrases = config.handsFree.commands.handsFree.previous.phrases;
-    const isPrevCommand = prevPhrases.some(phrase => 
-      transcription.toLowerCase().includes(phrase.toLowerCase())
-    );
-    
+    const isPrevCommand = prevPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+
     if (isPrevCommand) {
       if (process.env.NODE_ENV !== 'production') {
         console.log('PREVIOUS command detected');
@@ -540,10 +578,8 @@ function HandsFreeInterface({
     for (const [commandType, commandConfig] of Object.entries(config.handsFree.commands.handsFree)) {
       // Skip commands we've already checked
       if (['modify', 'next', 'previous', 'pause', 'continue'].includes(commandType)) continue;
-      
-      const isCommand = commandConfig.phrases.some(phrase =>
-        transcription.toLowerCase().includes(phrase.toLowerCase())
-      );
+
+      const isCommand = commandConfig.phrases.some(phrase => doesMatch(phrase, processedTranscription));
 
       if (isCommand) {
         if (process.env.NODE_ENV !== 'production') {
@@ -565,7 +601,7 @@ function HandsFreeInterface({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Executing command: ${commandCheck.type}`);
     }
-    
+
     // Play feedback sound
     try {
       const commandSound = new Audio('/click.mp3');
@@ -573,45 +609,45 @@ function HandsFreeInterface({
     } catch (error) {
       console.warn('Command sound failed to play:', error);
     }
-    
+
     clearReplayTimeout();
     replayAttemptsRef.current = 0;
     updateSpeechDetectionTime();
-    
+
     switch (commandCheck.type) {
       case 'pause':
         setIsPaused(true);
         isPausedRef.current = true;
         displayFeedback(config.handsFree.ui.messages.paused, 'command');
-        
+
         // Stop VAD/speech recognition
         if (vadRef.current) {
           await vadRef.current.destroy();
           vadRef.current = null;
         }
-        
+
         // Keep a minimal recording active just to listen for the continue command
         setTimeout(() => {
           startPausedRecording();
         }, 500);
         break;
-        
+
       case 'continue':
         setIsPaused(false);
         isPausedRef.current = false;
         displayFeedback("Resuming experiment...", 'command');
-        
+
         // Restart normal recording
         if (vadRef.current) {
           await vadRef.current.destroy();
           vadRef.current = null;
         }
-        
+
         setTimeout(() => {
           startRecording();
         }, 500);
         break;
-        
+
       case 'skip':
         segmentsRef.current = [commandCheck.response];
         const merged = segmentsRef.current.join(' ');
@@ -619,36 +655,36 @@ function HandsFreeInterface({
         displayFeedback("Skipping this question...", 'command');
         finalizeAndSubmit();
         break;
-        
+
       case 'modify':
         setIsModifying(true);
         isModifyingRef.current = true;
         segmentsRef.current = [];
         setMergedSpeech('');
         displayFeedback("Now modifying. Speak your new answer.", 'command');
-        
+
         setModifiedQuestions(prev => {
           const updated = new Set(prev);
           updated.add(currentQuestionIndex);
           return updated;
         });
-        
+
         if (window.speechSynthesis) {
           window.speechSynthesis.cancel();
         }
-        
+
         setTimeout(() => {
           startRecording();
         }, 500);
         break;
-        
+
       case 'next':
         if (currentQuestionIndex < currentQuestion.questions.length - 1) {
           displayFeedback("Moving to next question...", 'command');
           setCurrentQuestionIndex(currentQuestionIndex + 1);
         } else {
           if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
-             !hasChanges && cameFromEditor && onBackToEditor) {
+            !hasChanges && cameFromEditor && onBackToEditor) {
             displayFeedback("Moving to editor view...", 'command');
             onBackToEditor();
           } else {
@@ -660,7 +696,7 @@ function HandsFreeInterface({
           }
         }
         break;
-        
+
       case 'previous':
         if (currentQuestionIndex > 0) {
           displayFeedback("Moving to previous question...", 'command');
@@ -669,31 +705,31 @@ function HandsFreeInterface({
           displayFeedback("This is the first question", 'error');
         }
         break;
-        
+
       case 'toEditor':
         if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
-            !hasChanges && cameFromEditor && onBackToEditor) {
+          !hasChanges && cameFromEditor && onBackToEditor) {
           displayFeedback("Moving to editor view...", 'command');
           onBackToEditor();
         } else {
           displayFeedback("Editor not available here", 'error');
         }
         break;
-        
+
       case 'toQuestions':
         displayFeedback("Already in questions view", 'error');
         break;
-        
+
       case 'toHome':
         displayFeedback("Returning to home page...", 'command');
         safeNavigate('/');
         break;
-        
+
       case 'returnToHome':
         displayFeedback("Returning to home page...", 'command');
         safeNavigate('/');
         break;
-        
+
       default:
         console.warn(`Unknown command type: ${commandCheck.type}`);
         displayFeedback("Unknown command", 'error');
@@ -775,11 +811,11 @@ function HandsFreeInterface({
     if (process.env.NODE_ENV !== 'production') {
       console.log(`Submitting answer for question ${currentQuestionIndex}: "${text.substring(0, 30)}..."`);
     }
-    
+
     clearReplayTimeout();
     replayAttemptsRef.current = 0;
     updateSpeechDetectionTime();
-    
+
     setIsProcessing(true);
     try {
       const updatedQuestions = [...currentQuestion.questions];
@@ -808,7 +844,7 @@ function HandsFreeInterface({
       });
 
       const newLength = await sendMessage(currentQuestionIndex, updatedConversationPlanning);
-      
+
       if (process.env.NODE_ENV !== 'production') {
         console.log(`Backend returned new question count: ${newLength}`);
       }
@@ -822,22 +858,22 @@ function HandsFreeInterface({
         if (process.env.NODE_ENV !== 'production') {
           console.log(`Auto-advancing to next question (index ${currentQuestionIndex + 1})`);
         }
-        
+
         displayFeedback("Answer saved. Moving to next question.", 'success');
-        
+
         try {
           const navigationSound = new Audio('/click.mp3');
-          
+
           navigationSound.addEventListener('ended', () => {
             setTimeout(() => {
               setCurrentQuestionIndex(currentQuestionIndex + 1);
             }, 50);
           });
-          
+
           navigationSound.addEventListener('error', () => {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
           });
-          
+
           navigationSound.play().catch(() => {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
           });
@@ -866,11 +902,11 @@ function HandsFreeInterface({
     clearReplayTimeout();
     replayAttemptsRef.current = 0;
     updateSpeechDetectionTime();
-    
+
     setIsProcessing(true);
     try {
       const updatedQuestions = [...currentQuestion.questions];
-      
+
       updatedQuestions[currentQuestionIndex] = {
         ...updatedQuestions[currentQuestionIndex],
         response: text
@@ -908,14 +944,14 @@ function HandsFreeInterface({
 
       setQuestionStatus(newQuestionStatus);
       displayFeedback("Answer updated successfully and saved to conversation.", 'success');
-      
+
       if (newLength === null) {
         // LLM decided to end conversation
         displayFeedback("Moving to editor view...", 'success');
-        
+
         currentQuestion.questions = currentQuestion.questions.slice(0, currentQuestionIndex + 1);
         currentQuestion.followup_needed = false;
-        
+
         setTimeout(() => {
           playClickSound();
           onBackToEditor();
@@ -928,7 +964,7 @@ function HandsFreeInterface({
             updated.delete(currentQuestionIndex);
             return updated;
           });
-          
+
           playClickSound();
           setCurrentQuestionIndex(newLength - 1);
         }, 1500);
@@ -964,22 +1000,22 @@ function HandsFreeInterface({
         negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
         redemptionFrames: config.handsFree.vad.redemptionFrames,
         vadMode: config.handsFree.vad.mode,
-        logLevel: 3,   
-        groupedLogLevel: 3,  
-        runtimeLogLevel: 3,   
+        logLevel: 3,
+        groupedLogLevel: 3,
+        runtimeLogLevel: 3,
         runtimeVerboseLevel: 0,
         onSpeechStart: () => {
           if (process.env.NODE_ENV !== 'production') {
             console.log('Speech segment started in paused mode...');
           }
           setIsSpeechActive(true);
-          
+
           // Cancel TTS when user starts speaking
           if (window.speechSynthesis) {
             window.speechSynthesis.cancel();
           }
           setIsTTSPlaying(false);
-          
+
           updateSpeechDetectionTime();
         },
         onSpeechEnd: async (audio) => {
@@ -987,10 +1023,10 @@ function HandsFreeInterface({
             console.log('Speech segment ended in paused mode...');
           }
           setIsSpeechActive(false);
-          
+
           // Only process if we're still in paused mode
           if (!isPaused && !isPausedRef.current) return;
-          
+
           // Check if audio is silent or too short
           if (checkAudioSilence(audio)) {
             if (process.env.NODE_ENV !== 'production') {
@@ -998,15 +1034,15 @@ function HandsFreeInterface({
             }
             return;
           }
-          
+
           // Convert audio to WAV format
           const wavBuffer = float32ArrayToWav(audio);
           const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
-          
+
           // Create form data for API request
           const formData = new FormData();
           formData.append('audio', wavBlob, 'speech.wav');
-          
+
           try {
             // Send audio for transcription
             const response = await axios.post(
@@ -1014,15 +1050,15 @@ function HandsFreeInterface({
               formData,
               { headers: { 'Content-Type': 'multipart/form-data' } }
             );
-            
+
             if (response.data.text) {
               let transcription = response.data.text.trim().toLowerCase();
               transcription = transcription.replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
-              
+
               if (process.env.NODE_ENV !== 'production') {
                 console.log(`Paused mode transcription: "${transcription}"`);
               }
-              
+
               // Check specifically for continue command
               const commandCheck = checkForCommands(transcription);
               if (commandCheck.isCommand) {
@@ -1034,9 +1070,9 @@ function HandsFreeInterface({
           }
         }
       });
-      
+
       await vadRef.current.start();
-      
+
     } catch (error) {
       console.error('Error starting paused recording:', error);
       displayFeedback("Error starting recording. Please try again.", 'error');
@@ -1050,7 +1086,7 @@ function HandsFreeInterface({
       startPausedRecording();
       return;
     }
-    
+
     try {
       if (vadRef.current) {
         await vadRef.current.destroy();
@@ -1084,13 +1120,13 @@ function HandsFreeInterface({
           setIsSpeechActive(true);
           setIsRecording(true);
           clearFinalizeTimeout();
-          
+
           // Cancel TTS when user starts speaking
           if (window.speechSynthesis) {
             window.speechSynthesis.cancel();
           }
           setIsTTSPlaying(false);
-          
+
           clearReplayTimeout();
           replayAttemptsRef.current = 0;
           updateSpeechDetectionTime();
@@ -1128,7 +1164,7 @@ function HandsFreeInterface({
             if (response.data.text) {
               let transcription = response.data.text.trim().toLowerCase();
               transcription = transcription.replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
-              
+
               if (process.env.NODE_ENV !== 'production') {
                 console.log(`Segment transcription: "${transcription}"`);
               }
@@ -1137,7 +1173,62 @@ function HandsFreeInterface({
 
               // SPECIAL CASE: Direct modify command detection for questions with existing answers
               if (questionStatus[currentQuestionIndex]?.answer && !isModifying && !isModifyingRef.current) {
-                if (transcription.toLowerCase().includes("modify")) {
+                const modifyPhrases = config.handsFree.commands.handsFree.modify.phrases;
+                const commandSettings = config.handsFree.commands.behavior;
+                const matchingMode = commandSettings.matching.mode;
+                const ignoreArticles = commandSettings.matching.ignoreArticles;
+                const minConfidence = commandSettings.matching.minConfidence;
+
+                // Prepare transcription (always case insensitive, always ignore punctuation)
+                let processedTranscription = transcription.toLowerCase();
+                if (ignoreArticles) {
+                  processedTranscription = processedTranscription.replace(/\b(a|an|the)\b/g, '').replace(/\s+/g, ' ').trim();
+                }
+
+                let isModifyCommand = false;
+
+                switch (matchingMode) {
+                  case 'EXACT_MATCH':
+                    // Entire transcription must exactly match the command phrase
+                    isModifyCommand = modifyPhrases.some(phrase => {
+                      const processedPhrase = phrase.toLowerCase();
+                      return processedTranscription === processedPhrase;
+                    });
+                    break;
+
+                  case 'CONTAINS':
+                    // Command phrase must be contained in the transcription
+                    isModifyCommand = modifyPhrases.some(phrase =>
+                      processedTranscription.includes(phrase.toLowerCase())
+                    );
+                    break;
+
+                  case 'FUZZY':
+                    // Word-by-word matching
+                    isModifyCommand = modifyPhrases.some(phrase => {
+                      const processedPhrase = phrase.toLowerCase();
+                      const words1 = processedTranscription.split(' ');
+                      const words2 = processedPhrase.split(' ');
+                      let matches = 0;
+
+                      for (const word2 of words2) {
+                        if (words1.includes(word2)) {
+                          matches++;
+                        }
+                      }
+
+                      return matches / words2.length >= minConfidence;
+                    });
+                    break;
+
+                  default:
+                    // Default to exact match
+                    isModifyCommand = modifyPhrases.some(phrase =>
+                      processedTranscription === phrase.toLowerCase()
+                    );
+                }
+
+                if (isModifyCommand) {
                   if (process.env.NODE_ENV !== 'production') {
                     console.log("MODIFY command directly detected");
                   }
@@ -1146,23 +1237,23 @@ function HandsFreeInterface({
                   segmentsRef.current = [];
                   setMergedSpeech('');
                   displayFeedback("Now modifying. Speak your new answer.", 'command');
-                  
+
                   // Mark this question as modified to prevent TTS replay
                   setModifiedQuestions(prev => {
                     const updated = new Set(prev);
                     updated.add(currentQuestionIndex);
                     return updated;
                   });
-                  
+
                   // Stop any ongoing TTS playback
                   if (window.speechSynthesis) {
                     window.speechSynthesis.cancel();
                   }
-                  
+
                   setTimeout(() => {
                     startRecording();
                   }, 500);
-                  
+
                   setIsProcessing(false);
                   return;
                 }
@@ -1177,15 +1268,15 @@ function HandsFreeInterface({
                 segmentsRef.current.push(transcription);
                 const merged = segmentsRef.current.join(' ');
                 setMergedSpeech(merged);
-                
+
                 displayFeedback(`"${transcription}"`, 'transcription');
-                
+
                 clearFinalizeTimeout();
-                
+
                 finalizeTimeoutRef.current = setTimeout(async () => {
                   await finalizeAndSubmit();
                 }, config.handsFree.speech.finalizeDelay);
-                
+
                 setIsProcessing(false);
                 return;
               }
@@ -1243,7 +1334,7 @@ function HandsFreeInterface({
           startRecording();
         }
       });
-      
+
       if (process.env.NODE_ENV !== 'production') {
         console.log('Starting VAD...');
       }
@@ -1259,10 +1350,10 @@ function HandsFreeInterface({
       if (process.env.NODE_ENV !== 'production') {
         console.log('HandsFreeInterface unmounting, cleaning up resources');
       }
-      
+
       clearFinalizeTimeout();
       clearReplayTimeout();
-      
+
       if (vadRef.current) {
         try {
           const destroyPromise = vadRef.current.destroy();
@@ -1277,11 +1368,11 @@ function HandsFreeInterface({
         }
         vadRef.current = null;
       }
-      
+
       // Reset pause state
       setIsPaused(false);
       isPausedRef.current = false;
-      
+
       // Cancel any ongoing TTS
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -1318,7 +1409,7 @@ function HandsFreeInterface({
       playClickSound();
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
-               !hasChanges && cameFromEditor && onBackToEditor) {
+      !hasChanges && cameFromEditor && onBackToEditor) {
       playClickSound();
       onBackToEditor();
     } else {
@@ -1378,13 +1469,13 @@ function HandsFreeInterface({
             <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold' }}>
               Experiment Paused
             </Typography>
-            
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
+
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
                 mb: 3,
-                animation: isSpeechActive 
+                animation: isSpeechActive
                   ? 'activeListening 1s infinite ease-in-out'
                   : 'pulse 1.5s infinite ease-in-out',
                 '@keyframes pulse': {
@@ -1399,32 +1490,32 @@ function HandsFreeInterface({
                 }
               }}
             >
-              <MicIcon sx={{ 
-                fontSize: 60, 
+              <MicIcon sx={{
+                fontSize: 60,
                 color: isSpeechActive ? '#2e7d32' : '#1976d2',
                 transition: 'color 0.3s ease'
               }} />
             </Box>
-            
+
             <Typography variant="body1" sx={{ mb: 3 }}>
               Say <strong>"continue"</strong> or <strong>"resume"</strong> to continue the experiment.
             </Typography>
-            
-            <Box 
-              sx={{ 
-                display: 'flex', 
+
+            <Box
+              sx={{
+                display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 p: 2,
                 borderRadius: 1,
-                backgroundColor: isSpeechActive 
+                backgroundColor: isSpeechActive
                   ? 'rgba(46, 125, 50, 0.15)'
                   : 'rgba(25, 118, 210, 0.1)',
-                border: isSpeechActive 
+                border: isSpeechActive
                   ? '1px solid rgba(46, 125, 50, 0.3)'
                   : '1px solid rgba(25, 118, 210, 0.2)',
                 transition: 'all 0.3s ease',
-                animation: isSpeechActive 
+                animation: isSpeechActive
                   ? 'listeningPulse 1.5s infinite ease-in-out'
                   : 'none',
                 '@keyframes listeningPulse': {
@@ -1434,9 +1525,9 @@ function HandsFreeInterface({
                 }
               }}
             >
-              <Typography 
-                variant="body2" 
-                sx={{ 
+              <Typography
+                variant="body2"
+                sx={{
                   color: isSpeechActive ? '#2e7d32' : '#1976d2',
                   fontWeight: isSpeechActive ? 600 : 400,
                   display: 'flex',
@@ -1446,10 +1537,10 @@ function HandsFreeInterface({
               >
                 {isSpeechActive ? (
                   <>
-                    <Box component="span" sx={{ 
-                      width: 8, 
-                      height: 8, 
-                      borderRadius: '50%', 
+                    <Box component="span" sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
                       backgroundColor: '#2e7d32',
                       display: 'inline-block',
                       animation: 'blink 1s infinite'
@@ -1461,7 +1552,7 @@ function HandsFreeInterface({
                 )}
               </Typography>
             </Box>
-            
+
           </Box>
         </Box>
       )}
@@ -1623,33 +1714,33 @@ function HandsFreeInterface({
               gap: 1,
               padding: '4px 8px',
               borderRadius: 8,
-              backgroundColor: isPaused ? 'rgba(211, 47, 47, 0.1)' : 
-                                isSpeechActive ? 'rgba(46, 125, 50, 0.1)' : 
-                                'rgba(0, 0, 0, 0.05)',
+              backgroundColor: isPaused ? 'rgba(211, 47, 47, 0.1)' :
+                isSpeechActive ? 'rgba(46, 125, 50, 0.1)' :
+                  'rgba(0, 0, 0, 0.05)',
               transition: 'all 0.3s ease',
             }}
           >
-            <MicIcon 
-              sx={{ 
-                fontSize: 18, 
-                color: isPaused ? '#d32f2f' : 
-                       isSpeechActive ? '#2e7d32' : 
-                       'rgba(0, 0, 0, 0.4)',
+            <MicIcon
+              sx={{
+                fontSize: 18,
+                color: isPaused ? '#d32f2f' :
+                  isSpeechActive ? '#2e7d32' :
+                    'rgba(0, 0, 0, 0.4)',
                 animation: isSpeechActive && !isPaused ? 'pulse 1.5s infinite ease-in-out' : 'none',
-              }} 
+              }}
             />
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: isPaused ? '#d32f2f' : 
-                       isSpeechActive ? '#2e7d32' : 
-                       'rgba(0, 0, 0, 0.6)',
+            <Typography
+              variant="caption"
+              sx={{
+                color: isPaused ? '#d32f2f' :
+                  isSpeechActive ? '#2e7d32' :
+                    'rgba(0, 0, 0, 0.6)',
                 fontWeight: 500,
               }}
             >
-              {isPaused ? 'Paused' : 
-               isSpeechActive ? 'Listening' : 
-               'Ready'}
+              {isPaused ? 'Paused' :
+                isSpeechActive ? 'Listening' :
+                  'Ready'}
             </Typography>
           </Box>
 

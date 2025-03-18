@@ -153,6 +153,7 @@ const config = {
         },
         toEditor: {
           phrases: [
+            'next question',
             'go to editor',
             'open editor',
             'move to editor',
@@ -205,6 +206,8 @@ const config = {
         },
         modify: {
           phrases: [
+            'modify',
+            'modify question',
             'modify this question',
             'modify this response',
             'modify this answer',
@@ -228,6 +231,7 @@ const config = {
         },
         pause: {
           phrases: [
+            'pause flow',
             'pause experiment',
             'pause the experiment',
             'pause test',

@@ -239,7 +239,7 @@ function TextEditor({
 
             // Check if audio is silent
             const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
-            if (avgEnergy < config.handsFree.audio.minEnergy) {
+            if (avgEnergy < config.handsFree.vad.minEnergy) {
               console.log('Silent segment detected – ignoring');
               return;
             }

@@ -912,16 +912,12 @@ function HandsFreeInterface({
         response: text
       };
 
-      for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
-        updatedQuestions[i] = {
-          ...updatedQuestions[i],
-          response: ''
-        };
-      }
+      // Remove all subsequent questions
+      const trimmedQuestions = updatedQuestions.slice(0, currentQuestionIndex + 1);
 
       const updatedConversationPlanning = {
         ...currentQuestion,
-        questions: updatedQuestions,
+        questions: trimmedQuestions,
         followup_needed: true
       };
 
@@ -938,6 +934,7 @@ function HandsFreeInterface({
       const newQuestionStatus = { ...questionStatus };
       newQuestionStatus[currentQuestionIndex] = { type: 'answered', answer: text };
 
+      // Also remove status entries for deleted questions
       for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
         delete newQuestionStatus[i];
       }
@@ -949,7 +946,7 @@ function HandsFreeInterface({
         // LLM decided to end conversation
         displayFeedback("Moving to editor view...", 'success');
 
-        currentQuestion.questions = currentQuestion.questions.slice(0, currentQuestionIndex + 1);
+        currentQuestion.questions = trimmedQuestions;
         currentQuestion.followup_needed = false;
 
         setTimeout(() => {

@@ -191,8 +191,7 @@ ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
 Generate a clear and appropriate reply based on the user's responses to the questions. 
-${hasTone ? `Use the specified tone: ${toneClassification.tone}
-Reason for tone: ${toneClassification.reasoning}` : ''}
+${hasTone ? `Use this tone: ${toneClassification.tone} (${config.openai.toneClassification.categories[toneClassification.tone]})` : ''}
 
 === Original text they're replying to ===
 ${originalText}
@@ -202,7 +201,7 @@ ${qaFormat}
 
 === Guidelines ===
 - Use simple, direct language.
-${hasTone ? `- Maintain the ${toneClassification.tone} tone throughout the reply.` : ''}
+${hasTone ? `- Maintain the specified tone throughout the reply.` : ''}
 - Address all key points from the original message.
 - Keep sentences short and focused on what the user wants to convey.
 - Incorporate any essential details the user provided.
@@ -215,7 +214,7 @@ ${hasMemory ? `
 - For formal replies, include any professional or contact details the user has provided.
 - Include an appropriate greeting and closing if context calls for it.
 - Make sure the response is complete and consistent with the user's stated intentions.
-${hasTone ? `- Adapt language and expressions to match the ${toneClassification.tone} tone.` : ''}
+${hasTone ? `- Adapt language and expressions to match the specified tone.` : ''}
 - Never ask for additional details or clarification - use the information provided.
 `;
 };

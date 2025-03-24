@@ -75,8 +75,7 @@ ${generatedOutput}
 ${JSON.stringify(issues, null, 2)}
 
 ${hasTone ? `=== TONE GUIDANCE ===
-Maintain the ${toneClassification.tone} tone while making corrections.
-Reason for tone: ${toneClassification.reasoning}` : ''}
+Use this tone: ${toneClassification.tone} (${config.openai.toneClassification.categories[toneClassification.tone]})` : ''}
 
 === TASK ===
 1. Review the original Q&A and the current output.
@@ -88,7 +87,7 @@ Reason for tone: ${toneClassification.reasoning}` : ''}
 4. Ensure the corrected version:
    - Stays concise
    - Preserves the user's key details
-   ${hasTone ? `   - Maintains the ${toneClassification.tone} tone throughout` : ''}
+   ${hasTone ? `   - Maintains the specified tone throughout` : ''}
    - Does not remove benign expansions like greetings unless they cause a conflict
 - Never ask for additional details or clarification - use the information provided.
 

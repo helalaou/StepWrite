@@ -219,15 +219,14 @@ ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
 Generate a coherent, concise response based on the conversation.
-${hasTone ? `Use the specified tone: ${toneClassification.tone}
-Reason for tone: ${toneClassification.reasoning}` : ''}
+${hasTone ? `Use this tone: ${toneClassification.tone} (${config.openai.toneClassification.categories[toneClassification.tone]})` : ''}
 
 === Previous conversation ===
 ${qaFormat}
 
 === Guidelines ===
 - Use clear, straightforward language.
-${hasTone ? `- Maintain the ${toneClassification.tone} tone throughout the text.` : ''}
+${hasTone ? `- Maintain the specified tone throughout the text.` : ''}
 - Break down information into logical steps if needed.
 - Keep sentences short and focused on the user's main points.
 - Incorporate any essential details the user provided.
@@ -236,7 +235,7 @@ ${hasMemory ? `
 - Do not add personal details from memory unless they were specifically discussed.
 ` : ''}
 - If formality is required (e.g., a formal letter or email), include name, title, and contact info if the user provided them.
-${hasTone ? `- Adapt language and expressions to match the ${toneClassification.tone} tone.` : ''}
+${hasTone ? `- Adapt language and expressions to match the specified tone.` : ''}
 - Never ask for additional details or clarification - use the information provided.
 `;
 };

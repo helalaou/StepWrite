@@ -294,7 +294,7 @@ const config = {
             'end the experiment'
           ],
           response: 'Finishing experiment and generating final text.',
-          staticAnswer: 'user requested to stop the experiment here'
+          staticAnswer: 'user has skipped this question'
         }
       },
       

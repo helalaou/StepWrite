@@ -1342,7 +1342,7 @@ function HandsFreeInterface({
                 if (commandCheck.isCommand) {
                   await handleCommandExecution(commandCheck);
                 } else {
-                  displayFeedback("Say 'modify' to change your answer, or use navigation commands.", 'command');
+                  displayFeedback("Say 'modify question' to change your answer, or use navigation commands.", 'command');
                 }
                 setIsProcessing(false);
                 return;

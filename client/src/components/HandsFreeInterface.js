@@ -488,6 +488,21 @@ function HandsFreeInterface({
       };
     }
 
+    // Check for finish command
+    const finishPhrases = config.handsFree.commands.handsFree.finish.phrases;
+    const isFinishCommand = finishPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+
+    if (isFinishCommand) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('FINISH command detected');
+      }
+      return {
+        isCommand: true,
+        type: 'finish',
+        response: config.handsFree.commands.handsFree.finish.response
+      };
+    }
+
     // Priority-ordered command detection for other commands
 
     // 1. Modify command (highest priority)
@@ -646,6 +661,49 @@ function HandsFreeInterface({
         setTimeout(() => {
           startRecording();
         }, 500);
+        break;
+
+      case 'finish':
+        displayFeedback(config.handsFree.commands.handsFree.finish.response, 'command');
+        
+        // use static txt as current answer for question we are on
+        const staticAnswer = config.handsFree.commands.handsFree.finish.staticAnswer;
+        const updatedQuestions = [...currentQuestion.questions];
+        updatedQuestions[currentQuestionIndex] = {
+          ...updatedQuestions[currentQuestionIndex],
+          response: staticAnswer
+        };
+
+        //   update convestional  planning to force completion
+        const updatedConversationPlanning = {
+          ...currentQuestion,
+          questions: updatedQuestions,
+          followup_needed: false
+        };
+ 
+        setQuestionStatus({
+          ...questionStatus,
+          [currentQuestionIndex]: { type: 'answered', answer: staticAnswer }
+        });
+
+       
+        if (vadRef.current) {
+          await vadRef.current.destroy();
+          vadRef.current = null;
+        }
+        clearReplayTimeout();
+        clearFinalizeTimeout();
+        replayAttemptsRef.current = 0;
+        setIsRecording(false);
+        setIsSpeechActive(false);
+
+        //submit the answer & trigger output generation
+        await submitAnswer(
+          updatedQuestions[currentQuestionIndex].id,
+          staticAnswer,
+          currentQuestionIndex,
+          updatedConversationPlanning
+        );
         break;
 
       case 'skip':

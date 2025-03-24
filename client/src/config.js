@@ -274,6 +274,27 @@ const config = {
             'resume the flow'
           ],
           response: 'Resuming experiment.'
+        },
+        finish: {
+          phrases: [
+            'stop experiment',
+            'finish experiment',
+            'i would like to stop here',
+            'stop here',
+            'finish here',
+            'end experiment',
+            'end here',
+            'lets stop here',
+            'let us stop here',
+            'i want to stop here',
+            'i want to finish here',
+            'i want to end here',
+            'stop the experiment',
+            'finish the experiment',
+            'end the experiment'
+          ],
+          response: 'Finishing experiment and generating final text.',
+          staticAnswer: 'user requested to stop the experiment here'
         }
       },
       
@@ -332,6 +353,7 @@ const config = {
         stop: {
           phrases: [
             'stop speaking',
+            'stop talking',
             'stop the speaking',
             'stop reading',
             'stop the reading',

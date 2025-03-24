@@ -16,6 +16,13 @@ const openai = new OpenAI({
   timeout: config.openai.timeout,
 });
 
+function updateFollowupStatus(conversationPlanning, followupNeeded) {
+  return {
+    ...conversationPlanning,
+    followup_needed: followupNeeded
+  };
+}
+
 async function generateWriteQuestion(conversationPlanning) {
   const qaFormat = conversationPlanning.questions
     .map(q => `Q: ${q.question}; A: ${q.response}`)
@@ -75,7 +82,7 @@ async function generateWriteQuestion(conversationPlanning) {
 
     const { question, followup_needed } = parsedResponse;
     
-    const updatedConversationPlanning = {
+    let updatedConversationPlanning = {
       ...conversationPlanning,
       questions: [
         ...conversationPlanning.questions,
@@ -84,9 +91,10 @@ async function generateWriteQuestion(conversationPlanning) {
           question,
           response: ''
         }
-      ],
-      followup_needed
+      ]
     };
+    
+    updatedConversationPlanning = updateFollowupStatus(updatedConversationPlanning, followup_needed);
 
     logger.section('FINAL RESULT', {
       question,
@@ -178,7 +186,29 @@ async function generateEditQuestion(originalText, conversationPlanning) {
       }
     }
 
-    return parsedResponse;
+    const { question, followup_needed } = parsedResponse;
+    
+    let updatedConversationPlanning = {
+      ...conversationPlanning,
+      questions: [
+        ...conversationPlanning.questions,
+        {
+          id: conversationPlanning.questions.length + 1,
+          question,
+          response: ''
+        }
+      ]
+    };
+    
+    updatedConversationPlanning = updateFollowupStatus(updatedConversationPlanning, followup_needed);
+
+    logger.section('FINAL RESULT', {
+      question,
+      followup_needed,
+      updatedQuestionCount: updatedConversationPlanning.questions.length
+    });
+
+    return { question, conversationPlanning: updatedConversationPlanning };
   } catch (error) {
     logger.error('Failed to generate edit question:', error);
     throw error;
@@ -303,7 +333,7 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
 
     const { question, followup_needed } = parsedResponse;
     
-    const updatedConversationPlanning = {
+    let updatedConversationPlanning = {
       ...conversationPlanning,
       questions: [
         ...conversationPlanning.questions,
@@ -312,9 +342,10 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
           question,
           response: ''
         }
-      ],
-      followup_needed
+      ]
     };
+    
+    updatedConversationPlanning = updateFollowupStatus(updatedConversationPlanning, followup_needed);
 
     logger.section('FINAL RESULT', {
       question,

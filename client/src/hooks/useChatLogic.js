@@ -109,7 +109,9 @@ export function useChatLogic(mode = 'write') {
 
       const response = await axios.post(`${config.core.apiUrl}${endpoint}`, payload);
 
-      if (!response.data.followup_needed) {
+      const needsFollowup = !!response.data.followup_needed;
+
+      if (!needsFollowup) {
         const newOutput = response.data.output;
         setFinalOutput(newOutput);
         setLastValidOutput(newOutput);
@@ -128,7 +130,7 @@ export function useChatLogic(mode = 'write') {
       if (response.data.conversationPlanning) {
         const updatedPlanning = {
           ...response.data.conversationPlanning,
-          followup_needed: response.data.followup_needed
+          followup_needed: needsFollowup
         };
 
         const newQuestionStatus = { ...questionStatus };

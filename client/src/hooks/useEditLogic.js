@@ -36,7 +36,10 @@ export function useEditLogic() {
         setEditedText(response.data.editedText);
       }
 
-      if (!response.data.followup_needed) {
+      // Handle the followup_needed flag from the server response
+      const needsFollowup = !!response.data.followup_needed;
+
+      if (!needsFollowup) {
         setFinalOutput(response.data.output);
         setShowEditor(true);
         return null;
@@ -45,7 +48,7 @@ export function useEditLogic() {
       if (response.data.conversationPlanning) {
         const updatedPlanning = {
           ...response.data.conversationPlanning,
-          followup_needed: response.data.followup_needed
+          followup_needed: needsFollowup
         };
         setConversationPlanning(updatedPlanning);
         return updatedPlanning.questions.length;

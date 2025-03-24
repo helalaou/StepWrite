@@ -60,6 +60,38 @@ app.use((req, res, next) => {
   next();
 });
 
+// Check if followup is needed
+function isFollowupNeeded(conversationPlanning, forceFollowup = false) {
+  if (forceFollowup) {
+    logger.info('Followup forced by caller');
+    return true;
+  }
+  
+  const needsFollowup = !!conversationPlanning.followup_needed;
+  logger.info(`Followup decision: ${needsFollowup ? 'needed' : 'not needed'}`);
+  return needsFollowup;
+}
+
+// Set followup status
+function updateFollowupStatus(conversationPlanning, followupNeeded) {
+  return {
+    ...conversationPlanning,
+    followup_needed: followupNeeded
+  };
+}
+
+// Force complete conversation - for the manual endpoint
+function forceComplete(conversationPlanning) {
+  logger.info('Manually forcing conversation completion');
+  return updateFollowupStatus(conversationPlanning, false);
+}
+
+// Force continue conversation - for the manual endpoint
+function forceContinue(conversationPlanning) {
+  logger.info('Manually forcing conversation continuation');
+  return updateFollowupStatus(conversationPlanning, true);
+}
+
 // Submit Answer Route
 app.post('/api/write', async (req, res) => {
   try {
@@ -67,29 +99,30 @@ app.post('/api/write', async (req, res) => {
     logger.info('Processing submission with conversation planning:', conversationPlanning);
 
     // If a response was changed, remove subsequent questions
+    let updatedPlanning = { ...conversationPlanning };
     if (typeof changedIndex === 'number') {
-      conversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
-      conversationPlanning.followup_needed = true;
+      updatedPlanning.questions = updatedPlanning.questions.slice(0, changedIndex + 1);
+      updatedPlanning = updateFollowupStatus(updatedPlanning, true);
     }
 
-    if (conversationPlanning.followup_needed) {
-      const { question, conversationPlanning: updatedPlanning } = await generateWriteQuestion(conversationPlanning);
+    if (isFollowupNeeded(updatedPlanning)) {
+      const { question, conversationPlanning: newPlanning } = await generateWriteQuestion(updatedPlanning);
       
       // If no more questions needed, generate final output
-      if (!updatedPlanning.followup_needed) {
+      if (!isFollowupNeeded(newPlanning)) {
         logger.section('FINAL OUTPUT GENERATION', {
           factCheckingEnabled: config.openai.factChecking.enabled
         });
         
         let toneClassification = null;
         if (config.openai.toneClassification.enabled) {
-          const qaFormat = updatedPlanning.questions
+          const qaFormat = newPlanning.questions
             .map(q => `Q: ${q.question}\nA: ${q.response}`)
             .join('\n\n');
           toneClassification = await classifyTone(qaFormat);
         }
         
-        const output = await generateOutputWithFactCheck(updatedPlanning, toneClassification);
+        const output = await generateOutputWithFactCheck(newPlanning, toneClassification);
         
         logger.section('GENERATION COMPLETE', {
           output,
@@ -108,7 +141,7 @@ app.post('/api/write', async (req, res) => {
 
       res.json({ 
         question, 
-        conversationPlanning: updatedPlanning,
+        conversationPlanning: newPlanning,
         followup_needed: true 
       });
     } else {
@@ -119,13 +152,13 @@ app.post('/api/write', async (req, res) => {
       
       let toneClassification = null;
       if (config.openai.toneClassification.enabled) {
-        const qaFormat = conversationPlanning.questions
+        const qaFormat = updatedPlanning.questions
           .map(q => `Q: ${q.question}\nA: ${q.response}`)
           .join('\n\n');
         toneClassification = await classifyTone(qaFormat);
       }
       
-      const output = await generateOutputWithFactCheck(conversationPlanning, toneClassification);
+      const output = await generateOutputWithFactCheck(updatedPlanning, toneClassification);
       
       logger.section('GENERATION COMPLETE', {
         output,
@@ -155,17 +188,18 @@ app.post('/api/edit', async (req, res) => {
     logger.info('Processing edit submission:', { originalText, conversationPlanning, changedIndex });
 
     // If a response was changed, remove subsequent questions
+    let updatedPlanning = { ...conversationPlanning };
     if (typeof changedIndex === 'number') {
-      conversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
-      conversationPlanning.followup_needed = true;
+      updatedPlanning.questions = updatedPlanning.questions.slice(0, changedIndex + 1);
+      updatedPlanning = updateFollowupStatus(updatedPlanning, true);
     }
 
-    if (conversationPlanning.followup_needed) {
-      const { question, conversationPlanning: updatedPlanning } = await generateEditQuestion(originalText, conversationPlanning);
+    if (isFollowupNeeded(updatedPlanning)) {
+      const { question, conversationPlanning: newPlanning } = await generateEditQuestion(originalText, updatedPlanning);
       
       // If no more questions needed, generate final output
-      if (!updatedPlanning.followup_needed) {
-        const output = await generateEditOutput(originalText, updatedPlanning);
+      if (!isFollowupNeeded(newPlanning)) {
+        const output = await generateEditOutput(originalText, newPlanning);
         res.json({ 
           output,
           followup_needed: false 
@@ -175,11 +209,11 @@ app.post('/api/edit', async (req, res) => {
 
       res.json({ 
         question, 
-        conversationPlanning: updatedPlanning,
+        conversationPlanning: newPlanning,
         followup_needed: true 
       });
     } else {
-      const output = await generateEditOutput(originalText, conversationPlanning);
+      const output = await generateEditOutput(originalText, updatedPlanning);
       res.json({ 
         output,
         followup_needed: false 
@@ -263,17 +297,17 @@ app.post('/api/reply', async (req, res) => {
       if (changedIndex >= 0) {
         updatedConversationPlanning.questions[changedIndex].response = answer;
       }
-      updatedConversationPlanning.followup_needed = true;
+      updatedConversationPlanning = updateFollowupStatus(updatedConversationPlanning, true);
     }
 
-    if (updatedConversationPlanning.followup_needed) {
+    if (isFollowupNeeded(updatedConversationPlanning)) {
       const { question, conversationPlanning: newPlanning } = await generateReplyQuestion(
         originalText,
         updatedConversationPlanning
       );
       
       // If no more questions needed, generate final output with fact checking
-      if (!newPlanning.followup_needed) {
+      if (!isFollowupNeeded(newPlanning)) {
         logger.section('FINAL OUTPUT GENERATION', {
           factCheckingEnabled: config.openai.factChecking.enabled
         });
@@ -454,6 +488,41 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   cleanupAudioFiles();
   process.exit(0);
+});
+
+// Manual control endpoint
+app.post('/api/control/followup', async (req, res) => {
+  try {
+    const { conversationPlanning, action } = req.body;
+    
+    if (!conversationPlanning) {
+      return res.status(400).json({ error: 'Conversation planning is required' });
+    }
+    
+    if (!action || !['complete', 'continue'].includes(action)) {
+      return res.status(400).json({ error: 'Valid action is required: "complete" or "continue"' });
+    }
+    
+    let updatedPlanning;
+    
+    if (action === 'complete') {
+      updatedPlanning = forceComplete(conversationPlanning);
+    } else {
+      updatedPlanning = forceContinue(conversationPlanning);
+    }
+    
+    res.json({ 
+      conversationPlanning: updatedPlanning,
+      followup_needed: updatedPlanning.followup_needed,
+      message: `Conversation ${action === 'complete' ? 'completed' : 'continued'} manually`
+    });
+  } catch (error) {
+    logger.error('Error in manual followup control:', error);
+    res.status(500).json({ 
+      error: 'Failed to control followup status',
+      details: error.message 
+    });
+  }
 });
 
 // Start server

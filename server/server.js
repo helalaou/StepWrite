@@ -95,7 +95,7 @@ function forceContinue(conversationPlanning) {
 // Submit Answer Route
 app.post('/api/write', async (req, res) => {
   try {
-    const { conversationPlanning, changedIndex } = req.body;
+    const { conversationPlanning, changedIndex, context } = req.body;
     logger.info('Processing submission with conversation planning:', conversationPlanning);
 
     // If a response was changed, remove subsequent questions
@@ -106,7 +106,10 @@ app.post('/api/write', async (req, res) => {
     }
 
     if (isFollowupNeeded(updatedPlanning)) {
-      const { question, conversationPlanning: newPlanning } = await generateWriteQuestion(updatedPlanning);
+      // Use different question generation based on whether context exists (reply) or not (write)
+      const { question, conversationPlanning: newPlanning } = context 
+        ? await generateReplyQuestion(context, updatedPlanning)
+        : await generateWriteQuestion(updatedPlanning);
       
       // If no more questions needed, generate final output
       if (!isFollowupNeeded(newPlanning)) {
@@ -119,10 +122,10 @@ app.post('/api/write', async (req, res) => {
           const qaFormat = newPlanning.questions
             .map(q => `Q: ${q.question}\nA: ${q.response}`)
             .join('\n\n');
-          toneClassification = await classifyTone(qaFormat);
+          toneClassification = await classifyTone(qaFormat, context || '');
         }
         
-        const output = await generateOutputWithFactCheck(newPlanning, toneClassification);
+        const output = await generateOutputWithFactCheck(newPlanning, toneClassification, context);
         
         logger.section('GENERATION COMPLETE', {
           output,
@@ -155,10 +158,10 @@ app.post('/api/write', async (req, res) => {
         const qaFormat = updatedPlanning.questions
           .map(q => `Q: ${q.question}\nA: ${q.response}`)
           .join('\n\n');
-        toneClassification = await classifyTone(qaFormat);
+        toneClassification = await classifyTone(qaFormat, context || '');
       }
       
-      const output = await generateOutputWithFactCheck(updatedPlanning, toneClassification);
+      const output = await generateOutputWithFactCheck(updatedPlanning, toneClassification, context);
       
       logger.section('GENERATION COMPLETE', {
         output,
@@ -322,7 +325,7 @@ app.post('/api/reply', async (req, res) => {
         }
         
         // Then generate output with fact checking
-        const output = await generateOutputWithFactCheck(newPlanning, toneClassification);
+        const output = await generateOutputWithFactCheck(newPlanning, toneClassification, originalText);
         
         logger.section('GENERATION COMPLETE', {
           output,

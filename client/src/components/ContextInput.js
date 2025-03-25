@@ -5,13 +5,13 @@ import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
 import { playClickSound } from '../utils/soundUtils';
 
-function ReplyInput({ onSubmit }) {
+function ContextInput({ onSubmit, title = "Paste the text you want to reply to here" }) {
   const [text, setText] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = () => {
     if (!text.trim()) {
-      alert('Please paste the text you want to reply to');
+      alert('Please paste the text');
       return;
     }
     
@@ -54,7 +54,7 @@ function ReplyInput({ onSubmit }) {
           mb: 4,
         }}
       >
-        Paste the text you want to reply to here
+        {title}
       </Typography>
 
       <Box sx={{ 
@@ -128,4 +128,4 @@ function ReplyInput({ onSubmit }) {
   );
 }
 
-export default ReplyInput; 
+export default ContextInput; 

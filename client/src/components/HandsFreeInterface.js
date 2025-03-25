@@ -674,7 +674,7 @@ function HandsFreeInterface({
           response: staticAnswer
         };
 
-        //   update convestional  planning to force completion
+        // update conversation planning to force completion
         const updatedConversationPlanning = {
           ...currentQuestion,
           questions: updatedQuestions,
@@ -686,7 +686,7 @@ function HandsFreeInterface({
           [currentQuestionIndex]: { type: 'answered', answer: staticAnswer }
         });
 
-       
+        // Stop recording and clean up BEFORE submitting the answer
         if (vadRef.current) {
           await vadRef.current.destroy();
           vadRef.current = null;
@@ -697,12 +697,11 @@ function HandsFreeInterface({
         setIsRecording(false);
         setIsSpeechActive(false);
 
-        //submit the answer & trigger output generation
-        await submitAnswer(
-          updatedQuestions[currentQuestionIndex].id,
-          staticAnswer,
+        // Use sendMessage with isFinishCommand=true to force editor transition
+        await sendMessage(
           currentQuestionIndex,
-          updatedConversationPlanning
+          updatedConversationPlanning,
+          true // isFinishCommand flag
         );
         break;
 

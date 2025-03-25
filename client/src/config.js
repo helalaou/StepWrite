@@ -31,7 +31,32 @@ const config = {
     // System settings
     llm: {
       timeout: 70000, // Range: 10000-120000ms, Maximum time to wait for LLM response
-    }
+    },
+
+    // Static email for reply flow
+    reply_email: `Subject: Project Update Meeting - Action Items Review
+From: sarah.manager@company.com
+To: me@company.com
+Date: Today at 9:15 AM
+
+Hi there,
+
+I hope this email finds you well. Following our team meeting yesterday, I wanted to follow up on some key action items that require your attention.
+
+1. Could you please provide an update on the Q4 deliverables we discussed? We need to ensure we're on track with the timeline.
+
+2. The client presentation needs to be reviewed by Friday. Can you take a look and share your feedback?
+
+3. We should schedule a follow-up meeting to discuss the resource allocation for the upcoming phase. What times work best for you next week?
+
+Additionally, I'd like to get your thoughts on the new project management tool we're considering. Have you had a chance to review the demo I shared?
+
+Looking forward to your response.
+
+Best regards,
+Sarah Johnson
+Senior Project Manager
+Innovation Department`
   },
   
   // ====== INPUT MODE CONFIGURATION ======

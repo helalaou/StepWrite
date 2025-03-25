@@ -480,7 +480,7 @@ async function generateCorrection(qaFormat, output, issues) {
   }
 }
 
-async function generateOutputWithFactCheck(conversationPlanning, toneClassification) {
+async function generateOutputWithFactCheck(conversationPlanning, toneClassification, context = null) {
   logger.section('FACT CHECKING STATUS', {
     enabled: config.openai.factChecking.enabled,
     maxAttempts: config.openai.factChecking.maxAttempts
@@ -488,7 +488,9 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
 
   if (!config.openai.factChecking.enabled) {
     logger.info('Fact checking disabled, generating output without verification');
-    return await generateWriteOutput(conversationPlanning, toneClassification);
+    return context 
+      ? await generateReplyOutput(context, conversationPlanning, toneClassification)
+      : await generateWriteOutput(conversationPlanning, toneClassification);
   }
 
   const qaFormat = conversationPlanning.questions
@@ -502,7 +504,10 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
     qaFormat
   });
 
-  let output = await generateWriteOutput(conversationPlanning, toneClassification);
+  // Generate initial output using appropriate function
+  let output = context 
+    ? await generateReplyOutput(context, conversationPlanning, toneClassification)
+    : await generateWriteOutput(conversationPlanning, toneClassification);
 
   while (attempts < config.openai.factChecking.maxAttempts) {
     attempts++;

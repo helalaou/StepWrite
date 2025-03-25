@@ -2,13 +2,13 @@ import { useState } from 'react';
 import axios from 'axios';
 import config from '../config.js';
 
-export function useChatLogic(mode = 'write') {
-  const [context, setContext] = useState('');
+export function useConversationLogic(mode = 'write', initialContext = '') {
+  const [context, setContext] = useState(initialContext);
   const [conversationPlanning, setConversationPlanning] = useState({
     questions: [
       {
         id: 1,
-        question: mode === 'write' ? 'What would you like to write?' : 'What is the main point you want to make in your reply?',
+        question: 'What would you like to write?',
         response: '', 
       },
     ],
@@ -65,16 +65,12 @@ export function useChatLogic(mode = 'write') {
     });
   };
 
-  const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning, isFinishCommand = false) => {
+  const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning) => {
     setIsLoading(true);
     try {
       let conversationPlanningToSubmit = { ...updatedConversationPlanning };
       
-      // If this is explicitly coming from a finish command, respect the followup_needed flag
-      if (conversationPlanningToSubmit.followup_needed === false || isFinishCommand) {
-        // For finish command, always ensure these are set
-        conversationPlanningToSubmit.followup_needed = false;
-      } else if (typeof changedIndex === 'number') {
+      if (typeof changedIndex === 'number') {
         const originalAnswer = conversationHistory?.conversationPlanning?.questions[changedIndex]?.response;
         const hasChanged = originalAnswer !== answer;
         
@@ -104,34 +100,13 @@ export function useChatLogic(mode = 'write') {
 
       const endpoint = config.core.endpoints.write;
       const payload = {
+        context,
         conversationPlanning: conversationPlanningToSubmit,
         changedIndex,
         answer
       };
 
-      // Add context for reply mode
-      if (mode === 'reply' && context) {
-        payload.context = context;
-      }
-
       const response = await axios.post(`${config.core.apiUrl}${endpoint}`, payload);
-
-      // If this is a finish command, always transition to editor regardless of response
-      if (isFinishCommand) {
-        const newOutput = response.data.output || '';
-        setFinalOutput(newOutput);
-        setLastValidOutput(newOutput);
-        setShowEditor(true);
-        setConversationHistory({ 
-          conversationPlanning: conversationPlanningToSubmit, 
-          questionStatus: questionStatus 
-        });
-        setConversationPlanning(prev => ({
-          ...prev,
-          followup_needed: false
-        }));
-        return null;
-      }
 
       const needsFollowup = !!response.data.followup_needed;
 

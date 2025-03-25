@@ -7,9 +7,9 @@ import { useChatLogic } from './hooks/useChatLogic';
 // import EditTextInput from './components/EditTextInput';
 // import { useEditLogic } from './hooks/useEditLogic';
 // import SplitScreenEdit from './components/SplitScreenEdit';
-import ReplyInput from './components/ReplyInput';
 import HandsFreeInterface from './components/HandsFreeInterface';
 import config from './config';
+import { useEffect } from 'react';
 
 function WriteFlow() {
   const chatLogic = useChatLogic('write');
@@ -40,13 +40,14 @@ function WriteFlow() {
   // Add voice-only mode check
   const isHandsFree = config.input.mode === 'HANDS_FREE';
 
-  const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
+  const handleSendMessage = async (changedIndex, updatedConversationPlanning, isFinishCommand = false) => {
     try {
       const result = await submitAnswer(
         updatedConversationPlanning.questions[changedIndex].id, 
         input,
         changedIndex,
-        updatedConversationPlanning
+        updatedConversationPlanning,
+        isFinishCommand
       );
       return result;
     } catch (error) {
@@ -161,8 +162,7 @@ function EditFlow() {
 function ReplyFlow() {
   const chatLogic = useChatLogic('reply');
   const { 
-    originalText, 
-    setOriginalText,
+    setContext,
     conversationPlanning,
     input,
     setInput,
@@ -186,13 +186,19 @@ function ReplyFlow() {
   // Add voice-only mode check
   const isHandsFree = config.input.mode === 'HANDS_FREE';
 
-  const handleSendMessage = async (changedIndex, updatedConversationPlanning) => {
+  // Set the static email as context when component mounts
+  useEffect(() => {
+    setContext(config.core.reply_email);
+  }, [setContext]);
+
+  const handleSendMessage = async (changedIndex, updatedConversationPlanning, isFinishCommand = false) => {
     try {
       const result = await chatLogic.submitAnswer(
         updatedConversationPlanning.questions[changedIndex].id, 
         input,
         changedIndex,
-        updatedConversationPlanning
+        updatedConversationPlanning,
+        isFinishCommand
       );
       return result;
     } catch (error) {
@@ -200,10 +206,6 @@ function ReplyFlow() {
       throw error;
     }
   };
-
-  if (!originalText) {
-    return <ReplyInput onSubmit={setOriginalText} />;
-  }
 
   return showEditor ? (
     <TextEditor 
@@ -225,6 +227,9 @@ function ReplyFlow() {
       setQuestionStatus={setQuestionStatus}
       currentQuestionIndex={currentQuestionIndex}
       setCurrentQuestionIndex={setCurrentQuestionIndex}
+      hasChanges={hasChanges}
+      onBackToEditor={handleBackToEditor}
+      cameFromEditor={cameFromEditor}
     />
   ) : (
     <ChatInterface

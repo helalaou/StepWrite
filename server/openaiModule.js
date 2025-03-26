@@ -4,7 +4,7 @@ import config from './config.js';
 import { writeQuestionPrompt, writeOutputPrompt } from './prompts/writePrompts.js';
 import { editQuestionPrompt, editOutputPrompt } from './prompts/editPrompts.js';
 import { textTypeClassificationPrompt } from './prompts/textTypeClassificationPrompt.js';
-import { replyQuestionPrompt, replyOutputPrompt } from './prompts/replyPrompts.js';
+import { replyQuestionPrompt, replyOutputPrompt, initialReplyQuestionPrompt } from './prompts/replyPrompts.js';
 import { factCheckPrompt, factCorrectionPrompt } from './prompts/factCheckingPrompt.js';
 import { logger } from './config.js';
 import { toneClassificationPrompt } from './prompts/toneClassificationPrompt.js';
@@ -614,6 +614,35 @@ async function classifyTone(qaFormat, originalText = '') {
   }
 }
 
+async function generateInitialReplyQuestion(originalText) {
+  const prompt = initialReplyQuestionPrompt(originalText);
+
+  logger.section('OPENAI REQUEST (Initial Reply Question Generation)', {
+    model: config.openai.initialReplyQuestion.model,
+    temperature: config.openai.initialReplyQuestion.temperature,
+    maxTokens: config.openai.initialReplyQuestion.maxTokens
+  });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.initialReplyQuestion.model,
+      messages: [{ role: 'system', content: prompt }],
+      max_tokens: config.openai.initialReplyQuestion.maxTokens,
+      temperature: config.openai.initialReplyQuestion.temperature,
+    });
+
+    const question = completion.choices[0].message.content.trim();
+    logger.section('OPENAI RESPONSE (Initial Reply Question Generation)', {
+      question
+    });
+
+    return question;
+  } catch (error) {
+    logger.error('Failed to generate initial reply question:', error);
+    return "How would you like to respond to this message?";
+  }
+}
+
 export {
   generateWriteQuestion,
   generateWriteOutput,
@@ -623,5 +652,7 @@ export {
   generateReplyOutput,
   classifyTextType,
   generateOutputWithFactCheck,
-  classifyTone
+  classifyTone,
+  generateInitialReplyQuestion,
+  performFactCheck
 }; 

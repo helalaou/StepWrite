@@ -10,6 +10,7 @@ import { useChatLogic } from './hooks/useChatLogic';
 import HandsFreeInterface from './components/HandsFreeInterface';
 import config from './config';
 import { useEffect } from 'react';
+import axios from 'axios';
 
 function WriteFlow() {
   const chatLogic = useChatLogic('write');
@@ -164,9 +165,11 @@ function ReplyFlow() {
   const { 
     setContext,
     conversationPlanning,
+    setConversationPlanning,
     input,
     setInput,
     isLoading,
+    setIsLoading,
     showEditor,
     finalOutput,
     handleBackToQuestions,
@@ -186,10 +189,51 @@ function ReplyFlow() {
   // Add voice-only mode check
   const isHandsFree = config.input.mode === 'HANDS_FREE';
 
-  // Set the static email as context when component mounts
+  // Set the static email as context when component mounts and fetch initial question
   useEffect(() => {
-    setContext(config.core.reply_email);
-  }, [setContext]);
+    const setupReplyFlow = async () => {
+      const emailContext = config.core.reply_email;
+      setContext(emailContext);
+      
+      try {
+        setIsLoading(true);
+        const response = await axios.post(`${config.core.apiUrl}${config.core.endpoints.initialReplyQuestion}`, {
+          originalText: emailContext
+        });
+        
+        // Set the initial question from the API response
+        const initialQuestion = response.data.question || "How would you like to respond to this message?";
+        
+        setConversationPlanning(prev => ({
+          ...prev,
+          questions: [
+            {
+              id: 1,
+              question: initialQuestion,
+              response: ''
+            }
+          ]
+        }));
+      } catch (error) {
+        console.error('Failed to fetch initial question:', error);
+        // Fallback to a default question if API call fails
+        setConversationPlanning(prev => ({
+          ...prev,
+          questions: [
+            {
+              id: 1,
+              question: "How would you like to respond to this text?",
+              response: ''
+            }
+          ]
+        }));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    setupReplyFlow();
+  }, [setContext, setConversationPlanning, setIsLoading]);
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning, isFinishCommand = false) => {
     try {

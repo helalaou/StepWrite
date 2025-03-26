@@ -1,6 +1,48 @@
 import memoryManager from '../memory/memoryManager.js';
 import config from '../config.js';
 
+export const initialReplyQuestionPrompt = (originalText) => {
+  return `
+=== TASK ===
+Generate a SPECIFIC, PERSONALIZED first question to help someone reply to the message below.
+This question should directly reference the content of the message in a way that feels personalized.
+
+=== ORIGINAL MESSAGE ===
+"${originalText}"
+
+=== REQUIREMENTS ===
+1. Create a SPECIFIC question that references the actual content of the message
+2. The question must mention a key topic, request, or detail from the message
+3. Avoid generic questions like:
+   - "What main points do you want to address in your reply?"
+   - "How would you like to respond to this message?"
+   - "What do you want to say in your response?"
+4. Instead, focus on a specific element in the message, for example:
+   - If the message asks about project updates: "How would you like to update them on the Q4 deliverables?"
+   - If it's about scheduling: "When would you prefer to schedule the follow-up meeting they mentioned?"
+   - If there's a request for feedback: "What feedback would you like to provide on the client presentation?"
+5. Keep it concise (under 15 words)
+6. Should be phrased as an open-ended question
+7. Must sound natural and conversational
+
+=== EXAMPLES ===
+Original message: "Could you send me the project timeline by Friday?"
+❌ "What do you want to say in your reply?"
+✅ "Will you be able to send the project timeline by Friday?"
+
+Original message: "Our team loved your presentation yesterday. When can we schedule a follow-up meeting?"
+❌ "How would you like to respond to this message?"
+✅ "When would you like to schedule the follow-up meeting they requested?"
+
+Original message: "I'm concerned about the delay in the product launch. What's causing this issue?"
+❌ "What points do you want to address?"
+✅ "How do you want to explain the product launch delay?"
+
+=== OUTPUT FORMAT ===
+Return ONLY the question text, with no quotation marks, prefixes, or extra text.
+`;
+};
+
 export const replyQuestionPrompt = (originalText, qaFormat) => {
   const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
 

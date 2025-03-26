@@ -110,7 +110,14 @@ const config = {
         APOLOGETIC: "Expressing regret or making amends with genuine acknowledgment of responsibility.",
         URGENT: "Time-sensitive or important matters requiring immediate attention and action."
       }
-    }
+    },
+
+    // Initial reply question settings
+    initialReplyQuestion: {
+      model: 'gpt-4o',
+      temperature: 0.7,
+      maxTokens: 100,
+    },
   },
 
   // logging settings

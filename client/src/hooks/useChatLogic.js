@@ -8,7 +8,7 @@ export function useChatLogic(mode = 'write') {
     questions: [
       {
         id: 1,
-        question: mode === 'write' ? 'What would you like to write?' : 'What is the main point you want to make in your reply?',
+        question: mode === 'write' ? 'What would you like to write?' : '',
         response: '', 
       },
     ],
@@ -238,9 +238,11 @@ export function useChatLogic(mode = 'write') {
     context,
     setContext,
     conversationPlanning,
+    setConversationPlanning,
     input,
     setInput,
     isLoading,
+    setIsLoading,
     showEditor,
     setShowEditor,
     finalOutput,

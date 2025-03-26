@@ -25,7 +25,8 @@ const config = {
       classifyTone: '/api/classify/tone',
       factCheck: '/api/fact-check',
       tts: '/api/tts/generate',
-      transcribe: '/api/transcribe'
+      transcribe: '/api/transcribe',
+      initialReplyQuestion: '/api/generate-initial-reply-question'
     },
     
     // System settings
@@ -413,7 +414,7 @@ Innovation Department`
         waiting: 'Waiting for speech...',
         recording: 'Recording...',
         processing: 'Processing...',
-        paused: 'Experiment paused. Say "continue" to resume...'
+        paused: 'Experiment paused. Say "continue experiment" to resume...'
       }
     }
   },

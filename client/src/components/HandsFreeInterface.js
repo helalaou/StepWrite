@@ -1552,7 +1552,7 @@ function HandsFreeInterface({
             </Box>
 
             <Typography variant="body1" sx={{ mb: 3 }}>
-              Say <strong>"continue"</strong> or <strong>"resume"</strong> to continue the experiment.
+              Say <strong>"continue experiment"</strong> to resume the experiment.
             </Typography>
 
             <Box

@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import config from './config.js';
-import { generateWriteQuestion, generateWriteOutput, generateEditQuestion, generateEditOutput, classifyTextType, generateReplyQuestion, generateReplyOutput, generateOutputWithFactCheck, classifyTone } from './openaiModule.js';
+import { generateWriteQuestion, generateWriteOutput, generateEditQuestion, generateEditOutput, classifyTextType, generateReplyQuestion, generateReplyOutput, generateOutputWithFactCheck, classifyTone, generateInitialReplyQuestion } from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -557,6 +557,28 @@ app.post('/api/control/followup', async (req, res) => {
     logger.error('Error in manual followup control:', error);
     res.status(500).json({ 
       error: 'Failed to control followup status',
+      details: error.message 
+    });
+  }
+});
+
+// Create a new endpoint for generating the initial reply question
+app.post('/api/generate-initial-reply-question', async (req, res) => {
+  try {
+    const { originalText } = req.body;
+    if (!originalText) {
+      return res.status(400).json({ error: 'Original text is required' });
+    }
+
+    const initialQuestion = await generateInitialReplyQuestion(originalText);
+    
+    res.json({ 
+      question: initialQuestion
+    });
+  } catch (error) {
+    logger.error('Error generating initial reply question:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate initial question',
       details: error.message 
     });
   }

@@ -95,14 +95,48 @@ function forceContinue(conversationPlanning) {
 // Submit Answer Route
 app.post('/api/write', async (req, res) => {
   try {
-    const { conversationPlanning, changedIndex, context } = req.body;
+    const { conversationPlanning, changedIndex, context, isFinishCommand } = req.body;
     logger.info('Processing submission with conversation planning:', conversationPlanning);
 
-    // If a response was changed, remove subsequent questions
+    // if a response was changed, remove subsequent questions
     let updatedPlanning = { ...conversationPlanning };
     if (typeof changedIndex === 'number') {
       updatedPlanning.questions = updatedPlanning.questions.slice(0, changedIndex + 1);
-      updatedPlanning = updateFollowupStatus(updatedPlanning, true);
+      // oonly force followup if not a finish command
+      if (!isFinishCommand) {
+        updatedPlanning = updateFollowupStatus(updatedPlanning, true);
+      }
+    }
+
+    //for finish command, force output generation regardless of followup status
+    if (isFinishCommand) {
+      logger.section('FORCED OUTPUT GENERATION (FINISH COMMAND)', {
+        factCheckingEnabled: config.openai.factChecking.enabled
+      });
+      
+      let toneClassification = null;
+      if (config.openai.toneClassification.enabled) {
+        const qaFormat = updatedPlanning.questions
+          .map(q => `Q: ${q.question}\nA: ${q.response}`)
+          .join('\n\n');
+        toneClassification = await classifyTone(qaFormat, context || '');
+      }
+      
+      const output = await generateOutputWithFactCheck(updatedPlanning, toneClassification, context);
+      
+      logger.section('GENERATION COMPLETE', {
+        output,
+        length: output.length,
+        characters: output.length,
+        words: output.split(/\s+/).length,
+        ...(toneClassification && { usedTone: toneClassification.tone })
+      });
+      
+      res.json({ 
+        output,
+        followup_needed: false 
+      });
+      return;
     }
 
     if (isFollowupNeeded(updatedPlanning)) {

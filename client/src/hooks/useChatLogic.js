@@ -106,7 +106,8 @@ export function useChatLogic(mode = 'write') {
       const payload = {
         conversationPlanning: conversationPlanningToSubmit,
         changedIndex,
-        answer
+        answer,
+        isFinishCommand
       };
 
       // Add context for reply mode

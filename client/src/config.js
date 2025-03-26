@@ -231,7 +231,6 @@ Innovation Department`
         },
         modify: {
           phrases: [
-            'modify',
             'modify question',
             'modify this question',
             'modify this response',

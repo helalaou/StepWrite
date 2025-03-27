@@ -9,13 +9,13 @@ const config = {
   core: {
     // API URLs
     apiUrl: getEnvVar('REACT_APP_API_URL', 'http://localhost:3001'),
-    
+
     // Application metadata
     app: {
       name: 'StepWrite',
       version: '1.0.0',
     },
-    
+
     // API endpoints used across components
     endpoints: {
       write: '/api/write',
@@ -28,55 +28,44 @@ const config = {
       transcribe: '/api/transcribe',
       initialReplyQuestion: '/api/generate-initial-reply-question'
     },
-    
+
     // System settings
     llm: {
       timeout: 70000, // Range: 10000-120000ms, Maximum time to wait for LLM response
     },
 
     // Static email for reply flow
-    reply_email: `Subject: Project Update Meeting - Action Items Review
-From: sarah.manager@company.com
-To: me@company.com
-Date: Today at 9:15 AM
-
+    reply_email:
+      `Subject: Follow-Up on Your Application for Administrative Assistant Position
 Hi there,
-
-I hope this email finds you well. Following our team meeting yesterday, I wanted to follow up on some key action items that require your attention.
-
-1. Could you please provide an update on the Q4 deliverables we discussed? We need to ensure we're on track with the timeline.
-
-2. The client presentation needs to be reviewed by Friday. Can you take a look and share your feedback?
-
-3. We should schedule a follow-up meeting to discuss the resource allocation for the upcoming phase. What times work best for you next week?
-
-Additionally, I'd like to get your thoughts on the new project management tool we're considering. Have you had a chance to review the demo I shared?
-
-Looking forward to your response.
-
-Best regards,
-Sarah Johnson
-Senior Project Manager
-Innovation Department`
+Thank you for applying for the Administrative Assistant position at [Company Name]. We were impressed by your initial application and would like to gather a few additional details to move forward in the process:
+Can you confirm your expected graduation date, if applicable?
+Are you legally authorized to work in the U.S., and will you require visa sponsorship now or in the future?
+When would you be available to start, if offered the position?
+What is your preferred working schedule (e.g., full-time, part-time, hybrid, remote)?
+Do you have any prior experience with office software or tools, such as Microsoft Office, Google Workspace, or scheduling systems?
+Is there anything else you would like us to know about your background or availability?
+We look forward to hearing from you soon!
+Best regards,`
   },
-  
+
   // ====== INPUT MODE CONFIGURATION ======
   // Controls how users can input their responses
   input: {
     // Values: 'TEXT_ONLY' | 'HANDS_FREE' | 'TEXT_AND_VOICE'
     mode: getEnvVar('REACT_APP_INPUT_MODE', 'HANDS_FREE'),
   },
-  
+
   // ====== TEXT-TO-SPEECH SETTINGS ======
   // Used in: SpeakButton.js
   tts: {
     mode: getEnvVar('REACT_APP_TTS_MODE', 'ENABLED'),  // 'ENABLED' | 'DISABLED'
     outputPrefix: getEnvVar('REACT_APP_TEXT_EDITOR_TTS_PREFIX', 'The final output is:'), // Prefix text before playing the output to the user
   },
-  
+
   // ====== VOICE INPUT MODES ======
   // Settings for different voice input modes
-  
+
   // 1. HANDS-FREE MODE SETTINGS
   // Used in: HandsFreeInterface.js, TextEditor.js (for voice commands)
   handsFree: {
@@ -89,17 +78,17 @@ Innovation Department`
       negativeSpeechThreshold: 0.60,  // Range: 0.5-0.90, Confidence for negative detection
       redemptionFrames: 12,           // Range: 1-10, Frames to wait before confirming end 
       mode: 3,                        // Range: 0-3, VAD aggressiveness (3 = most aggressive)
-      
+
       // Energy-based speech detection
       minEnergy: 0.005,               // Range: 0.001-0.1, Minimum amplitude for valid speech
       significantThreshold: 0.005,    // Range: 0.001-0.1, Threshold for significant audio
       minSignificantRatio: 0.1,       // Range: 0.1-0.5, Minimum ratio of significant samples
-      
+
       // Audio quality settings
       sampleRate: 16000,              // Sample rate for audio processing
       channels: 1,                    // Mono audio
     },
-    
+
     // Controls when to finalize and submit speech
     speech: {
       finalizeDelay: 2500,            // Range: 3000-10000ms, Wait time before submitting
@@ -110,12 +99,12 @@ Innovation Department`
         nonFirstQuestionDelay: 1500,  // Range: 500-3000ms, delay before playing TTS for non-first questions to ensure the audio clips are generated
       },
     },
-    
+
     // Voice commands configuration
     commands: {
       // Command behavior settings
       behavior: {
-        matching: { 
+        matching: {
           mode: getEnvVar('REACT_APP_COMMAND_MATCHING_MODE', 'FUZZY'), // EXACT (entire phrase is an exact match) | CONTAINS (speech must contain the command) | FUZZY (word by word match with confidence trheshold)
           minConfidence: 0.85,   // Only used in FUZZY mode - higher = more strict
           ignoreArticles: true //whether to ignore articles when matching 
@@ -287,7 +276,6 @@ Innovation Department`
             'resume the test',
             'resume flow',
             'resume the flow',
-            'start listening',
             'start the listening',
             'continue please',
             'resume please',
@@ -322,7 +310,7 @@ Innovation Department`
           staticAnswer: 'user has skipped this question'
         }
       },
-      
+
       // TextEditor interface commands
       textEditor: {
         toQuestions: {
@@ -407,7 +395,7 @@ Innovation Department`
         }
       }
     },
-    
+
     // UI messages for hands-free mode
     ui: {
       messages: {
@@ -418,7 +406,7 @@ Innovation Department`
       }
     }
   },
-  
+
   // 2. TEXT_AND_VOICE MODE SETTINGS
   // Used in: VoiceInput.js for hybrid text/voice input
   voiceInput: {
@@ -430,7 +418,7 @@ Innovation Department`
       chunkSize: 3000,                // Milliseconds per audio chunk (range: 1000-10000)
       logInterval: 300,               // How often to log audio levels in ms (range: 100-1000)
     },
-    
+
     // Noise reduction settings for better voice recognition
     noiseReduction: {
       floorMultiplier: 1.2,           // Range: 1.0-3.0, Lower = keep more quiet sounds

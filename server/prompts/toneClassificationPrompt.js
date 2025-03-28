@@ -12,6 +12,8 @@ Analyze the conversation and determine the most appropriate tone for the respons
 ${originalText ? `=== ORIGINAL TEXT ===
 ${originalText}
 
+Pay special attention to the context of the original text, as it sets the expected formality and professionalism level of the conversation.
+
 ` : ''}=== CONVERSATION Q&A ===
 ${qaFormat}
 
@@ -19,7 +21,7 @@ ${qaFormat}
 1. Consider these factors:
    - The nature of the relationship (professional, personal, etc.)
    - The context and purpose of the communication
-   - The level of formality in the user's responses
+   - The level of formality in the user's responses, balanced against the formality of the original request
    - The emotional undertones in the conversation
    - The intended audience
    - The type of message (request, information, apology, etc.)
@@ -43,4 +45,4 @@ Return ONLY a JSON object with:
   "reasoning": "Brief explanation of classification"
 }
 `;
-}; 
+};

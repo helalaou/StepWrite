@@ -26,7 +26,8 @@ const config = {
       factCheck: '/api/fact-check',
       tts: '/api/tts/generate',
       transcribe: '/api/transcribe',
-      initialReplyQuestion: '/api/generate-initial-reply-question'
+      initialReplyQuestion: '/api/generate-initial-reply-question',
+      saveExperimentData: '/api/save-experiment-data'
     },
 
     // System settings
@@ -47,6 +48,13 @@ Do you have any prior experience with office software or tools, such as Microsof
 Is there anything else you would like us to know about your background or availability?
 We look forward to hearing from you soon!
 Best regards,`
+  },
+
+  // ====== EXPERIMENT TRACKING SETTINGS ======
+  experiment: {
+    enabled: true,  //enable/disable experiment tracking functionality
+    outputDir: 'experiment_data', // Directory to store experiment output files
+    participantIdRequired: true, // Whether participant ID is required before starting
   },
 
   // ====== INPUT MODE CONFIGURATION ======
@@ -392,6 +400,20 @@ Best regards,`
             'silence please'
           ],
           response: 'Stopping audio'
+        },
+        endExperiment: {
+          phrases: [
+            'end experiment',
+            'finish experiment',
+            'end the experiment',
+            'finish the experiment',
+            'save experiment',
+            'save and finish',
+            'save and exit',
+            'save experiment data',
+            'finish and save'
+          ],
+          response: 'Ending experiment and saving data'
         }
       }
     },

@@ -706,6 +706,13 @@ function HandsFreeInterface({
         break;
 
       case 'skip':
+        // Track skip counter for experiment if enabled
+        if (config.experiment && config.experiment.enabled) {
+          const currentCount = parseInt(sessionStorage.getItem('skipCount') || '0', 10);
+          sessionStorage.setItem('skipCount', (currentCount + 1).toString());
+          console.log('Incremented skip count:', currentCount + 1);
+        }
+        
         segmentsRef.current = [commandCheck.response];
         const merged = segmentsRef.current.join(' ');
         setMergedSpeech(merged);
@@ -714,6 +721,13 @@ function HandsFreeInterface({
         break;
 
       case 'modify':
+        // Track modify counter for experiment if enabled
+        if (config.experiment && config.experiment.enabled) {
+          const currentCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
+          sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
+          console.log('Incremented modify count:', currentCount + 1);
+        }
+        
         setIsModifying(true);
         isModifyingRef.current = true;
         segmentsRef.current = [];
@@ -763,33 +777,28 @@ function HandsFreeInterface({
         }
         break;
 
-      case 'toEditor':
-        if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
-          !hasChanges && cameFromEditor && onBackToEditor) {
-          displayFeedback("Moving to editor view...", 'command');
-          onBackToEditor();
-        } else {
-          displayFeedback("Editor not available here", 'error');
-        }
-        break;
-
-      case 'toQuestions':
-        displayFeedback("Already in questions view", 'error');
-        break;
-
-      case 'toHome':
-        displayFeedback("Returning to home page...", 'command');
-        safeNavigate('/');
-        break;
-
       case 'returnToHome':
         displayFeedback("Returning to home page...", 'command');
-        safeNavigate('/');
+        if (vadRef.current) {
+          await vadRef.current.destroy();
+          vadRef.current = null;
+        }
+        clearReplayTimeout();
+        clearFinalizeTimeout();
+        replayAttemptsRef.current = 0;
+        navigate('/');
         break;
 
+      case 'toEditor':
+        displayFeedback("Going to editor...", 'command');
+        if (onBackToEditor) {
+          onBackToEditor();
+        }
+        break;
+      
       default:
-        console.warn(`Unknown command type: ${commandCheck.type}`);
-        displayFeedback("Unknown command", 'error');
+        displayFeedback(`Unknown command: ${commandCheck.type}`, 'error');
+        break;
     }
   };
 
@@ -1286,6 +1295,14 @@ function HandsFreeInterface({
                   if (process.env.NODE_ENV !== 'production') {
                     console.log("MODIFY command directly detected");
                   }
+                  
+                  // Track modify counter for direct detection, just like in handleCommandExecution
+                  if (config.experiment && config.experiment.enabled) {
+                    const currentCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
+                    sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
+                    console.log('Incremented modify count (direct detection):', currentCount + 1);
+                  }
+                  
                   setIsModifying(true);
                   isModifyingRef.current = true; // Immediate update
                   segmentsRef.current = [];

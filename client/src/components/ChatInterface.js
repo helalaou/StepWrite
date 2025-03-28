@@ -301,6 +301,13 @@ function ChatInterface({
     
     const currentIndex = currentQuestionIndex;
     
+    // Track modifications for experiment if enabled
+    if (config.experiment.enabled && questionStatus[currentIndex]?.type === 'answered') {
+      const currentCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
+      sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
+      console.log('Incremented modify count:', currentCount + 1);
+    }
+    
     // If skipped, immediately switch to answering mode with empty input
     if (questionStatus[currentIndex]?.type === 'skipped') {
       console.log('Changing from skipped to answering mode');
@@ -352,6 +359,13 @@ function ChatInterface({
         previousStatus: questionStatus[currentQuestionIndex]?.type,
         newStatus: 'skipped'
       });
+
+      // Increment skip counter for experiment if enabled
+      if (config.experiment.enabled) {
+        const currentCount = parseInt(sessionStorage.getItem('skipCount') || '0', 10);
+        sessionStorage.setItem('skipCount', (currentCount + 1).toString());
+        console.log('Incremented skip count:', currentCount + 1);
+      }
 
       const skipMessage = "user has skipped this question";
       

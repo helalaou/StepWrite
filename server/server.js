@@ -584,6 +584,57 @@ app.post('/api/generate-initial-reply-question', async (req, res) => {
   }
 });
 
+// Endpoint for saving experiment data
+app.post('/api/save-experiment-data', async (req, res) => {
+  try {
+    if (!config.experiment.enabled) {
+      return res.status(403).json({ error: 'Experiment tracking is disabled in server configuration' });
+    }
+
+    const { participantId, mode, modifyCount, skipCount, finalOutput } = req.body;
+
+    if (!participantId) {
+      return res.status(400).json({ error: 'Participant ID is required' });
+    }
+
+    if (!finalOutput) {
+      return res.status(400).json({ error: 'Final output is required' });
+    }
+
+    if (!['write', 'reply'].includes(mode)) {
+      return res.status(400).json({ error: 'Invalid mode. Must be "write" or "reply"' });
+    }
+
+    // Create a sanitized filename to prevent directory traversal
+    const sanitizedId = participantId.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const filename = `${sanitizedId}_${mode}_experiment.txt`;
+    const filepath = path.join(config.experiment.outputDir, filename);
+
+    // Prepare content for the file
+    const content = `user_id: ${participantId}
+number of times the user used the modify command: ${modifyCount || 0}
+number of times the user skipped a question: ${skipCount || 0}
+final output:
+${finalOutput}`;
+
+    // Write the file
+    fs.writeFileSync(filepath, content);
+
+    logger.info(`Saved experiment data for participant ${participantId} in ${mode} mode.`);
+    res.json({ 
+      success: true,
+      message: `Experiment data saved for participant ID: ${participantId}`,
+      filepath: filename
+    });
+  } catch (error) {
+    logger.error('Error saving experiment data:', error);
+    res.status(500).json({ 
+      error: 'Failed to save experiment data',
+      details: error.message 
+    });
+  }
+});
+
 // Start server
 app.listen(config.server.port, () => {
   logger.info(`${config.app.name} server v${config.app.version} running at http://localhost:${config.server.port}`);

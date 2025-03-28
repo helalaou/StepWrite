@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Box, TextField, Button, Typography, IconButton, Tooltip, Divider } from '@mui/material';
+import { Box, TextField, Button, Typography, IconButton, Tooltip, Divider, CircularProgress, TextareaAutosize } from '@mui/material';
 import WestIcon from '@mui/icons-material/West';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
@@ -14,6 +14,7 @@ import config from '../config';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
 import { playClickSound } from '../utils/soundUtils';
+import ExperimentEndButton from './ExperimentEndButton';
 
 // Add the pulse animation
 const pulseAnimation = keyframes`
@@ -69,6 +70,13 @@ function TextEditor({
 
   // Add ref to track cleanup status
   const isCleaningUpRef = useRef(false);
+
+  // Add a reference to the experiment end button
+  const endExperimentButtonRef = useRef(null);
+
+  // Add state and refs for voice command detection
+  const [isListeningForCommands, setIsListeningForCommands] = useState(false);
+  const speechRecognitionRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -562,6 +570,62 @@ function TextEditor({
     };
   }, []);
 
+  // Initialize voice recognition for commands
+  useEffect(() => {
+    // Only setup voice command recognition if experiment is enabled and we're using a browser with SpeechRecognition
+    if (config.experiment.enabled && 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+        console.log('Voice command detected:', transcript);
+        
+        // Check if the transcript contains any of the endExperiment phrases
+        const endExperimentPhrases = config.handsFree.commands.textEditor.endExperiment.phrases;
+        const matchesEndExperiment = endExperimentPhrases.some(phrase => 
+          transcript.includes(phrase.toLowerCase())
+        );
+        
+        if (matchesEndExperiment && endExperimentButtonRef.current) {
+          console.log('End experiment command detected');
+          // Simulate a click on the end experiment button
+          endExperimentButtonRef.current.click();
+        }
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+      };
+      
+      speechRecognitionRef.current = recognition;
+      
+      // Start listening for commands
+      try {
+        recognition.start();
+        setIsListeningForCommands(true);
+        console.log('Started listening for voice commands');
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
+      }
+    }
+    
+    // Cleanup
+    return () => {
+      if (speechRecognitionRef.current) {
+        try {
+          speechRecognitionRef.current.stop();
+        } catch (error) {
+          console.error('Error stopping speech recognition:', error);
+        }
+      }
+    };
+  }, []);
+
   return (
     <Box sx={{ 
       display: 'flex',
@@ -882,6 +946,16 @@ function TextEditor({
           )}
         </Box>
       </Box>
+
+      {/* Add experiment end button if experiment is enabled */}
+      {config.experiment.enabled && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <ExperimentEndButton 
+            content={content} 
+            ref={endExperimentButtonRef}  // Add ref to access button
+          />
+        </Box>
+      )}
     </Box>
   );
 }

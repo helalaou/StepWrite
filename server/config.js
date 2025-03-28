@@ -13,6 +13,11 @@ const config = {
     name: 'StepWrite',
     version: '1.0.0',
   },
+  // Experiment tracking settings
+  experiment: {
+    enabled: true,
+    outputDir: './temp/experiment_data',
+  },
   openai: {
     timeout: 70000, // 70 seconds
     
@@ -166,9 +171,14 @@ const config = {
 try {
   fs.mkdirSync(path.resolve(config.audio.tts.tempDir), { recursive: true });
   fs.mkdirSync(path.resolve(config.audio.stt.tempDir), { recursive: true });
+  
+  // Create experiment data directory if enabled
+  if (config.experiment.enabled) {
+    fs.mkdirSync(path.resolve(config.experiment.outputDir), { recursive: true });
+  }
 } catch (err) {
   if (err.code !== 'EEXIST') {
-    logger.error('Failed to create temp directories:', err);
+    logger.error('Failed to create directories:', err);
   }
 }
 

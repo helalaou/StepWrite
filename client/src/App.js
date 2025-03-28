@@ -8,11 +8,16 @@ import { useChatLogic } from './hooks/useChatLogic';
 // import { useEditLogic } from './hooks/useEditLogic';
 // import SplitScreenEdit from './components/SplitScreenEdit';
 import HandsFreeInterface from './components/HandsFreeInterface';
+import ParticipantIdInput from './components/ParticipantIdInput';
 import config from './config';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 
 function WriteFlow() {
+  const [showIdInput, setShowIdInput] = useState(
+    config.experiment.enabled && config.experiment.participantIdRequired
+  );
+  
   const chatLogic = useChatLogic('write');
   const {
     conversationPlanning,
@@ -56,6 +61,11 @@ function WriteFlow() {
       throw error;
     }
   };
+
+  // If participant ID input is shown, don't show the rest of the interface
+  if (showIdInput) {
+    return <ParticipantIdInput onSubmit={() => setShowIdInput(false)} mode="write" />;
+  }
 
   return showEditor ? (
     <TextEditor 
@@ -161,6 +171,10 @@ function EditFlow() {
 */
 
 function ReplyFlow() {
+  const [showIdInput, setShowIdInput] = useState(
+    config.experiment.enabled && config.experiment.participantIdRequired
+  );
+  
   const chatLogic = useChatLogic('reply');
   const { 
     setContext,
@@ -191,6 +205,9 @@ function ReplyFlow() {
 
   // Set the static email as context when component mounts and fetch initial question
   useEffect(() => {
+    // Skip initialization if we're showing ID input
+    if (showIdInput) return;
+    
     const setupReplyFlow = async () => {
       const emailContext = config.core.reply_email;
       setContext(emailContext);
@@ -233,7 +250,7 @@ function ReplyFlow() {
     };
     
     setupReplyFlow();
-  }, [setContext, setConversationPlanning, setIsLoading]);
+  }, [setContext, setConversationPlanning, setIsLoading, showIdInput]);
 
   const handleSendMessage = async (changedIndex, updatedConversationPlanning, isFinishCommand = false) => {
     try {
@@ -250,6 +267,11 @@ function ReplyFlow() {
       throw error;
     }
   };
+
+  // If participant ID input is shown, don't show the rest of the interface
+  if (showIdInput) {
+    return <ParticipantIdInput onSubmit={() => setShowIdInput(false)} mode="reply" />;
+  }
 
   return showEditor ? (
     <TextEditor 

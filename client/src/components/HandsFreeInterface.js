@@ -1073,10 +1073,7 @@ function HandsFreeInterface({
           }
           setIsSpeechActive(true);
 
-          // Cancel TTS when user starts speaking
-          if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-          }
+          //   mark tts as interrupted
           setIsTTSPlaying(false);
 
           updateSpeechDetectionTime();
@@ -1138,7 +1135,6 @@ function HandsFreeInterface({
 
     } catch (error) {
       console.error('Error starting paused recording:', error);
-      displayFeedback("Error starting recording. Please try again.", 'error');
     }
   };
 
@@ -1485,6 +1481,67 @@ function HandsFreeInterface({
       onBackToEditor();
     } else {
       displayFeedback("No more questions available yet", 'error');
+    }
+  };
+
+  // Modify the TTS playback function to handle transitions better
+  const playTTS = async (text) => {
+    if (!text) return;
+    
+    try {
+      setIsTTSPlaying(true);
+      
+      //start the microphone immediately while TTS is playing
+      if (!isPaused && !isPausedRef.current) {
+        await startPausedRecording();
+      }
+
+      const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ text })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (!data.audioUrl) {
+        throw new Error('No audio URL in response');
+      }
+
+      const audio = new Audio(`${config.core.apiUrl}${data.audioUrl}`);
+      
+      
+      audio.addEventListener('ended', () => {
+        setIsTTSPlaying(false);
+        //   mic ready for next input
+        if (!isPaused && !isPausedRef.current) {
+          startPausedRecording();
+        }
+      });
+      
+      audio.addEventListener('error', (e) => {
+        console.error('Audio playback error:', e);
+        setIsTTSPlaying(false);
+        //  miic is ready even if TTS fails
+        if (!isPaused && !isPausedRef.current) {
+          startPausedRecording();
+        }
+      });
+
+      await audio.play();
+    } catch (error) {
+      console.error('Error playing TTS:', error);
+      setIsTTSPlaying(false);
+      //mic is ready even if TTS fails
+      if (!isPaused && !isPausedRef.current) {
+        startPausedRecording();
+      }
     }
   };
 

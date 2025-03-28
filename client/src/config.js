@@ -91,7 +91,7 @@ Best regards,`
       minEnergy: 0.004,               // Range: 0.001-0.1, Minimum amplitude for valid speech
       significantThreshold: 0.004,    // Range: 0.001-0.1, Threshold for significant audio
       minSignificantRatio: 0.20,       // Range: 0.1-0.5, Minimum ratio of significant samples
-
+      
       // Audio quality settings
       sampleRate: 16000,              // Sample rate for audio processing
       channels: 1,                    // Mono audio

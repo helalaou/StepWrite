@@ -72,17 +72,17 @@ Best regards,`
     // Voice Activity Detection and Audio Processing settings
     vad: {
       // Speech detection settings
-      minSpeechFrames: 3,             // Range: 3-30, Minimum frames for speech detection
-      preSpeechPadFrames: 10,         // Range: 1-10, Frames to keep before speech 
-      positiveSpeechThreshold: 0.7,   // Range: 0.5-0.95, Confidence for positive detection 
-      negativeSpeechThreshold: 0.60,  // Range: 0.5-0.90, Confidence for negative detection
-      redemptionFrames: 12,           // Range: 1-10, Frames to wait before confirming end 
-      mode: 3,                        // Range: 0-3, VAD aggressiveness (3 = most aggressive)
+      minSpeechFrames: 4,             // Range: 3-30, Minimum frames for speech detection
+      preSpeechPadFrames: 8,         // Range: 1-10, Frames to keep before speech 
+      positiveSpeechThreshold: 0.80,   // Range: 0.5-0.95, Confidence for positive detection 
+      negativeSpeechThreshold: 0.70,  // Range: 0.5-0.90, Confidence for negative detection
+      redemptionFrames: 8,           // Range: 1-10, Frames to wait before confirming end 
+      mode: 2,                        // Range: 0-3, VAD aggressiveness (3 = most aggressive)
 
       // Energy-based speech detection
-      minEnergy: 0.005,               // Range: 0.001-0.1, Minimum amplitude for valid speech
-      significantThreshold: 0.005,    // Range: 0.001-0.1, Threshold for significant audio
-      minSignificantRatio: 0.1,       // Range: 0.1-0.5, Minimum ratio of significant samples
+      minEnergy: 0.004,               // Range: 0.001-0.1, Minimum amplitude for valid speech
+      significantThreshold: 0.004,    // Range: 0.001-0.1, Threshold for significant audio
+      minSignificantRatio: 0.20,       // Range: 0.1-0.5, Minimum ratio of significant samples
 
       // Audio quality settings
       sampleRate: 16000,              // Sample rate for audio processing

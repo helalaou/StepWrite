@@ -28,6 +28,11 @@ function ParticipantIdInput({ onSubmit, mode }) {
     sessionStorage.setItem('modifyCount', '0');
     sessionStorage.setItem('skipCount', '0');
     
+    // Initialize time tracking variables
+    sessionStorage.setItem('writingStartTime', Date.now().toString());
+    sessionStorage.setItem('writingTimeTotal', '0');
+    sessionStorage.setItem('revisionTimeTotal', '0');
+    
     setTimeout(() => {
       setIsLoading(false);
       if (typeof onSubmit === 'function') {

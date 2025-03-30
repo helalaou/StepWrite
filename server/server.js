@@ -591,7 +591,16 @@ app.post('/api/save-experiment-data', async (req, res) => {
       return res.status(403).json({ error: 'Experiment tracking is disabled in server configuration' });
     }
 
-    const { participantId, mode, modifyCount, skipCount, textOutput, finalOutput } = req.body;
+    const { 
+      participantId, 
+      mode, 
+      modifyCount, 
+      skipCount, 
+      textOutput, 
+      finalOutput, 
+      writingTime, 
+      revisionTime 
+    } = req.body;
 
     if (!participantId) {
       return res.status(400).json({ error: 'Participant ID is required' });
@@ -614,10 +623,16 @@ app.post('/api/save-experiment-data', async (req, res) => {
     const filename = `${sanitizedId}_${mode}_experiment.txt`;
     const filepath = path.join(config.experiment.outputDir, filename);
 
+    // Format time values
+    const writingTimeStr = writingTime ? `${Math.floor(writingTime / 60)}m ${writingTime % 60}s (${writingTime}s total)` : 'not tracked';
+    const revisionTimeStr = revisionTime ? `${Math.floor(revisionTime / 60)}m ${revisionTime % 60}s (${revisionTime}s total)` : 'not tracked';
+
     // Prepare content for the file
     const content = `user_id: ${participantId}
 number of times the user used the modify command: ${modifyCount || 0}
 number of times the user skipped a question: ${skipCount || 0}
+time taken (writing): ${writingTimeStr}
+time taken (revision): ${revisionTimeStr}
 ############### ORIGINAL OUTPUT ###############
 ${textOutput}
 ############### REVISED OUTPUT ###############

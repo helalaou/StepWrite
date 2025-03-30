@@ -26,6 +26,18 @@ const ExperimentEndButton = forwardRef(({ content, textOutput }, ref) => {
     const modifyCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
     const skipCount = parseInt(sessionStorage.getItem('skipCount') || '0', 10);
     
+    // calcfinal revision time before saving
+    const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
+    const revisionTimeTotal = parseInt(sessionStorage.getItem('revisionTimeTotal') || '0', 10);
+    const revisionStartTime = parseInt(sessionStorage.getItem('revisionStartTime') || '0', 10);
+    
+    // if we(re in revision mode, add the current session time to the total
+    let finalRevisionTime = revisionTimeTotal;
+    if (revisionStartTime > 0) {
+      const additionalRevisionTime = Math.floor((Date.now() - revisionStartTime) / 1000);
+      finalRevisionTime += additionalRevisionTime;
+    }
+    
     try {
       setIsLoading(true);
       
@@ -35,7 +47,9 @@ const ExperimentEndButton = forwardRef(({ content, textOutput }, ref) => {
         modifyCount,
         skipCount,
         textOutput: textOutput || content,
-        finalOutput: content
+        finalOutput: content,
+        writingTime: writingTimeTotal,
+        revisionTime: finalRevisionTime
       });
       
       if (response.data.success) {

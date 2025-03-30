@@ -706,6 +706,52 @@ function HandsFreeInterface({
         );
         break;
 
+      case 'endExperiment':
+        displayFeedback(config.handsFree.commands.handsFree.endExperiment.response, 'command');
+        
+        // Calculate final writing/revision time
+        // If we're in writing mode (not in the editor), update writing time
+        const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
+        const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
+        
+        if (writingStartTime > 0) {
+          const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
+          sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
+          sessionStorage.removeItem('writingStartTime');
+        }
+        
+        // If we're in revision mode (in the editor), update revision time
+        const revisionStartTime = parseInt(sessionStorage.getItem('revisionStartTime') || '0', 10);
+        const revisionTimeTotal = parseInt(sessionStorage.getItem('revisionTimeTotal') || '0', 10);
+        
+        if (revisionStartTime > 0) {
+          const additionalRevisionTime = Math.floor((Date.now() - revisionStartTime) / 1000);
+          sessionStorage.setItem('revisionTimeTotal', (revisionTimeTotal + additionalRevisionTime).toString());
+          sessionStorage.removeItem('revisionStartTime');
+        }
+        
+        // Stop recording and clean up
+        if (vadRef.current) {
+          await vadRef.current.destroy();
+          vadRef.current = null;
+        }
+        clearReplayTimeout();
+        clearFinalizeTimeout();
+        replayAttemptsRef.current = 0;
+        setIsRecording(false);
+        setIsSpeechActive(false);
+        
+        // If we're not in editor view yet, transition to editor
+        if (cameFromEditor && onBackToEditor) {
+          displayFeedback("Moving to editor view to save experiment...", 'command');
+          onBackToEditor();
+        } else {
+          // If we're already in editor view, we'd need access to end experiment button
+          // This part would need to be handled in TextEditor component
+          displayFeedback("Please say 'end writing' in editor view", 'command');
+        }
+        break;
+
       case 'skip':
         // Track skip counter for experiment if enabled
         if (config.experiment && config.experiment.enabled) {
@@ -838,12 +884,28 @@ function HandsFreeInterface({
           questions: updatedQuestions
         };
 
-        await submitAnswer(
+        const result = await submitAnswer(
           updatedQuestions[0].id,
           finalAnswer,
           0,
           updatedConversationPlanning
         );
+
+        // If no followup needed, track writing time and start revision time
+        if (result === null) {
+          // Calculate writing time
+          const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
+          const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
+          
+          if (writingStartTime > 0) {
+            const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
+            sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
+            sessionStorage.removeItem('writingStartTime');
+            
+            // Start tracking revision time
+            sessionStorage.setItem('revisionStartTime', Date.now().toString());
+          }
+        }
 
         // Reset state and move to the next question
         segmentsRef.current = [];
@@ -855,7 +917,23 @@ function HandsFreeInterface({
         playClickSound();
         setCurrentQuestionIndex(1);
       } else if (!questionStatus[currentQuestionIndex]?.answer) {
-        await handleSubmitAnswer(finalAnswer);
+        const result = await handleSubmitAnswer(finalAnswer);
+
+        // If no followup needed, track writing time and start revision time
+        if (result === null) {
+          // Calculate writing time
+          const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
+          const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
+          
+          if (writingStartTime > 0) {
+            const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
+            sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
+            sessionStorage.removeItem('writingStartTime');
+            
+            // Start tracking revision time
+            sessionStorage.setItem('revisionStartTime', Date.now().toString());
+          }
+        }
 
         segmentsRef.current = [];
         setMergedSpeech('');
@@ -953,12 +1031,15 @@ function HandsFreeInterface({
         console.log(`- Backend returned newLength: ${!!newLength}`);
         console.log(`- Current index < new length - 1: ${currentQuestionIndex < (newLength ? newLength - 1 : 0)}`);
       }
+      
+      return newLength;
     } catch (error) {
       console.error(`Error submitting answer: ${error}`);
       setQuestionStatus({
         ...questionStatus,
         [currentQuestionIndex]: { type: 'answering', answer: text }
       });
+      return null;
     } finally {
       setIsProcessing(false);
     }
@@ -1000,16 +1081,30 @@ function HandsFreeInterface({
 
       const newQuestionStatus = { ...questionStatus };
       newQuestionStatus[currentQuestionIndex] = { type: 'answered', answer: text };
-
+      
       // Also remove status entries for deleted questions
       for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
         delete newQuestionStatus[i];
       }
-
+     
       setQuestionStatus(newQuestionStatus);
       displayFeedback("Answer updated successfully and saved to conversation.", 'success');
-
+      
+      // If no followup needed (transitioning to editor), update time tracking
       if (newLength === null) {
+        // Calculate writing time
+        const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
+        const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
+        
+        if (writingStartTime > 0) {
+          const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
+          sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
+          sessionStorage.removeItem('writingStartTime');
+          
+          // Start tracking revision time
+          sessionStorage.setItem('revisionStartTime', Date.now().toString());
+        }
+        
         // LLM decided to end conversation
         displayFeedback("Moving to editor view...", 'success');
 
@@ -1034,9 +1129,17 @@ function HandsFreeInterface({
         }, 1500);
       }
 
+      // Handle cleanup
+      segmentsRef.current = [];
+      setMergedSpeech('');
+      setIsModifying(false);
+      isModifyingRef.current = false;
+      
+      return newLength;
     } catch (error) {
       console.error('Error submitting modified answer:', error);
       displayFeedback("Failed to update. Please try again.", 'error');
+      return null;
     } finally {
       setIsProcessing(false);
     }

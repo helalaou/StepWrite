@@ -275,5 +275,9 @@ ${hasMemory ? `
 - Make sure the response is complete and consistent with the user's stated intentions.
 ${hasTone ? `- Adapt language and expressions to match the specified tone.` : ''}
 - Never ask for additional details or clarification - use the information provided.
+- When handling negative responses:
+  - If the user said "no" to optional items, preferences, or arrangements that were asked as "Would you like/need/want X?", then completely omit mentioning X in the output
+  - If the user was asked a direct question that needs a response (e.g., in the original message someone asked "Do you want to join us for pizza?"), always answer that question even if the answer is negative
+  - Rule of thumb: If saying "You don't need to X" or "No need to X" sounds awkward or implies X was expected by default, omit mentioning X entirely
 `;
 };

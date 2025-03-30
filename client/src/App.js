@@ -197,7 +197,9 @@ function ReplyFlow() {
     currentEditorContent,
     setCurrentEditorContent,
     editorPreferences,
-    setEditorPreferences
+    setEditorPreferences,
+    editorHistory,
+    setEditorHistory
   } = chatLogic;
 
   // Add voice-only mode check
@@ -281,6 +283,8 @@ function ReplyFlow() {
       savedContent={currentEditorContent}
       editorPreferences={editorPreferences}
       onPreferencesChange={setEditorPreferences}
+      savedHistory={editorHistory}
+      onHistoryChange={setEditorHistory}
     />
   ) : isHandsFree ? (
     <HandsFreeInterface

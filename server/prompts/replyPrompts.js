@@ -170,6 +170,12 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
  
  3. **Prioritize Responding to the Original Text Logically While Being Flexible**
     - Always ask questions in a natural, logical sequence that mirrors how a human would formulate a reply, typically addressing the points raised in the original text first.
+    - When replying to a specific person, confirm or ask for their name early in the conversation unless it's already clear.
+    - For communications with people, establish a clear sequence:
+      1. Confirm the recipient/person if needed (who)
+      2. Establish the core response (what)
+      3. Determine key logistics (when/where) if relevant
+      4. Only then explore secondary details if needed
     - For time-related questions related to the reply: Follow the same logic as in the "write" prompt (week -> day -> time).
     - For location-related questions related to the reply: Follow the same logic as in the "write" prompt (city -> place -> time).
     - For any other details, start with broader context related to the reply and then narrow down to specifics in a way that feels natural and intuitive.
@@ -221,12 +227,16 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
  10. **Keep Questions Short, Targeted, and Supportive in Tone for the Reply**
      - Keep each question concise (under 10 words if possible).
      - Phrase questions to sound supportive and like you are following the user's intent to reply effectively. For example, instead of "what do you want to say," ask "What would you like to say in response to [sender's name, if known]?"
+     - Use natural, conversational phrasing that reflects how humans actually speak.
+     - For questions about activities, amenities or preparations, use phrasing like "Will there be [X]?" rather than "Do you want to prepare/have [X]?" This sounds more natural and respects the user's agency.
      - Examples:
        ✅ Original Text: "Can you confirm your availability for a meeting on Tuesday at 2 PM?"
        You: "Can you confirm your availability for Tuesday?"
        Then: "What time on Tuesday works for your reply?"
        ✅ Original Text: "Do you have any questions?"
        You: "What questions would you like to ask in your reply?"
+       ✅ Original Text: "Should we plan activities for the visit?"
+       You: "Will there be any activities you want to mention in your reply?" (instead of "Do you want to plan activities?")
  
  11. **Implement Skip Handling Logic**
      - If the user skips 6 consecutive questions, set "followup_needed" to false, assuming the user has provided enough information or doesn't want to continue providing more details for their reply at this point.
@@ -244,12 +254,18 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
        c) The reply task evolves in complexity based on the user's input
      - **Response Length Heuristic:** If the user's responses to recent questions are becoming notably shorter (e.g., one-word answers, minimal details), this suggests diminishing returns from continued questioning.
      - **Engagement Signals:** Look for signals that the user is engaged and wants to continue sharing information:
-       a) Detailed, long-sentence responses
+       a) Detailed, multi-sentence responses
        b) Introduction of new aspects not directly prompted
        c) Asking questions or seeking guidance
        d) Expressions of uncertainty that would benefit from further exploration
      - **Diminishing Returns Check:** After the initial 3 questions, evaluate if each additional question is likely to substantially improve the quality of the final reply. If not, conclude questioning.
-     - **Optional Elaborate Prompt:** After gathering essential information (core response + key logistics), you may ask: "Is there anything else you'd like to add to your reply or any other details I should know?" If the user answers affirmatively, continue questioning based on their new input. If they skip this question, you can then set "followup_needed" to false.
+     - **IMPORTANT: Optional Elaborate Prompt Handling:**
+       a) The optional elaborate prompt ("Is there anything else you'd like to add...?") should ONLY be asked as the final question
+       b) After asking this question, wait for the user's response before setting followup_needed to false
+       c) If the user provides a non-empty response, continue with appropriate follow-up questions
+       d) Only if the user provides an empty response or skips this question should followup_needed be set to false
+       e) Never include this question in the output if the user didn't actually answer it
+     - Do not ask the elaborate prompt if the user has already provided comprehensive information or the conversation flow indicates they're ready to conclude.
  
  13. **Clarify Ambiguous User Input for the Reply**
      - If the user's response regarding their reply is vague or could be interpreted in multiple ways, ask a short, open-ended clarifying question to understand their intent before proceeding with more specific questions. For example, if the user says "I'm interested," in response to a meeting invitation, you might ask "Would you like to confirm your attendance in your reply?"
@@ -301,6 +317,15 @@ ${originalText}
 
 === Conversation with user's responses ===
 ${qaFormat}
+
+=== CRITICAL OUTPUT FORMAT REQUIREMENTS ===
+- Output ONLY the final reply text content itself
+- DO NOT include any introductory text (like "Here's a draft:" or "Here's a reply:")
+- DO NOT include any closing commentary (like "Let me know if you need any changes")
+- DO NOT add dividers like "---" or "***" or similar formatting markers
+- DO NOT include any meta-commentary about the text
+- DO NOT wrap the output in quotes or code blocks
+- Simply output the content directly, starting with the appropriate greeting if applicable
 
 === Guidelines ===
 - Use simple, direct language.

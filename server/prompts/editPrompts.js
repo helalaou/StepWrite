@@ -93,6 +93,15 @@ ${originalText}
 === Editing instructions from conversation ===
 ${qaFormat}
 
+=== CRITICAL OUTPUT FORMAT REQUIREMENTS ===
+- Output ONLY the final edited text content itself
+- DO NOT include any introductory text (like "Here's the edited version:" or "Here's my edit:")
+- DO NOT include any closing commentary (like "Let me know if you need more changes")
+- DO NOT add dividers like "---" or "***" or similar formatting markers
+- DO NOT include any meta-commentary about the edits made
+- DO NOT wrap the output in quotes or code blocks
+- Simply output the edited content directly
+
 === Guidelines ===
 - Make the text clearer and more concise
 - Break down complex sentences

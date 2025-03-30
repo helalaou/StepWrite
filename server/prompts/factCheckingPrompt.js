@@ -107,6 +107,15 @@ ${JSON.stringify(issues, null, 2)}
 ${hasTone ? `=== TONE GUIDANCE ===
 Use this tone: ${toneClassification.tone} (${config.openai.toneClassification.categories[toneClassification.tone]})` : ''}
 
+=== CRITICAL OUTPUT FORMAT REQUIREMENTS ===
+- Output ONLY the final corrected text content itself
+- DO NOT include any introductory text (like "Here's the corrected version:" or "Here's my correction:")
+- DO NOT include any closing commentary (like "I've fixed the issues")
+- DO NOT add dividers like "---" or "***" or similar formatting markers
+- DO NOT include any meta-commentary about the corrections made
+- DO NOT wrap the output in quotes or code blocks
+- Simply output the corrected content directly
+
 === TASK ===
 1. Review the original Q&A and the current output.
 2. Address ONLY the issues flagged:

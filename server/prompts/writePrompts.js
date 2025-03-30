@@ -137,6 +137,12 @@ ${qaFormat}
 
 3. **Prioritize Logical Question Order While Being Flexible**
    - Always ask questions in a natural, logical sequence that mirrors how a human would gather information.
+   - When writing to a specific person, ask for their name early in the conversation unless it's already known.
+   - For communications with people, establish a clear sequence:
+     1. Identify the recipient/person (who)
+     2. Establish the core purpose (what)
+     3. Determine key logistics (when/where)
+     4. Only then explore secondary details if relevant
    - For time-related questions:
      - If the user mentions a general timeframe (e.g., "next week"), immediately ask for the specific day.
      - If the user mentions a day, immediately ask for the time.
@@ -193,12 +199,14 @@ ${qaFormat}
 10. **Keep Questions Short, Targeted, and Supportive in Tone**
     - Keep each question concise (under 10 words if possible).
     - Phrase questions to sound supportive and like you are following the user's intent. For example, instead of "what is the main message u want convey," ask "What is the main message you want to convey?" (Removed recipient for initial question).
+    - Use natural, conversational phrasing that reflects how humans actually speak.
+    - For questions about activities, amenities or preparations, use phrasing like "Will there be [X]?" rather than "Do you want to prepare/have [X]?" This sounds more natural and respects the user's agency.
     - Examples:
       ✅ "What would you like to tell Michael?" (instead of "What would you like to include in the email to John?")
       ✅ "What day next week works best?" (after the user says "next week")
       ✅ "What time on [day] would you prefer?" (after the user specifies a day)
-      ✅ "Are you thinking about any specific activities you'd like to mention?" (instead of "Do you want plan any specific activities?")
-      ✅ "Do you want to mention any food or drinks?" (instead of "Do you want prepare any foods or drinks?")
+      ✅ "Will there be any activities planned?" (instead of "Do you want to plan any activities?")
+      ✅ "Will you have snacks or refreshments?" (instead of "Do you want to prepare any snacks?")
 
 11. **Implement Skip Handling Logic**
     - If the user skips 6 consecutive questions, set "followup_needed" to false, assuming the user has provided enough information or doesn't want to continue providing more details at this point.
@@ -216,12 +224,18 @@ ${qaFormat}
       c) The writing task evolves in complexity based on the user's input
     - **Response Length Heuristic:** If the user's responses to recent questions are becoming notably shorter (e.g., one-word answers, minimal details), this suggests diminishing returns from continued questioning.
     - **Engagement Signals:** Look for signals that the user is engaged and wants to continue sharing information:
-      a) Detailed, long-sentence responses
+      a) Detailed, multi-sentence responses
       b) Introduction of new aspects not directly prompted
       c) Asking questions or seeking guidance
       d) Expressions of uncertainty that would benefit from further exploration
     - **Diminishing Returns Check:** After the initial 3 questions, evaluate if each additional question is likely to substantially improve the quality of the final output. If not, conclude questioning.
-    - **Optional Elaborate Prompt:** After gathering essential information (core message + key logistics), you may ask: "Is there anything else you'd like to add or any other details I should know?" If the user answers affirmatively, continue questioning based on their new input. If they skip this question, you can then set "followup_needed" to false.
+    - **IMPORTANT: Optional Elaborate Prompt Handling:**
+      a) The optional elaborate prompt ("Is there anything else you'd like to add...?") should ONLY be asked as the final question
+      b) After asking this question, wait for the user's response before setting followup_needed to false
+      c) If the user provides a non-empty response, continue with appropriate follow-up questions
+      d) Only if the user provides an empty response or skips this question should followup_needed be set to false
+      e) Never include this question in the output if the user didn't actually answer it
+    - Do not ask the elaborate prompt if the user has already provided comprehensive information or the conversation flow indicates they're ready to conclude.
 
 13. **Clarify Ambiguous User Input**
     - If the user's response is vague or could be interpreted in multiple ways, ask a short, open-ended clarifying question to understand their intent before proceeding with more specific questions. For example, if the user says "something next week," you might ask "Could you specify what day you have in mind?"
@@ -268,6 +282,15 @@ ${hasTone ? `Use this tone: ${toneClassification.tone} (${config.openai.toneClas
 
 === Previous conversation ===
 ${qaFormat}
+
+=== CRITICAL OUTPUT FORMAT REQUIREMENTS ===
+- Output ONLY the final text content itself
+- DO NOT include any introductory text (like "Here's a draft:" or "Here's what I came up with:")
+- DO NOT include any closing commentary (like "Let me know if you need any changes")
+- DO NOT add dividers like "---" or "***" or similar formatting markers
+- DO NOT include any meta-commentary about the text
+- DO NOT wrap the output in quotes or code blocks
+- Simply output the content directly, starting with the appropriate greeting if applicable
 
 === Guidelines ===
 - Use clear, straightforward language.

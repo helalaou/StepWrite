@@ -254,8 +254,8 @@ Best regards,`
         pause: {
           phrases: [
             'pause flow',
-            'pause experiment',
-            'pause the experiment',
+            'pause writing',
+            'pause the writing',
             'pause test',
             'pause the test',
             'pause flow',
@@ -272,14 +272,14 @@ Best regards,`
             'pause for now',
             'pause for the moment'
           ],
-          response: 'Experiment paused. Say continue to resume.'
+          response: 'Writing paused. Say continue to resume.'
         },
         continue: {
           phrases: [
-            'continue experiment',
-            'continue the experiment',
-            'resume experiment',
-            'resume the experiment',
+            'continue writing',
+            'continue the writing',
+            'resume writing',
+            'resume the writing',
             'resume test',
             'resume the test',
             'resume flow',
@@ -294,27 +294,27 @@ Best regards,`
             'continue the flow',
             'resume the flow'
           ],
-          response: 'Resuming experiment.'
+          response: 'Resuming writing.'
         },
         finish: {
           phrases: [
-            'stop experiment',
-            'finish experiment',
+            'stop writing',
+            'finish writing',
             'i would like to stop here',
             'stop here',
             'finish here',
-            'end experiment',
+            'end writing',
             'end here',
             'lets stop here',
             'let us stop here',
             'i want to stop here',
             'i want to finish here',
             'i want to end here',
-            'stop the experiment',
-            'finish the experiment',
-            'end the experiment'
+            'stop the writing',
+            'finish the writing',
+            'end the writing'
           ],
-          response: 'Finishing experiment and generating final text.',
+          response: 'Finishing writing and generating final text.',
           staticAnswer: 'user has skipped this question'
         }
       },
@@ -403,17 +403,17 @@ Best regards,`
         },
         endExperiment: {
           phrases: [
-            'end experiment',
-            'finish experiment',
-            'end the experiment',
-            'finish the experiment',
-            'save experiment',
+            'end writing',
+            'finish writing',
+            'end the writing',
+            'finish the writing',
+            'save writing',
             'save and finish',
             'save and exit',
-            'save experiment data',
+            'save writing',
             'finish and save'
           ],
-          response: 'Ending experiment and saving data'
+          response: 'Ending writing and saving data'
         }
       }
     },
@@ -424,7 +424,7 @@ Best regards,`
         waiting: 'Waiting for speech...',
         recording: 'Recording...',
         processing: 'Processing...',
-        paused: 'Experiment paused. Say "continue experiment" to resume...'
+        paused: 'Writing paused. Say "continue writing" to resume...'
       }
     }
   },

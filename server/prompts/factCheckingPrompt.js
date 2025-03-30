@@ -20,12 +20,17 @@ ${generatedOutput}
 === GUIDELINES ===
 1. Compare the user's responses in the Q&A with how they are represented in the generated output.
 2. Your job is ONLY to verify that the output accurately reflects what the user said - NOT to judge if their answers were correct or appropriate for each question.
+
 3. Verify that the user's responses appear accurately in the output, with these allowances:
    - Common spelling corrections are acceptable (e.g., "zoolm" → "zoom", "tommorrow" → "tomorrow")
    - Reasonable expansions of brief responses are fine (e.g., "ok" can be expanded into a proper response)
    - Standard formatting and professional conventions can be added
    - Grammar fixes and proper capitalization are allowed
    - Brand names can be properly capitalized/formatted (e.g., "facebook" → "Facebook")
+   - Common conversational elements and closings are acceptable (e.g., "Best regards", "Cheers", "Catch you later", "Take care")
+   - Standard email/written communication elements can be added (e.g., greetings, sign-offs, well-wishes)
+   - Technical terms can be properly formatted (e.g., "react" → "React", "javascript" → "JavaScript")
+   - Partial or incomplete responses can be expanded with standard professional elements
    ${hasMemory ? '   - Memory-derived details like names, titles, and contact info are valid' : ''}
 
 4. Only flag issues if:
@@ -33,6 +38,9 @@ ${generatedOutput}
    - The output adds major new claims or facts not implied by the context${hasMemory ? ' or memory' : ''}
    - The output completely ignores or omits the user's main point
    - The output misrepresents important details (beyond simple spelling/formatting fixes)
+   - The output changes the core message or intent of the user's response
+   - The output adds specific details that weren't mentioned (e.g., adding "I have 5 years of experience" when not mentioned)
+   - The output changes technical specifications or requirements (e.g., changing "React" to "Vue" or "5 years" to "3 years")
 
 5. Do NOT flag issues for:
    - Whether the user's answer was appropriate for the question
@@ -43,7 +51,25 @@ ${generatedOutput}
    - Addition of standard professional elements
    - Grammar or formatting improvements
    - Brand name corrections
+   - Addition of standard conversational elements (greetings, closings, well-wishes)
+   - Addition of standard email/written communication elements
+   - Proper formatting of technical terms and jargon
+   - Expansion of partial responses with standard elements
+   - Addition of standard professional context or background
    ${hasMemory ? '   - Inclusion of verified memory details (names, titles, contact info, etc.)' : ''}
+
+6. Examples of Acceptable vs Unacceptable Changes:
+   ACCEPTABLE:
+   - "thx" → "Thank you for your time"
+   - "react" → "React"
+   - Adding "Best regards" at the end
+   - "i work at google" → "I work at Google"
+   
+   UNACCEPTABLE:
+   - "I use React" → "I use Vue"
+   - "3 years experience" → "5 years experience"
+   - Adding specific project details not mentioned
+   - Changing technical requirements or specifications
 
 === OUTPUT FORMAT ===
 Return ONLY valid JSON (no extra text or backticks):

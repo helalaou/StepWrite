@@ -98,6 +98,7 @@ function HandsFreeInterface({
   onBackToEditor,
   cameFromEditor,
   setInput,
+  mode,
 }) {
   const navigate = useNavigate();
 
@@ -665,7 +666,7 @@ function HandsFreeInterface({
 
       case 'finish':
         displayFeedback(config.handsFree.commands.handsFree.finish.response, 'command');
-        
+
         // use static txt as current answer for question we are on
         const staticAnswer = config.handsFree.commands.handsFree.finish.staticAnswer;
         const updatedQuestions = [...currentQuestion.questions];
@@ -680,7 +681,7 @@ function HandsFreeInterface({
           questions: updatedQuestions,
           followup_needed: false
         };
- 
+
         setQuestionStatus({
           ...questionStatus,
           [currentQuestionIndex]: { type: 'answered', answer: staticAnswer }
@@ -712,7 +713,7 @@ function HandsFreeInterface({
           sessionStorage.setItem('skipCount', (currentCount + 1).toString());
           console.log('Incremented skip count:', currentCount + 1);
         }
-        
+
         segmentsRef.current = [commandCheck.response];
         const merged = segmentsRef.current.join(' ');
         setMergedSpeech(merged);
@@ -727,7 +728,7 @@ function HandsFreeInterface({
           sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
           console.log('Incremented modify count:', currentCount + 1);
         }
-        
+
         setIsModifying(true);
         isModifyingRef.current = true;
         segmentsRef.current = [];
@@ -795,7 +796,7 @@ function HandsFreeInterface({
           onBackToEditor();
         }
         break;
-      
+
       default:
         displayFeedback(`Unknown command: ${commandCheck.type}`, 'error');
         break;
@@ -1291,14 +1292,14 @@ function HandsFreeInterface({
                   if (process.env.NODE_ENV !== 'production') {
                     console.log("MODIFY command directly detected");
                   }
-                  
+
                   // Track modify counter for direct detection, just like in handleCommandExecution
                   if (config.experiment && config.experiment.enabled) {
                     const currentCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
                     sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
                     console.log('Incremented modify count (direct detection):', currentCount + 1);
                   }
-                  
+
                   setIsModifying(true);
                   isModifyingRef.current = true; // Immediate update
                   segmentsRef.current = [];
@@ -1487,10 +1488,10 @@ function HandsFreeInterface({
   // Modify the TTS playback function to handle transitions better
   const playTTS = async (text) => {
     if (!text) return;
-    
+
     try {
       setIsTTSPlaying(true);
-      
+
       //start the microphone immediately while TTS is playing
       if (!isPaused && !isPausedRef.current) {
         await startPausedRecording();
@@ -1498,7 +1499,7 @@ function HandsFreeInterface({
 
       const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
@@ -1515,8 +1516,8 @@ function HandsFreeInterface({
       }
 
       const audio = new Audio(`${config.core.apiUrl}${data.audioUrl}`);
-      
-      
+
+
       audio.addEventListener('ended', () => {
         setIsTTSPlaying(false);
         //   mic ready for next input
@@ -1524,7 +1525,7 @@ function HandsFreeInterface({
           startPausedRecording();
         }
       });
-      
+
       audio.addEventListener('error', (e) => {
         console.error('Audio playback error:', e);
         setIsTTSPlaying(false);
@@ -1557,6 +1558,25 @@ function HandsFreeInterface({
         overflow: 'hidden'
       }}
     >
+      {/* Logo at top left */}
+      <Box
+        component="img"
+        src="/images/logo.png"
+        alt="StepWrite Logo"
+        sx={{
+          position: 'absolute',
+          top: '15px',
+          left: '20px',
+          width: {
+            xs: '50px',
+            sm: '80px',
+            md: '100px',
+            lg: '80px'
+          },
+          zIndex: 10,
+        }}
+      />
+
       {/* pause overlay - only visible when paused */}
       {isPaused && (
         <Box

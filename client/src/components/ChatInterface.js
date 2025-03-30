@@ -24,6 +24,7 @@ function ChatInterface({
   hasChanges,
   onBackToEditor,
   cameFromEditor,
+  mode,
 }) {
   const navigate = useNavigate();
 
@@ -31,25 +32,25 @@ function ChatInterface({
   const navControls = {
     width: {
       percentage: {
-        xs: '15%',     
-        sm: '12%'     
+        xs: '15%',
+        sm: '12%'
       },
       min: {
-        xs: '20px',    
-        sm: '25px'     
+        xs: '20px',
+        sm: '25px'
       },
       max: {
-        xs: '50px',    
-        sm: '80px'    
+        xs: '50px',
+        sm: '80px'
       }
     },
     arrow: {
       size: {
-        xs: '2rem', 
-        sm: '2.8rem',  
-        md: '3rem'  
+        xs: '2rem',
+        sm: '2.8rem',
+        md: '3rem'
       },
-      scale: 1.1,  
+      scale: 1.1,
     },
     hover: {
       intensity: 0.04,
@@ -83,17 +84,17 @@ function ChatInterface({
     justifyContent: isLeft ? 'flex-start' : 'flex-end',
     zIndex: 2,
     backgroundColor: (
-      isLeft ? currentQuestionIndex === 0 
-             : currentQuestionIndex === currentQuestion.questions.length - 1
-    ) 
-      ? 'transparent' 
+      isLeft ? currentQuestionIndex === 0
+        : currentQuestionIndex === currentQuestion.questions.length - 1
+    )
+      ? 'transparent'
       : `rgba(255, 255, 255, ${navControls.hover.base})`,
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     backdropFilter: 'blur(8px)',
     '&:hover': {
       backgroundColor: (
-        isLeft ? currentQuestionIndex === 0 
-               : currentQuestionIndex === currentQuestion.questions.length - 1
+        isLeft ? currentQuestionIndex === 0
+          : currentQuestionIndex === currentQuestion.questions.length - 1
       )
         ? 'transparent'
         : `rgba(255, 255, 255, ${navControls.hover.intensity})`,
@@ -130,10 +131,10 @@ function ChatInterface({
 
   // useEffect to rebuild questionStatus from scratch
   // whenever currentQuestion changes (or currentQuestionIndex changes).
-   
+
   useEffect(() => {
     if (!currentQuestion?.questions) return;
-    
+
     const questions = currentQuestion.questions;
     const newStatus = {};
 
@@ -141,8 +142,8 @@ function ChatInterface({
     questions.forEach((question, index) => {
       if (question.response && question.response.trim() !== '') {
         newStatus[index] = {
-          type: question.response === "user has skipped this question" 
-            ? 'skipped' 
+          type: question.response === "user has skipped this question"
+            ? 'skipped'
             : 'answered',
           answer: question.response
         };
@@ -218,9 +219,9 @@ function ChatInterface({
           alert('Failed to submit answer. Please try again.');
           setQuestionStatus({
             ...questionStatus,
-            [currentQuestionIndex]: { 
+            [currentQuestionIndex]: {
               type: 'answering',
-              answer: input 
+              answer: input
             }
           });
         });
@@ -234,9 +235,9 @@ function ChatInterface({
       //mve to next question if available
       if (currentQuestionIndex < currentQuestion.questions.length - 1) {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
-        const nextAnswer = questionStatus[currentQuestionIndex + 1]?.answer || 
-                         currentQuestion.questions[currentQuestionIndex + 1]?.response || 
-                         '';
+        const nextAnswer = questionStatus[currentQuestionIndex + 1]?.answer ||
+          currentQuestion.questions[currentQuestionIndex + 1]?.response ||
+          '';
         setInput(nextAnswer);
       }
       setOriginalAnswer('');
@@ -247,24 +248,24 @@ function ChatInterface({
     if (currentQuestionIndex > 0) {
       // Play click sound for previous navigation
       playClickSound();
-      
+
       // Reset editing state if user was editing
       if (questionStatus[currentQuestionIndex]?.type === 'answering') {
         setQuestionStatus({
           ...questionStatus,
-          [currentQuestionIndex]: { 
+          [currentQuestionIndex]: {
             type: 'answered',
-            answer: currentQuestion.questions[currentQuestionIndex].response 
+            answer: currentQuestion.questions[currentQuestionIndex].response
           }
         });
       }
 
       const newIndex = currentQuestionIndex - 1;
       setCurrentQuestionIndex(newIndex);
-      
-      const prevAnswer = questionStatus[newIndex]?.answer || 
-                        currentQuestion.questions[newIndex]?.response || 
-                        '';
+
+      const prevAnswer = questionStatus[newIndex]?.answer ||
+        currentQuestion.questions[newIndex]?.response ||
+        '';
       setInput(prevAnswer);
     }
   };
@@ -273,24 +274,24 @@ function ChatInterface({
     if (currentQuestionIndex < currentQuestion.questions.length - 1) {
       // Play click sound for next navigation
       playClickSound();
-      
+
       // Reset editing state if user was editing
       if (questionStatus[currentQuestionIndex]?.type === 'answering') {
         setQuestionStatus({
           ...questionStatus,
-          [currentQuestionIndex]: { 
+          [currentQuestionIndex]: {
             type: 'answered',
-            answer: currentQuestion.questions[currentQuestionIndex].response 
+            answer: currentQuestion.questions[currentQuestionIndex].response
           }
         });
       }
 
       const newIndex = currentQuestionIndex + 1;
       setCurrentQuestionIndex(newIndex);
-      
-      const nextAnswer = questionStatus[newIndex]?.answer || 
-                        currentQuestion.questions[newIndex]?.response || 
-                        '';
+
+      const nextAnswer = questionStatus[newIndex]?.answer ||
+        currentQuestion.questions[newIndex]?.response ||
+        '';
       setInput(nextAnswer);
     }
   };
@@ -298,16 +299,16 @@ function ChatInterface({
   const handleAnswerClick = () => {
     // Play click sound for answer/edit answer button
     playClickSound();
-    
+
     const currentIndex = currentQuestionIndex;
-    
+
     // Track modifications for experiment if enabled
     if (config.experiment.enabled && questionStatus[currentIndex]?.type === 'answered') {
       const currentCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
       sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
       console.log('Incremented modify count:', currentCount + 1);
     }
-    
+
     // If skipped, immediately switch to answering mode with empty input
     if (questionStatus[currentIndex]?.type === 'skipped') {
       console.log('Changing from skipped to answering mode');
@@ -315,9 +316,9 @@ function ChatInterface({
       setOriginalAnswer('');
       setQuestionStatus({
         ...questionStatus,
-        [currentIndex]: { 
+        [currentIndex]: {
           type: 'answering',
-          answer: '' 
+          answer: ''
         }
       });
       return;
@@ -330,9 +331,9 @@ function ChatInterface({
       setOriginalAnswer(currentAnswer);
       setQuestionStatus({
         ...questionStatus,
-        [currentIndex]: { 
+        [currentIndex]: {
           type: 'answering',
-          answer: currentAnswer 
+          answer: currentAnswer
         }
       });
       return;
@@ -342,9 +343,9 @@ function ChatInterface({
     setOriginalAnswer(input);
     setQuestionStatus({
       ...questionStatus,
-      [currentIndex]: { 
+      [currentIndex]: {
         type: 'answering',
-        answer: questionStatus[currentIndex]?.answer || input 
+        answer: questionStatus[currentIndex]?.answer || input
       }
     });
   };
@@ -353,7 +354,7 @@ function ChatInterface({
     if (questionStatus[currentQuestionIndex]?.type !== 'skipped') {
       // Play click sound for skip button
       playClickSound();
-      
+
       console.log('Skipping Question:', {
         questionIndex: currentQuestionIndex,
         previousStatus: questionStatus[currentQuestionIndex]?.type,
@@ -368,7 +369,7 @@ function ChatInterface({
       }
 
       const skipMessage = "user has skipped this question";
-      
+
       const updatedQuestions = [...currentQuestion.questions];
       updatedQuestions[currentQuestionIndex] = {
         ...updatedQuestions[currentQuestionIndex],
@@ -379,9 +380,9 @@ function ChatInterface({
         ...currentQuestion,
         questions: updatedQuestions
       };
-      
+
       setInput(skipMessage);
-      
+
       // Remove statuses for any subsequent questions
       const updatedQuestionStatus = { ...questionStatus };
       Object.keys(updatedQuestionStatus).forEach((key) => {
@@ -396,7 +397,7 @@ function ChatInterface({
       });
 
       submitAnswer(
-        currentQuestion.questions[currentQuestionIndex].id, 
+        currentQuestion.questions[currentQuestionIndex].id,
         skipMessage,
         currentQuestionIndex,
         updatedConversationPlanning,
@@ -413,9 +414,9 @@ function ChatInterface({
           alert('Failed to skip question. Please try again.');
           setQuestionStatus({
             ...questionStatus,
-            [currentQuestionIndex]: { 
+            [currentQuestionIndex]: {
               type: 'answering',
-              answer: input 
+              answer: input
             }
           });
         });
@@ -455,7 +456,7 @@ function ChatInterface({
 
     // Add window unload event listener
     window.addEventListener('beforeunload', cleanupAudio);
-    
+
     // Cleanup on component unmount
     return () => {
       window.removeEventListener('beforeunload', cleanupAudio);
@@ -470,15 +471,35 @@ function ChatInterface({
   };
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
+    <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
       height: '100vh',
       position: 'relative',
       overflow: 'hidden',
     }}>
+      {/* Logo at top left */}
+      <Box
+        component="img"
+        src="/images/logo.png"
+        alt="StepWrite Logo"
+        sx={{
+          position: 'absolute',
+          top: '15px',
+          left: '20px',
+          width: {
+            xs: '50px',
+            sm: '80px',
+            md: '100px',
+            lg: '80px'
+          },
+          zIndex: 10,
+        }}
+      />
+
+
       {/* Back to Home Button - Only show on first question */}
       {currentQuestionIndex === 0 && (
         <NavigationButton
@@ -489,21 +510,21 @@ function ChatInterface({
       )}
 
       {/* Back to Editor button */}
-      {currentQuestionIndex === currentQuestion.questions.length - 1 && 
-       !hasChanges && 
-       cameFromEditor && 
-       onBackToEditor && (
-        <NavigationButton
-          direction="right"
-          onClick={onBackToEditor}
-          tooltip="Back to Editor"
-        />
-      )}
+      {currentQuestionIndex === currentQuestion.questions.length - 1 &&
+        !hasChanges &&
+        cameFromEditor &&
+        onBackToEditor && (
+          <NavigationButton
+            direction="right"
+            onClick={onBackToEditor}
+            tooltip="Back to Editor"
+          />
+        )}
 
       {/* Left/Right Navigation */}
       <Box sx={getNavStyles(true)}>
-        <IconButton 
-          onClick={handlePrevQuestion} 
+        <IconButton
+          onClick={handlePrevQuestion}
           disabled={currentQuestionIndex === 0}
           sx={getNavButtonStyles(currentQuestionIndex === 0)}
         >
@@ -512,8 +533,8 @@ function ChatInterface({
       </Box>
 
       <Box sx={getNavStyles(false)}>
-        <IconButton 
-          onClick={handleNextQuestion} 
+        <IconButton
+          onClick={handleNextQuestion}
           disabled={currentQuestionIndex === currentQuestion.questions.length - 1}
           sx={getNavButtonStyles(currentQuestionIndex === currentQuestion.questions.length - 1)}
         >
@@ -521,7 +542,7 @@ function ChatInterface({
         </IconButton>
       </Box>
 
-      <Box sx={{ 
+      <Box sx={{
         width: '100%',
         maxWidth: '1700px',
         padding: { xs: '0 60px', sm: '0 15%' },
@@ -529,14 +550,14 @@ function ChatInterface({
         position: 'relative',
         zIndex: 1,
       }}>
-        <Box sx={{ 
+        <Box sx={{
           position: 'relative',
           width: '100%',
           mb: 4
         }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
+          <Typography
+            variant="h4"
+            sx={{
               fontSize: { xs: '24pt', sm: '32pt', md: '42pt' },
               textAlign: 'center',
               transition: 'all 0.3s ease',
@@ -553,34 +574,34 @@ function ChatInterface({
             transform: 'translateY(-50%)',
           }}>
             {config.tts.mode === 'ENABLED' && (
-              <SpeakButton 
-                text={currentQuestion.questions[currentQuestionIndex]?.question} 
+              <SpeakButton
+                text={currentQuestion.questions[currentQuestionIndex]?.question}
                 disabled={isLoading}
               />
             )}
           </Box>
         </Box>
 
-        <Box sx={{ 
-          display: 'flex', 
+        <Box sx={{
+          display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 3,
-          width: '100%', 
+          width: '100%',
           maxWidth: '800px',
           margin: '0 auto',
         }}>
-          <Box sx={{ 
-            display: 'flex', 
+          <Box sx={{
+            display: 'flex',
             gap: 2,
-            justifyContent: 'center', 
+            justifyContent: 'center',
             width: '100%'
           }}>
             <Button
               variant={isAnswering || isAnswered ? 'contained' : 'outlined'}
               onClick={handleAnswerClick}
               size="large"
-              sx={{ 
+              sx={{
                 height: { xs: '28px', sm: '64px' },
                 fontSize: { xs: '0.75rem', sm: '1.2rem' },
                 padding: { xs: '0 10px', sm: '0 40px' },
@@ -607,7 +628,7 @@ function ChatInterface({
                 variant={questionStatus[currentQuestionIndex]?.type === 'skipped' ? 'contained' : 'outlined'}
                 onClick={handleSkip}
                 size="large"
-                sx={{ 
+                sx={{
                   height: { xs: '28px', sm: '64px' },
                   fontSize: { xs: '0.75rem', sm: '1.2rem' },
                   padding: { xs: '0 10px', sm: '0 40px' },
@@ -632,8 +653,8 @@ function ChatInterface({
           </Box>
 
           {(isAnswering || isAnswered) && !isSkipped && (
-            <Box sx={{ 
-              display: 'flex', 
+            <Box sx={{
+              display: 'flex',
               width: '100%',
               flexDirection: 'column',
               gap: { xs: 1, sm: 2 },
@@ -658,10 +679,10 @@ function ChatInterface({
                     onKeyDown={handleKeyPress}
                     placeholder="Type your answer..."
                     disabled={!isAnswering || isLoading}
-                    sx={{ 
+                    sx={{
                       width: '100%',
                       maxWidth: { xs: '100%', sm: '92%', md: '94%' },
-                      '& .MuiInputBase-input': { 
+                      '& .MuiInputBase-input': {
                         fontSize: { xs: '1rem', sm: '1.5rem' },
                         padding: { xs: '10px', sm: '15px' }
                       },
@@ -713,7 +734,7 @@ function ChatInterface({
                       disabled={isLoading}
                       autoStart={config.input.mode === 'HANDS_FREE'}
                       showStopButton={config.input.mode === 'HANDS_FREE'}
-                      sx={{ 
+                      sx={{
                         '& .MuiIconButton-root': {
                           width: { xs: '32px', sm: '48px' },
                           height: { xs: '32px', sm: '48px' }
@@ -737,7 +758,7 @@ function ChatInterface({
                     onClick={handleSubmit}
                     disabled={isLoading}
                     size="large"
-                    sx={{ 
+                    sx={{
                       height: { xs: '32px', sm: '48px' },
                       fontSize: { xs: '0.8rem', sm: '1rem' },
                       padding: { xs: '0 12px', sm: '0 24px' },
@@ -754,7 +775,7 @@ function ChatInterface({
                         disabled={isLoading}
                         autoStart={config.input.mode === 'HANDS_FREE'}
                         showStopButton={config.input.mode === 'HANDS_FREE'}
-                        sx={{ 
+                        sx={{
                           '& .MuiIconButton-root': {
                             width: '32px',
                             height: '32px'

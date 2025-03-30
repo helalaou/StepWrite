@@ -24,12 +24,12 @@ const config = {
     // Write flow settings
     write: {
       question: {
-        model: 'gpt-4o',
+        model: 'chatgpt-4o-latest',
         temperature: 0.7,
         maxTokens: 30,
       },
       output: {
-        model: 'gpt-4o',
+        model: 'chatgpt-4o-latest',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -38,12 +38,12 @@ const config = {
     // Edit flow settings
     edit: {
       question: {
-        model: 'gpt-4o',
+        model: 'chatgpt-4o-latest',
         temperature: 0.7,
         maxTokens: 30,
       },
       output: {
-        model: 'gpt-4o',
+        model: 'chatgpt-4o-latest',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -52,12 +52,12 @@ const config = {
     // Reply flow settings
     reply: {
       question: {
-        model: 'gpt-4o',
+        model: 'chatgpt-4o-latest',
         temperature: 0.7,
         maxTokens: 30,
       },
       output: {
-        model: 'gpt-4o',
+        model: 'chatgpt-4o-latest',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -65,7 +65,7 @@ const config = {
 
     // Classification settings
     textTypeClassification: {
-      model: 'gpt-4o',
+      model: 'chatgpt-4o-latest',
       temperature: 0,
       maxTokens: 10,
       validCategories: ['email', 'letter', 'message', 'other'],
@@ -77,12 +77,12 @@ const config = {
       enabled: true,
       maxAttempts: 5,
       check: {
-        model: 'gpt-4o',
+        model: 'chatgpt-4o-latest',
         temperature: 0.3,
         maxTokens: 10000,
       },
       correction: {
-        model: 'gpt-4o',
+        model: 'chatgpt-4o-latest',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -95,7 +95,7 @@ const config = {
     },
 
     toneClassification: {
-      model: 'gpt-4o',
+      model: 'chatgpt-4o-latest',
       temperature: 0.3,
       maxTokens: 200,
       enabled: true,
@@ -119,7 +119,7 @@ const config = {
 
     // Initial reply question settings
     initialReplyQuestion: {
-      model: 'gpt-4o',
+      model: 'chatgpt-4o-latest',
       temperature: 0.7,
       maxTokens: 100,
     },

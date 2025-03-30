@@ -952,7 +952,8 @@ function TextEditor({
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <ExperimentEndButton 
             content={content} 
-            ref={endExperimentButtonRef}  // Add ref to access button
+            textOutput={initialContent}
+            ref={endExperimentButtonRef}   
           />
         </Box>
       )}

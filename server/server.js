@@ -591,7 +591,7 @@ app.post('/api/save-experiment-data', async (req, res) => {
       return res.status(403).json({ error: 'Experiment tracking is disabled in server configuration' });
     }
 
-    const { participantId, mode, modifyCount, skipCount, finalOutput } = req.body;
+    const { participantId, mode, modifyCount, skipCount, textOutput, finalOutput } = req.body;
 
     if (!participantId) {
       return res.status(400).json({ error: 'Participant ID is required' });
@@ -599,6 +599,10 @@ app.post('/api/save-experiment-data', async (req, res) => {
 
     if (!finalOutput) {
       return res.status(400).json({ error: 'Final output is required' });
+    }
+
+    if (!textOutput) {
+      return res.status(400).json({ error: 'Text output is required' });
     }
 
     if (!['write', 'reply'].includes(mode)) {
@@ -614,7 +618,9 @@ app.post('/api/save-experiment-data', async (req, res) => {
     const content = `user_id: ${participantId}
 number of times the user used the modify command: ${modifyCount || 0}
 number of times the user skipped a question: ${skipCount || 0}
-final output:
+############### ORIGINAL OUTPUT ###############
+${textOutput}
+############### REVISED OUTPUT ###############
 ${finalOutput}`;
 
     // Write the file

@@ -202,8 +202,16 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
  8. **Aim for the Minimal Necessary Set of Questions for the Reply**
     - Never ask for details that can be reasonably inferred from the original text or the context of the conversation about the reply.
     - Avoid asking "just in case"—only ask about information that is clearly needed to formulate the reply and address the original sender's points.
+    - Before asking any question, evaluate:
+      a) Is this information essential for responding to this specific communication?
+      b) Would this detail normally be explicit in this kind of reply given the context?
+      c) Is this information already implied by the context or cultural norms?
+      d) Would omitting this detail make the reply incomplete or confusing?
+    - For social communications, understand the appropriate level of detail based on relationship context:
+      a) Formal contexts typically require more explicit details
+      b) Informal contexts with friends/family typically focus on key logistics, with social niceties implied
+    - Understand the purpose hierarchy: First establish core response/position, then key logistics (who/when/where), then only if necessary, secondary details
     - Do not ask for personal contact details unless the user explicitly indicates they need to be included in the reply.
-    - Never ask about transportation or logistics unless the original text makes it a central part of the communication requiring a response.
     - Continuously think about what information is absolutely essential for the writer LLM to produce a coherent and useful reply.
  
  9. **Avoid Duplicate or Rephrased Questions**
@@ -225,13 +233,32 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
  
  12. **Define Clear Completion Conditions and Offer to Elaborate for the Reply**
      - Continuously assess if you have gathered enough information to formulate a reply that addresses the core points of the original text and fulfills the user's intent. If the subsequent questions seem to be eliciting increasingly minor details or if the user's responses become less informative, consider setting "followup_needed" to false. Once you have gathered what appears to be enough information to construct the reply, set "followup_needed" to false.
-     - **Optional Elaborate Prompt:** If "followup_needed" is still true after a reasonable number of questions (e.g., 5-7), consider asking: "Is there anything else you'd like to add to your reply or any other details I should know?" If the user answers affirmatively, continue questioning based on their new input. If they skip this question, you can then set "followup_needed" to false.
+     - Set a practical limit on questions based on communication type:
+       a) For simple confirmations or short replies: 3-4 questions maximum
+       b) For standard social communications: 4-6 questions maximum
+       c) For complex business/professional communications: 6-8 questions maximum
+       d) For detailed planning or problem-solving: 8-10 questions maximum
+     - **Important Exception:** These limits should be flexible when:
+       a) The user introduces new, substantive topics during the conversation
+       b) The user provides particularly detailed responses that open new areas for exploration
+       c) The reply task evolves in complexity based on the user's input
+     - **Response Length Heuristic:** If the user's responses to recent questions are becoming notably shorter (e.g., one-word answers, minimal details), this suggests diminishing returns from continued questioning.
+     - **Engagement Signals:** Look for signals that the user is engaged and wants to continue sharing information:
+       a) Detailed, long-sentence responses
+       b) Introduction of new aspects not directly prompted
+       c) Asking questions or seeking guidance
+       d) Expressions of uncertainty that would benefit from further exploration
+     - **Diminishing Returns Check:** After the initial 3 questions, evaluate if each additional question is likely to substantially improve the quality of the final reply. If not, conclude questioning.
+     - **Optional Elaborate Prompt:** After gathering essential information (core response + key logistics), you may ask: "Is there anything else you'd like to add to your reply or any other details I should know?" If the user answers affirmatively, continue questioning based on their new input. If they skip this question, you can then set "followup_needed" to false.
  
  13. **Clarify Ambiguous User Input for the Reply**
      - If the user's response regarding their reply is vague or could be interpreted in multiple ways, ask a short, open-ended clarifying question to understand their intent before proceeding with more specific questions. For example, if the user says "I'm interested," in response to a meeting invitation, you might ask "Would you like to confirm your attendance in your reply?"
  
  14. **Handle Deviations and New Information Relevant to the Reply**
      - Pay close attention to the user's responses about their intended reply. If the user introduces a new, important aspect related to the original text or their desired response, prioritize asking clarifying questions about that new aspect, even if it wasn't in the initially anticipated flow.
+     - When users volunteer information beyond what was asked, interpret this as a signal that this topic is important to them and worth exploring further.
+     - If a user introduces a new topic area or expands the scope of their reply, shift your questioning to explore this direction as it likely represents their true interest.
+     - Be attentive to areas where the user provides notably detailed responses - this often indicates a topic they're engaged with and would benefit from targeted follow-up questions.
  
  15. **Focus on Direct Utility for the Reply and Avoid Unnecessary Questions**
      - If a user's response seems to deviate significantly from the task of replying to the original text or if a question seems unlikely to yield information directly contributing to a meaningful and relevant reply, err on the side of not asking it.
@@ -244,6 +271,12 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
      - If a user expresses hesitation or uncertainty about how to respond, ask questions that help them explore different approaches
      - If the original message contains sensitive topics, use questions to help users navigate their response carefully
      - When the user's feelings about the message differ from what they want to communicate, help them articulate a response that balances honesty with appropriateness
+     - Understand the contextual appropriateness of information based on:
+       a) The type of reply being created
+       b) The relationship between the parties involved
+       c) The cultural context and social norms
+       d) The core purpose of the original message and the user's desired response
+     - Help users focus on information that matters for their specific scenario, rather than exhaustively covering all possible details
  
  === OUTPUT FORMAT ===
  Return your result as valid JSON: {"question": "your question here","followup_needed": boolean}
@@ -277,6 +310,9 @@ ${hasTone ? `- Maintain the specified tone throughout the reply.` : ''}
 - Incorporate any essential details the user provided.
 - Reflect the user's thought process, priorities, and reasoning as revealed through the conversation.
 - Maintain the user's voice and perspective while providing structure and clarity.
+- Emphasize topics where the user provided detailed responses or volunteered additional information, as these likely represent their priorities.
+- Follow the user's lead on what aspects of the content matter most to them rather than giving equal weight to all topics.
+- When the user expanded on certain areas with multiple responses, ensure these are developed appropriately in the output.
 ${hasMemory ? `
 - Only include memory-derived information if explicitly relevant to this reply.
 - Do not add personal details from memory unless they were specifically discussed.

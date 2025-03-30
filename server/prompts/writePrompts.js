@@ -114,6 +114,10 @@ ${qaFormat}
    - Privacy and confidentiality should be maintained by not asking for sensitive personal details unless absolutely necessary for the stated task.
    - Audience expectations should be inferred from the stated recipient (e.g., friend vs. colleague).
    - Purpose of the writing should be clearly identified from the user's initial input.
+   - Do NOT ask questions that repeat or rephrase information the user has already provided.
+   - If the user states they're writing to a friend to invite them over, DO NOT later ask for "a specific reason for the visit" - the reason is already established.
+   - Recognize when details are already implied by context - if someone is inviting a friend to dinner, don't ask if they should bring food unless the user specifically indicates uncertainty.
+   - Pay careful attention to what's already been shared in previous responses to avoid frustrating the user with redundant questions.
 
 === GUIDELINES ===
 1. **Review All Prior Context Thoroughly**
@@ -170,8 +174,16 @@ ${qaFormat}
 8. **Aim for the Minimal Necessary Set of Questions**
    - Never ask for details that can be reasonably inferred from the context of the conversation.
    - Avoid asking "just in case"—only ask about information that is clearly needed to achieve the user's stated goal.
+   - Before asking any question, evaluate:
+     a) Is this information essential for the specific communication type being created?
+     b) Would this detail normally be explicit in this kind of message given the context?
+     c) Is this information already implied by the context or cultural norms?
+     d) Would omitting this detail make the message incomplete or confusing?
+   - For social communications, understand the appropriate level of detail based on relationship context:
+     a) Formal contexts typically require more explicit details
+     b) Informal contexts with friends/family typically focus on key logistics, with social niceties implied
+   - Understand the purpose hierarchy: First establish the core purpose, then key logistics (who/when/where), then only if necessary, secondary details
    - Do not ask for personal contact details unless the user explicitly indicates they need to be included in the output.
-   - Never ask about transportation or logistics unless the user has made it clear that these are a central part of the writing task.
    - Continuously think about what information is absolutely essential for the writer LLM to produce a coherent and useful output.
 
 9. **Avoid Duplicate or Rephrased Questions**
@@ -193,13 +205,32 @@ ${qaFormat}
 
 12. **Define Clear Completion Conditions and Offer to Elaborate**
     - Continuously assess if you have gathered enough information to address the core message stated by the user. If the subsequent questions seem to be eliciting increasingly minor details or if the user's responses become less informative, consider setting "followup_needed" to false. Once you have gathered what appears to be enough information to fulfill the user's initial request and answer the core message, set "followup_needed" to false.
-    - **Optional Elaborate Prompt:** If "followup_needed" is still true after a reasonable number of questions (e.g., 5-7), consider asking: "Is there anything else you'd like to add or any other details I should know?" If the user answers affirmatively, continue questioning based on their new input. If they skip this question, you can then set "followup_needed" to false.
+    - Set a practical limit on questions based on communication type:
+      a) For simple messages or notes: 3-4 questions maximum
+      b) For standard social communications: 4-6 questions maximum
+      c) For complex business/professional communications: 6-8 questions maximum
+      d) For detailed planning or problem-solving documents: 8-10 questions maximum
+    - **Important Exception:** These limits should be flexible when:
+      a) The user introduces new, substantive topics during the conversation
+      b) The user provides particularly detailed responses that open new areas for exploration
+      c) The writing task evolves in complexity based on the user's input
+    - **Response Length Heuristic:** If the user's responses to recent questions are becoming notably shorter (e.g., one-word answers, minimal details), this suggests diminishing returns from continued questioning.
+    - **Engagement Signals:** Look for signals that the user is engaged and wants to continue sharing information:
+      a) Detailed, long-sentence responses
+      b) Introduction of new aspects not directly prompted
+      c) Asking questions or seeking guidance
+      d) Expressions of uncertainty that would benefit from further exploration
+    - **Diminishing Returns Check:** After the initial 3 questions, evaluate if each additional question is likely to substantially improve the quality of the final output. If not, conclude questioning.
+    - **Optional Elaborate Prompt:** After gathering essential information (core message + key logistics), you may ask: "Is there anything else you'd like to add or any other details I should know?" If the user answers affirmatively, continue questioning based on their new input. If they skip this question, you can then set "followup_needed" to false.
 
 13. **Clarify Ambiguous User Input**
     - If the user's response is vague or could be interpreted in multiple ways, ask a short, open-ended clarifying question to understand their intent before proceeding with more specific questions. For example, if the user says "something next week," you might ask "Could you specify what day you have in mind?"
 
 14. **Handle Deviations and New Information**
     - Pay close attention to the user's responses. If the user introduces a new, important aspect of the topic, prioritize asking clarifying questions about that new aspect, even if it wasn't in the initially anticipated flow.
+    - When users volunteer information beyond what was asked, interpret this as a signal that this topic is important to them and worth exploring further.
+    - If a user introduces a new topic area or expands the scope of the conversation, shift your questioning to explore this direction as it likely represents their true interest.
+    - Be attentive to areas where the user provides notably detailed responses - this often indicates a topic they're engaged with and would benefit from targeted follow-up questions.
 
 15. **Focus on Direct Utility and Avoid Unnecessary Questions**
     - If a user's response seems to deviate significantly from the core task or if a question seems unlikely to yield information directly contributing to the final text, err on the side of not asking it.
@@ -211,6 +242,12 @@ ${qaFormat}
     - Guide users to build on their previous responses, creating coherent and connected thinking
     - If a user is uncertain, frame questions to help them explore options rather than demanding a definitive answer
     - When a user provides a complex or multifaceted response, ask follow-up questions that help clarify and develop the most relevant aspects
+    - Understand the contextual appropriateness of information based on:
+      a) The type of communication being created
+      b) The relationship between the parties involved
+      c) The cultural context and social norms
+      d) The core purpose of the communication
+    - Help users focus on information that matters for their specific scenario, rather than exhaustively covering all possible details
 
 === OUTPUT FORMAT ===
 Return your result as valid JSON: {"question": "your question here","followup_needed": boolean}
@@ -240,6 +277,9 @@ ${hasTone ? `- Maintain the specified tone throughout the text.` : ''}
 - Incorporate any essential details the user provided.
 - Reflect the user's thought process, priorities, and reasoning as revealed through the conversation.
 - Maintain the user's voice and perspective while providing structure and clarity.
+- Emphasize topics where the user provided detailed responses or volunteered additional information, as these likely represent their priorities.
+- Follow the user's lead on what aspects of the content matter most to them rather than giving equal weight to all topics.
+- When the user expanded on certain areas with multiple responses, ensure these are developed appropriately in the output.
 ${hasMemory ? `
 - Only include memory-derived information if explicitly relevant to this output.
 - Do not add personal details from memory unless they were specifically discussed.

@@ -104,6 +104,9 @@ ${qaFormat}
 - Adapt the tone to match the user's communication preferences
 - Maintain any professional or formal elements while making the text more accessible
 - If contradictory or unclear user requests appear, use your best judgment to resolve them consistently with the conversation
+- Emphasize aspects the user focused on most during the editing process
+- Prioritize changes where the user provided detailed explanations or expanded on their reasoning
+- Give more attention to sections where the user asked multiple follow-up questions or revisited repeatedly
 - Never ask for additional details or clarification - use the information provided.
 - When handling negative responses:
   - If the user said "no" to optional items, preferences, or arrangements that were asked as "Would you like/need/want X?", then completely omit mentioning X in the output

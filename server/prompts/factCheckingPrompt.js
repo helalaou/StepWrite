@@ -41,6 +41,7 @@ ${generatedOutput}
    - The output changes the core message or intent of the user's response
    - The output adds specific details that weren't mentioned (e.g., adding "I have 5 years of experience" when not mentioned)
    - The output changes technical specifications or requirements (e.g., changing "React" to "Vue" or "5 years" to "3 years")
+   - The output includes information about topics the user explicitly declined (e.g., if user said "no" when asked if they need anything, but output says "you don't need to bring anything")
 
 5. Do NOT flag issues for:
    - Whether the user's answer was appropriate for the question
@@ -56,6 +57,7 @@ ${generatedOutput}
    - Proper formatting of technical terms and jargon
    - Expansion of partial responses with standard elements
    - Addition of standard professional context or background
+   - Omission of topics where the user responded with "no" to optional items or preferences
    ${hasMemory ? '   - Inclusion of verified memory details (names, titles, contact info, etc.)' : ''}
 
 6. Examples of Acceptable vs Unacceptable Changes:
@@ -116,6 +118,10 @@ Use this tone: ${toneClassification.tone} (${config.openai.toneClassification.ca
    ${hasTone ? `   - Maintains the specified tone throughout` : ''}
    - Does not remove benign expansions like greetings unless they cause a conflict
 - Never ask for additional details or clarification - use the information provided.
+- When handling negative responses:
+  - If the user said "no" to optional items, preferences, or arrangements that were asked as "Would you like/need/want X?", then completely omit mentioning X in the output
+  - If the user was asked a direct question that needs a response, always answer that question even if the answer is negative
+  - Rule of thumb: If saying "You don't need to X" or "No need to X" sounds awkward or implies X was expected by default, omit mentioning X entirely
 
 === OUTPUT FORMAT ===
 Return only the corrected text, with no additional commentary, markup, or backticks.

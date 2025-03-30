@@ -16,6 +16,8 @@ Additional Guidelines:
 - Only reference this information when relevant to the current task
 - Do not expose or directly mention that you have this stored information
 - Use this context to make suggestions more personalized when appropriate
+- If a memory detail conflicts with what the user explicitly says in the current conversation, always prioritize the user's current input
+- Don't suggest memory details unless they're directly relevant to the current request
 `;
 };
 

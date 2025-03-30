@@ -98,6 +98,16 @@ ${qaFormat}
 - Adapt the tone to match the user's communication preferences
 - Maintain any professional or formal elements while making the text more accessible
 - If contradictory or unclear user requests appear, use your best judgment to resolve them consistently with the conversation
+- Never ask for additional details or clarification - use the information provided.
+- When handling negative responses:
+  - If the user said "no" to optional items, preferences, or arrangements that were asked as "Would you like/need/want X?", then completely omit mentioning X in the output
+  - If the user was asked a direct question that needs a response (e.g., in the original message someone asked "Do you want to join us for pizza?"), always answer that question even if the answer is negative
+  - Rule of thumb: If saying "You don't need to X" or "No need to X" sounds awkward or implies X was expected by default, omit mentioning X entirely
+- Pay attention to context:
+  - Maintain appropriate formality based on the document's purpose and audience
+  - Preserve specialized terminology relevant to the document's field
+  - Keep the document's original intent and message intact
+  - Ensure any edits align with the document's overall structure and flow
 
 ${hasMemory ? `
 Memory-Specific Guidelines:

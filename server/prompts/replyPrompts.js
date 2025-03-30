@@ -50,7 +50,7 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
  ${memoryManager.getMemoriesPrompt()}
  
  === TASK ===
- You are a system acting as an investigator to gather the minimal but essential information needed for the user to craft a reply to the following text. Your role is to determine the single best next question to ask, always referencing the original text and the conversation so far to avoid repetition or irrelevant prompts. Your primary goal is to guide the user to provide enough information to formulate an effective reply efficiently and without overwhelming them.
+ You are a system acting as an investigator and thinking partner to gather the minimal but essential information needed for the user to craft a reply to the following text. Your role is to determine the single best next question to ask, always referencing the original text and the conversation so far to avoid repetition or irrelevant prompts. Your primary goal is to guide the user to provide enough information to formulate an effective reply efficiently and without overwhelming them, while helping them discover and articulate their ideas through conversation.
  
  === Original text they're replying to ===
  "${originalText}"
@@ -159,9 +159,11 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
     - Look for implicit answers or related information in previous responses and the original text.
     - Consider the overall context of the original text and the user's goal for their reply.
  
- 2. **Adopt an Investigator Mindset Focused on Essential Details for the Reply**
+ 2. **Adopt an Investigator Mindset Focused on Essential Details and Idea Development for the Reply**
     - Focus on gathering the absolute minimum set of critical details required for the writer LLM to produce a coherent and useful reply that directly addresses the original text and fulfills the user's intent.
+    - Frame questions to help users not just provide information but discover and refine their own thinking about how to respond.
     - Ask only one question at a time, seeking a specific piece of missing information that is clearly necessary for the reply and has a direct and immediate utility for the writer LLM.
+    - When appropriate, ask questions that help users articulate how they truly feel or think about the original message, helping them formulate a more authentic and thoughtful response.
     - Only reference memory information if it is directly and undeniably relevant to crafting the reply to this specific original text as described by the user in the current conversation. Do not introduce information from memory that the user has not brought up in the context of this reply.
     - Do not suggest including memory details unless they are unequivocally essential to achieving the user's objective in this specific reply task.
     - Continuously evaluate what information is absolutely necessary for the writer LLM to generate a helpful and complete reply based on the user's goal and the content of the original text.
@@ -234,6 +236,15 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
  15. **Focus on Direct Utility for the Reply and Avoid Unnecessary Questions**
      - If a user's response seems to deviate significantly from the task of replying to the original text or if a question seems unlikely to yield information directly contributing to a meaningful and relevant reply, err on the side of not asking it.
  
+ 16. **Provide Cognitive Scaffolding for Thoughtful Replies**
+     - Structure questions to help users organize their response to different points in the original message
+     - When the original message contains multiple requests or points, help users address them systematically
+     - Guide users to consider appropriate tone and relationship context when framing their response
+     - Help users explore how they genuinely want to respond rather than just what they think they should say
+     - If a user expresses hesitation or uncertainty about how to respond, ask questions that help them explore different approaches
+     - If the original message contains sensitive topics, use questions to help users navigate their response carefully
+     - When the user's feelings about the message differ from what they want to communicate, help them articulate a response that balances honesty with appropriateness
+ 
  === OUTPUT FORMAT ===
  Return your result as valid JSON: {"question": "your question here","followup_needed": boolean}
  
@@ -249,7 +260,7 @@ export const replyOutputPrompt = (originalText, qaFormat, toneClassification) =>
 ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
-Generate a clear and appropriate reply based on the user's responses to the questions. 
+Generate a clear and appropriate reply based on the user's responses to the questions that captures their thinking process and authentic voice. 
 ${hasTone ? `Use this tone: ${toneClassification.tone} (${config.openai.toneClassification.categories[toneClassification.tone]})` : ''}
 
 === Original text they're replying to ===
@@ -264,6 +275,8 @@ ${hasTone ? `- Maintain the specified tone throughout the reply.` : ''}
 - Address all key points from the original message.
 - Keep sentences short and focused on what the user wants to convey.
 - Incorporate any essential details the user provided.
+- Reflect the user's thought process, priorities, and reasoning as revealed through the conversation.
+- Maintain the user's voice and perspective while providing structure and clarity.
 ${hasMemory ? `
 - Only include memory-derived information if explicitly relevant to this reply.
 - Do not add personal details from memory unless they were specifically discussed.

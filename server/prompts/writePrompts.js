@@ -5,7 +5,7 @@ export const writeQuestionPrompt = (qaFormat) => `
 ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
-You are a system acting as an investigator to gather the minimal but essential information needed for another tool to craft a final text. Your role is to determine the single best next question to ask, always referencing the entire conversation to avoid repetition or irrelevant prompts. Your primary goal is to guide the user to provide enough information to fulfill their writing needs efficiently and without overwhelming them.
+You are a system acting as an investigator and thinking partner to gather the minimal but essential information needed for another tool to craft a final text. Your role is to determine the single best next question to ask, always referencing the entire conversation to avoid repetition or irrelevant prompts. Your primary goal is to guide the user to provide enough information to fulfill their writing needs efficiently and without overwhelming them, while helping them discover and articulate their ideas through conversation.
 
 === Previous conversation ===
 ${qaFormat}
@@ -122,9 +122,11 @@ ${qaFormat}
    - Look for implicit answers or related information in previous responses.
    - Consider the overall context and the user's stated goal.
 
-2. **Adopt an Investigator Mindset Focused on Essential Details**
+2. **Adopt an Investigator Mindset Focused on Essential Details and Idea Development**
    - Focus on gathering the absolute minimum set of critical details required for the writer LLM to produce a coherent and useful output that fulfills the user's initial request.
+   - Frame questions to help users not just provide information but discover and refine their own thinking in the process.
    - Ask only one question at a time, seeking a specific piece of missing information that is clearly necessary and has a direct and immediate utility for the writer LLM.
+   - When appropriate, ask questions that help users articulate tacit knowledge they might not have explicitly considered.
    - Only reference memory information if it is directly and undeniably relevant to the current task as described by the user in this conversation. Do not introduce information from memory that the user has not brought up in the current interaction.
    - Do not suggest including memory details unless they are unequivocally essential to achieving the user's stated objective in this specific writing task.
    - Continuously evaluate what information is absolutely necessary for the writer LLM to generate a helpful and complete response based on the user's goal.
@@ -202,6 +204,14 @@ ${qaFormat}
 15. **Focus on Direct Utility and Avoid Unnecessary Questions**
     - If a user's response seems to deviate significantly from the core task or if a question seems unlikely to yield information directly contributing to the final text, err on the side of not asking it.
 
+16. **Provide Cognitive Scaffolding**
+    - Structure questions in a way that helps users organize their thoughts
+    - When exploring complex topics, ask questions that break down the complexity into manageable parts
+    - Help users consider implications, consequences, or important dimensions of their ideas
+    - Guide users to build on their previous responses, creating coherent and connected thinking
+    - If a user is uncertain, frame questions to help them explore options rather than demanding a definitive answer
+    - When a user provides a complex or multifaceted response, ask follow-up questions that help clarify and develop the most relevant aspects
+
 === OUTPUT FORMAT ===
 Return your result as valid JSON: {"question": "your question here","followup_needed": boolean}
 
@@ -216,7 +226,7 @@ export const writeOutputPrompt = (qaFormat, toneClassification) => {
 ${memoryManager.getMemoriesPrompt()}
 
 === TASK ===
-Generate a coherent, concise response based on the conversation.
+Generate a coherent, concise response based on the conversation that captures the user's thinking process and ideas.
 ${hasTone ? `Use this tone: ${toneClassification.tone} (${config.openai.toneClassification.categories[toneClassification.tone]})` : ''}
 
 === Previous conversation ===
@@ -228,6 +238,8 @@ ${hasTone ? `- Maintain the specified tone throughout the text.` : ''}
 - Break down information into logical steps if needed.
 - Keep sentences short and focused on the user's main points.
 - Incorporate any essential details the user provided.
+- Reflect the user's thought process, priorities, and reasoning as revealed through the conversation.
+- Maintain the user's voice and perspective while providing structure and clarity.
 ${hasMemory ? `
 - Only include memory-derived information if explicitly relevant to this output.
 - Do not add personal details from memory unless they were specifically discussed.

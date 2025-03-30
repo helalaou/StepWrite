@@ -42,6 +42,7 @@ ${generatedOutput}
    - The output adds specific details that weren't mentioned (e.g., adding "I have 5 years of experience" when not mentioned)
    - The output changes technical specifications or requirements (e.g., changing "React" to "Vue" or "5 years" to "3 years")
    - The output includes information about topics the user explicitly declined (e.g., if user said "no" when asked if they need anything, but output says "you don't need to bring anything")
+   - The output fails to capture the user's reasoning or thinking process as revealed in their responses
 
 5. Do NOT flag issues for:
    - Whether the user's answer was appropriate for the question
@@ -58,6 +59,7 @@ ${generatedOutput}
    - Expansion of partial responses with standard elements
    - Addition of standard professional context or background
    - Omission of topics where the user responded with "no" to optional items or preferences
+   - Restructuring content to enhance clarity while preserving the user's ideas and reasoning
    ${hasMemory ? '   - Inclusion of verified memory details (names, titles, contact info, etc.)' : ''}
 
 6. Examples of Acceptable vs Unacceptable Changes:
@@ -115,6 +117,8 @@ Use this tone: ${toneClassification.tone} (${config.openai.toneClassification.ca
 4. Ensure the corrected version:
    - Stays concise
    - Preserves the user's key details
+   - Maintains the user's unique voice and perspective
+   - Captures their thinking process and reasoning
    ${hasTone ? `   - Maintains the specified tone throughout` : ''}
    - Does not remove benign expansions like greetings unless they cause a conflict
 - Never ask for additional details or clarification - use the information provided.

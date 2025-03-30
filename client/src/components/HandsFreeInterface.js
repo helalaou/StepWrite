@@ -651,7 +651,7 @@ function HandsFreeInterface({
       case 'continue':
         setIsPaused(false);
         isPausedRef.current = false;
-        displayFeedback("Resuming experiment...", 'command');
+        displayFeedback("Resuming writing...", 'command');
 
         // Restart normal recording
         if (vadRef.current) {
@@ -1615,7 +1615,7 @@ function HandsFreeInterface({
             }}
           >
             <Typography variant="h5" sx={{ mb: 2, fontWeight: 'bold' }}>
-              Experiment Paused
+              Writing Paused
             </Typography>
 
             <Box
@@ -1646,7 +1646,7 @@ function HandsFreeInterface({
             </Box>
 
             <Typography variant="body1" sx={{ mb: 3 }}>
-              Say <strong>"continue experiment"</strong> to resume the experiment.
+              Say <strong>"continue writing"</strong> to resume the writing.
             </Typography>
 
             <Box

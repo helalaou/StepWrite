@@ -1,30 +1,31 @@
 {
-  "Personal Information": [
-    "First Name: Hamza",    
-    "Last Name: El Alaoui",
-    "Age: 24",
-    "Location: Pittsburgh, PA, United States"
-  ],
-  "Education": [
-    "Currently a PhD student studying Computer Science",
-    "University: Carnegie Mellon University",
-    "School: School of Computer Science",
-    "Department: Human-Computer Interaction Institute"
-  ],
-  "Work": [
-    "Graduate Research Assistant at Carnegie Mellon University",
-    "Worked in industry at Oracle before starting his PhD",
-    "Interned at Oracle Labs, Mastercad, and Prodware",
-    "Has a passion for building products that help people"
-  ],
-  "Preferences": [
-    "Likes technology and gaming",
-    "Bikes a lot",
-    "Speaks English, French and Arabic, currently learning Spanish"
-  ],
-  "Communication Style": [
-    "Prefers short sentences",
-    "Benefits from step-by-step instructions",
-    "Likes direct communication"
-  ]
+  "personalInfo": {
+    "firstName": "Hamza",
+    "lastName": "El Alaoui",
+    "fullName": "Hamza El Alaoui",
+    "age": 24,
+    "location": "Pittsburgh, PA, United States"
+  },
+  "education": {
+    "level": "PhD student",
+    "field": "Computer Science",
+    "university": "Carnegie Mellon University",
+    "school": "School of Computer Science",
+    "department": "Human-Computer Interaction Institute"
+  },
+  "work": {
+    "currentRole": "Graduate Research Assistant",
+    "currentEmployer": "Carnegie Mellon University",
+    "previousEmployer": "Oracle",
+    "internships": ["Oracle Labs", "Mastercard", "Prodware"],
+    "interests": ["Building products that help people"]
+  },
+  "preferences": {
+    "interests": ["Technology", "Gaming", "Biking"],
+    "languages": ["English", "French", "Arabic"],
+    "learning": ["Spanish"]
+  },
+  "communicationStyle": {
+    "preferences": ["Short sentences", "Step-by-step instructions", "Direct communication"]
+  }
 } 

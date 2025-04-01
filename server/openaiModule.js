@@ -8,6 +8,7 @@ import { replyQuestionPrompt, replyOutputPrompt, initialReplyQuestionPrompt } fr
 import { factCheckPrompt, factCorrectionPrompt } from './prompts/factCheckingPrompt.js';
 import { logger } from './config.js';
 import { toneClassificationPrompt } from './prompts/toneClassificationPrompt.js';
+import memoryManager from './memory/memoryManager.js';
 
 dotenv.config();
 
@@ -285,18 +286,35 @@ async function classifyTextType(text) {
   }
 }
 
+// Simple utility function to process email templates
+function processEmailTemplate(originalText) {
+  let processedText = originalText;
+  
+  // Get user name from memory if available
+  const userName = memoryManager.isEnabled() ? memoryManager.getUserName() || "Student" : "Student";
+  
+  // Replace the {Name} placeholder with the user's name from memory
+  processedText = originalText.replace(/\{Name\}/g, userName);
+  
+  return { processedText, extractedName: userName };
+}
+
 async function generateReplyQuestion(originalText, conversationPlanning) {
   const qaFormat = conversationPlanning.questions
     .map(q => `Q: ${q.question}; A: ${q.response}`)
     .join('\n');
 
-  const prompt = replyQuestionPrompt(originalText, qaFormat);
+  // Process template variables in the original text
+  const { processedText, extractedName } = processEmailTemplate(originalText);
+
+  const prompt = replyQuestionPrompt(processedText, qaFormat);
 
   logger.section('OPENAI REQUEST (Reply Question Generation)', {
     prompt,
     model: config.openai.reply.question.model,
     maxTokens: config.openai.reply.question.maxTokens,
-    temperature: config.openai.reply.question.temperature
+    temperature: config.openai.reply.question.temperature,
+    extractedRecipientName: extractedName
   });
 
   try {
@@ -366,18 +384,22 @@ async function generateReplyOutput(originalText, conversationPlanning, toneClass
   const qaFormat = conversationPlanning.questions
     .map(q => `Q: ${q.question}\nA: ${q.response}`)
     .join('\n\n');
+    
+  // Process template variables in the original text
+  const { processedText, extractedName } = processEmailTemplate(originalText);
 
-  const prompt = replyOutputPrompt(originalText, qaFormat, toneClassification);
+  const prompt = replyOutputPrompt(processedText, qaFormat, toneClassification);
 
   logger.section('OPENAI REQUEST (Reply Output Generation)', {
     prompt,
     model: config.openai.reply.output.model,
     maxTokens: config.openai.reply.output.maxTokens,
     temperature: config.openai.reply.output.temperature,
-    originalTextLength: originalText.length,
+    originalTextLength: processedText.length,
     qaFormatLength: qaFormat.length,
     questionsCount: conversationPlanning.questions.length,
-    hasTone: !!toneClassification
+    hasTone: !!toneClassification,
+    extractedRecipientName: extractedName
   });
 
   try {
@@ -504,9 +526,24 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
     qaFormat
   });
 
+  // Process context if it exists (for email templates)
+  let processedContext = context;
+  let extractedName = null;
+  if (context) {
+    const templateResult = processEmailTemplate(context);
+    processedContext = templateResult.processedText;
+    extractedName = templateResult.extractedName;
+    
+    logger.section('CONTEXT PROCESSING', {
+      originalContextLength: context.length,
+      processedContextLength: processedContext.length,
+      extractedRecipientName: extractedName
+    });
+  }
+
   // Generate initial output using appropriate function
   let output = context 
-    ? await generateReplyOutput(context, conversationPlanning, toneClassification)
+    ? await generateReplyOutput(processedContext, conversationPlanning, toneClassification)
     : await generateWriteOutput(conversationPlanning, toneClassification);
 
   while (attempts < config.openai.factChecking.maxAttempts) {
@@ -563,14 +600,25 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
 }
 
 async function classifyTone(qaFormat, originalText = '') {
-  const prompt = toneClassificationPrompt(qaFormat, originalText);
+  // Process template variables in the original text if provided
+  let processedText = originalText;
+  let extractedName = null;
+  
+  if (originalText) {
+    const templateResult = processEmailTemplate(originalText);
+    processedText = templateResult.processedText;
+    extractedName = templateResult.extractedName;
+  }
+  
+  const prompt = toneClassificationPrompt(qaFormat, processedText);
   
   logger.section('TONE CLASSIFICATION REQUEST', {
     prompt,
     model: config.openai.toneClassification.model,
     temperature: config.openai.toneClassification.temperature,
     hasOriginalText: !!originalText,
-    qaFormatLength: qaFormat.length
+    qaFormatLength: qaFormat.length,
+    extractedRecipientName: extractedName
   });
 
   try {
@@ -615,12 +663,16 @@ async function classifyTone(qaFormat, originalText = '') {
 }
 
 async function generateInitialReplyQuestion(originalText) {
-  const prompt = initialReplyQuestionPrompt(originalText);
+  // Process template variables in the original text
+  const { processedText, extractedName } = processEmailTemplate(originalText);
+
+  const prompt = initialReplyQuestionPrompt(processedText);
 
   logger.section('OPENAI REQUEST (Initial Reply Question Generation)', {
     model: config.openai.initialReplyQuestion.model,
     temperature: config.openai.initialReplyQuestion.temperature,
-    maxTokens: config.openai.initialReplyQuestion.maxTokens
+    maxTokens: config.openai.initialReplyQuestion.maxTokens,
+    extractedRecipientName: extractedName
   });
 
   try {

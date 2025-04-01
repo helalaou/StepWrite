@@ -211,13 +211,16 @@ function ReplyFlow() {
     if (showIdInput) return;
     
     const setupReplyFlow = async () => {
-      const emailContext = config.core.reply_email;
-      setContext(emailContext);
+      // Get the email template with placeholders
+      const emailTemplate = config.core.reply_email;
+      
+      // Set raw template as context
+      setContext(emailTemplate);
       
       try {
         setIsLoading(true);
         const response = await axios.post(`${config.core.apiUrl}${config.core.endpoints.initialReplyQuestion}`, {
-          originalText: emailContext
+          originalText: emailTemplate
         });
         
         // Set the initial question from the API response

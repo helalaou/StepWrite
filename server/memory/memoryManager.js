@@ -49,6 +49,15 @@ class MemoryManager {
     }
     return memoryFactCheckPrompt(this.memories);
   }
+
+  getUserName() {
+    if (!this.isEnabled()) {
+      return null;
+    }
+    
+    // Return the user's name from memories if available
+    return this.memories.name || this.memories.fullName || null;
+  }
 }
 
 export default new MemoryManager(); 

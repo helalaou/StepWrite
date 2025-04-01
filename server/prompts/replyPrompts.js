@@ -338,7 +338,12 @@ ${qaFormat}
 - DO NOT add dividers like "---" or "***" or similar formatting markers
 - DO NOT include any meta-commentary about the text
 - DO NOT wrap the output in quotes or code blocks
-- Simply output the content directly, starting with the appropriate greeting if applicable
+- Simply output the content directly, starting with the appropriate greeting
+
+=== GREETING FORMAT REQUIREMENTS ===
+- For emails: ALWAYS start with "Hello [Recipient's Name]," (extract the recipient's name from the original message)
+- If recipient's name isn't clear from the original message, use an appropriate greeting like "Hello," or "Hi there,"
+- NEVER start with the user's own name
 
 === Guidelines ===
 - Use simple, direct language.
@@ -353,6 +358,7 @@ ${hasTone ? `- Maintain the specified tone throughout the reply.` : ''}
 - When the user expanded on certain areas with multiple responses, ensure these are developed appropriately in the output.
 ${hasMemory ? `
 - Only include memory-derived information if explicitly relevant to this reply.
+- Use the user's full name for signatures when appropriate.
 - Do not add personal details from memory unless they were specifically discussed.
 ` : ''}
 - If the original text asked questions, ensure they are answered.

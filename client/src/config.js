@@ -37,17 +37,16 @@ const config = {
 
     // Static email for reply flow
     reply_email:
-      `Subject: Follow-Up on Your Application for Administrative Assistant Position
-Hi there,
-Thank you for applying for the Administrative Assistant position at [Company Name]. We were impressed by your initial application and would like to gather a few additional details to move forward in the process:
-Can you confirm your expected graduation date, if applicable?
-Are you legally authorized to work in the U.S., and will you require visa sponsorship now or in the future?
-When would you be available to start, if offered the position?
-What is your preferred working schedule (e.g., full-time, part-time, hybrid, remote)?
-Do you have any prior experience with office software or tools, such as Microsoft Office, Google Workspace, or scheduling systems?
-Is there anything else you would like us to know about your background or availability?
-We look forward to hearing from you soon!
-Best regards,`
+      `Subject: Question about your missing project submission
+
+Hi,
+
+I noticed that you haven't submitted your final project for our course that was due last Friday. This project counts for 25% of your final grade. 
+
+Please let me know what's happening with your submission.
+
+Regards,
+Professor Williams`
   },
 
   // ====== EXPERIMENT TRACKING SETTINGS ======

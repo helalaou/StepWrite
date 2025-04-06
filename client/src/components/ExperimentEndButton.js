@@ -4,7 +4,7 @@ import axios from 'axios';
 import config from '../config';
 import { playClickSound } from '../utils/soundUtils';
 
-const ExperimentEndButton = forwardRef(({ content, textOutput }, ref) => {
+const ExperimentEndButton = forwardRef(({ content, textOutput, conversationPlanning }, ref) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
@@ -49,7 +49,8 @@ const ExperimentEndButton = forwardRef(({ content, textOutput }, ref) => {
         textOutput: textOutput || content,
         finalOutput: content,
         writingTime: writingTimeTotal,
-        revisionTime: finalRevisionTime
+        revisionTime: finalRevisionTime,
+        conversationPlanning: conversationPlanning
       });
       
       if (response.data.success) {

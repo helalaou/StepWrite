@@ -98,7 +98,7 @@ Professor Williams`
 
     // Controls when to finalize and submit speech
     speech: {
-      finalizeDelay: 2500,            // Range: 3000-10000ms, Wait time before submitting
+      finalizeDelay: 3000,            // Range: 3000-10000ms, Wait time before submitting
       // Controls question replay behavior when no speech is detected
       replay: {
         maxAttempts: Infinity,        // Number of replay attempts before giving up

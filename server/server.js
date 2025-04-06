@@ -599,7 +599,8 @@ app.post('/api/save-experiment-data', async (req, res) => {
       textOutput, 
       finalOutput, 
       writingTime, 
-      revisionTime 
+      revisionTime,
+      conversationPlanning
     } = req.body;
 
     if (!participantId) {
@@ -627,12 +628,22 @@ app.post('/api/save-experiment-data', async (req, res) => {
     const writingTimeStr = writingTime ? `${Math.floor(writingTime / 60)}m ${writingTime % 60}s (${writingTime}s total)` : 'not tracked';
     const revisionTimeStr = revisionTime ? `${Math.floor(revisionTime / 60)}m ${revisionTime % 60}s (${revisionTime}s total)` : 'not tracked';
 
+    // Format the QA data
+    let qaData = '';
+    if (conversationPlanning && conversationPlanning.questions && conversationPlanning.questions.length > 0) {
+      qaData = '\n############### QUESTION-ANSWER DATA ###############\n';
+      conversationPlanning.questions.forEach((qa, index) => {
+        qaData += `\nQ${index + 1}: ${qa.question}\n`;
+        qaData += `A${index + 1}: ${qa.response || 'No answer provided'}\n`;
+      });
+    }
+
     // Prepare content for the file
     const content = `user_id: ${participantId}
 number of times the user used the modify command: ${modifyCount || 0}
 number of times the user skipped a question: ${skipCount || 0}
 time taken (writing): ${writingTimeStr}
-time taken (revision): ${revisionTimeStr}
+time taken (revision): ${revisionTimeStr}${qaData}
 ############### ORIGINAL OUTPUT ###############
 ${textOutput}
 ############### REVISED OUTPUT ###############

@@ -21,9 +21,18 @@ This question should directly reference the content of the message in a way that
    - If the message asks about project updates: "How would you like to update them on the Q4 deliverables?"
    - If it's about scheduling: "When would you prefer to schedule the follow-up meeting they mentioned?"
    - If there's a request for feedback: "What feedback would you like to provide on the client presentation?"
-5. Keep it concise (under 15 words)
-6. Should be phrased as an open-ended question
-7. Must sound natural and conversational
+   - If it's a job rejection: "Would you like to thank them for the opportunity or ask for feedback?"
+   - If it's a service complaint: "How would you like to address their concerns about the service quality?"
+   - If it's a friend's invitation: "Are you available to attend their weekend gathering?"
+   - If it's a family request: "What information would you like to provide about your upcoming visit?"
+5. Prioritize questions that address:
+   - Direct requests in the message
+   - Time-sensitive issues
+   - The sender's main concern or point
+   - Any decisions the recipient needs to make
+6. Keep it concise (under 15 words)
+7. Should be phrased as an open-ended question
+8. Must sound natural and conversational
 
 === EXAMPLES ===
 Original message: "Could you send me the project timeline by Friday?"
@@ -37,6 +46,14 @@ Original message: "Our team loved your presentation yesterday. When can we sched
 Original message: "I'm concerned about the delay in the product launch. What's causing this issue?"
 ❌ "What points do you want to address?"
 ✅ "How do you want to explain the product launch delay?"
+
+Original message: "We regret to inform you that we've chosen another candidate for the position."
+❌ "How would you like to reply to this message?"
+✅ "How would you like to respond to this job rejection?"
+
+Original message: "Hi there! Just checking if you're available to grab dinner this weekend?"
+❌ "What do you want to say to them?"
+✅ "Are you available for dinner this weekend with them?"
 
 === OUTPUT FORMAT ===
 Return ONLY the question text, with no quotation marks, prefixes, or extra text.
@@ -153,17 +170,19 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
     - Purpose of the reply should be clearly to respond to the original text.
  
  === GUIDELINES ===
- 1. **Review All Prior Context Thoroughly**
-    - Carefully check the original text and all Q&A pairs (and any indirect answers within user responses) before asking a new question.
-    - If a detail has already been provided (even if not in direct answer to a prior question), do not ask again.
-    - Look for implicit answers or related information in previous responses and the original text.
-    - Consider the overall context of the original text and the user's goal for their reply.
+ 1. **Review All Prior Context With High Intelligence**
+    - CRITICAL: Carefully analyze what information has ALREADY been provided through BOTH direct answers AND indirect mentions within responses.
+    - If a user mentions something even briefly (e.g., "I have a certificate"), NEVER ask if they want to include that information - assume they do since they mentioned it.
+    - NEVER ask questions that can be logically inferred from previous answers (e.g., if user says they'll attach a document, don't ask if they want to mention sending the document).
+    - Look for subtle implications and references in user responses that provide indirect answers.
+    - Be highly attentive to details the user has already provided, even if mentioned casually or in passing.
+    - Apply common sense reasoning to avoid asking for information that would be obvious given the context established.
  
  2. **Adopt an Investigator Mindset Focused on Essential Details and Idea Development for the Reply**
-    - Focus on gathering the absolute minimum set of critical details required for the writer LLM to produce a coherent and useful reply that directly addresses the original text and fulfills the user's intent.
+    - Focus on gathering ONLY the absolute minimum set of critical details required for the writer LLM.
     - Frame questions to help users not just provide information but discover and refine their own thinking about how to respond.
     - Ask only one question at a time, seeking a specific piece of missing information that is clearly necessary for the reply and has a direct and immediate utility for the writer LLM.
-    - When appropriate, ask questions that help users articulate how they truly feel or think about the original message, helping them formulate a more authentic and thoughtful response.
+    - Ask questions that help users articulate how they truly feel or think about the original message, helping them formulate a more authentic and thoughtful response.
     - Only reference memory information if it is directly and undeniably relevant to crafting the reply to this specific original text as described by the user in the current conversation. Do not introduce information from memory that the user has not brought up in the context of this reply.
     - Do not suggest including memory details unless they are unequivocally essential to achieving the user's objective in this specific reply task.
     - Continuously evaluate what information is absolutely necessary for the writer LLM to generate a helpful and complete reply based on the user's goal and the content of the original text.
@@ -176,8 +195,23 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
       2. Establish the core response (what)
       3. Determine key logistics (when/where) if relevant
       4. Only then explore secondary details if needed
-    - For time-related questions related to the reply: Follow the same logic as in the "write" prompt (week -> day -> time).
-    - For location-related questions related to the reply: Follow the same logic as in the "write" prompt (city -> place -> time).
+    - **CONTEXT-AWARE DETAIL GATHERING:**
+      - For professional, high-stakes, or formal communications (job applications, business emails, critical requests, professor emails, workplace communications):
+        * Continue gathering specific details about time, location, etc.
+        * If a meeting or deadline is mentioned, ask for the specific day
+        * If the user mentions a day, ask for the time
+        * Request specifics needed for professional contexts
+      - For casual, low-stakes, or informal communications (messages to friends, family gatherings, casual plans):
+        * Be more lenient about specifics
+        * If the user mentions "weekend" or a general timeframe, first ask: "Would you like to specify a particular day/time in your reply, or keep it general?"
+        * Don't drill down for excessive details unless the user indicates they want to be specific
+        * Respect casual flexibility that's common in informal communication
+    - For time-related questions related to the reply:
+      - For formal/professional contexts: Follow the pattern week -> day -> time
+      - For casual contexts: If the user mentions a general timeframe, ask if they want to be more specific or keep it general
+    - For location-related questions related to the reply:
+      - For formal/professional contexts: Follow the pattern city -> place -> specific venue details
+      - For casual contexts: If the user mentions a general location, ask if they want to specify a particular venue or keep it general
     - For any other details, start with broader context related to the reply and then narrow down to specifics in a way that feels natural and intuitive.
     - **Be flexible:** If the user spontaneously provides information about a later part of their intended reply, acknowledge it and then circle back to gather the preceding information in a logical order, especially regarding addressing the initial points of the original text.
  
@@ -202,12 +236,14 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
     - Memory should primarily inform the context you understand for the reply, not generate new topics or questions unrelated to the original text or the user's current input for their reply.
     - Do not suggest including details from memory unless they are absolutely essential for the reply the user wants to create *right now*.
  
- 7. **Handle Skipped Questions Decisively**
-    - If the user skips a question, do not ask it again in any form, even rephrased. Treat a skipped question as a signal that the user does not want to provide that information at this time for their reply.
-    - Any variation or rephrase of a skipped question is STRICTLY PROHIBITED. For example, if "Should he use the buzzer when he arrives?" is skipped, do not later ask "Should he knock or use the buzzer when he arrives?" as it's essentially the same question.
-    - After the user skips 3 consecutive questions, this is a strong signal that they've provided all the information they care to share and you should set "followup_needed" to false immediately.
-    - IMPORTANT: Consider related questions as effectively skipped too. If a user skips a question about one aspect of a topic (e.g., "Should he use the buzzer?"), do not ask related questions about the same topic (e.g., "Should he knock?").
-    - A skip is a clear boundary - do not attempt to get the same information through different phrasing.
+ 7. **Handle Skipped Questions With Strict Avoidance of Related Topics**
+    - CRITICAL: If the user skips a question, NEVER ask ANYTHING related to that topic again.
+    - The definition of "related" must be interpreted BROADLY - if a user skips "Do you want to mention sending the certificate?", consider ALL questions about the certificate, sending documents, or proof/documentation as permanently skipped.
+    - Treat a skipped question as a strong signal that the user finds the entire topic unimportant or irrelevant.
+    - After the user skips a question, avoid the entire conceptual area that question addressed.
+    - If the user skips 2 consecutive questions of any kind, this is a strong signal to conclude questioning entirely - set "followup_needed" to false.
+    - ANY question that explores a different aspect of a previously skipped topic is STRICTLY PROHIBITED.
+    - A skip creates a clear boundary for an entire topic area - do not attempt to get any information about that topic through different phrasing or angles.
  
  8. **Aim for the Minimal Necessary Set of Questions for the Reply**
     - Never ask for details that can be reasonably inferred from the original text or the context of the conversation about the reply.
@@ -227,9 +263,11 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
     - Do not ask for personal contact details unless the user explicitly indicates they need to be included in the reply.
     - Continuously think about what information is absolutely essential for the writer LLM to produce a coherent and useful reply.
  
- 9. **Avoid Duplicate or Rephrased Questions**
-    - If a question (or its answer) appears anywhere in the current conversation context (including the original text), do not ask it again.
-    - Do not paraphrase a previously asked question that the user has already answered or skipped.
+ 9. **ABSOLUTELY NEVER Ask Duplicate or Similar Questions**
+    - CRITICALLY IMPORTANT: If a question or any similar variation has already been asked, NEVER ask it again or anything close to it.
+    - Do not ask questions about information that has already been mentioned or implied in any way by the user.
+    - If the user provides information without being asked (e.g., "I'll include a certificate"), treat that as an answer to any future questions about that topic.
+    - If the question seeks information that can be reasonably inferred from previous answers, do not ask it.
  
  10. **Keep Questions Short, Targeted, and Supportive in Tone for the Reply**
      - Keep each question concise (under 10 words if possible).
@@ -246,35 +284,34 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
        You: "Will there be any activities you want to mention in your reply?" (instead of "Do you want to plan activities?")
  
  11. **Implement Skip Handling Logic**
-     - If the user skips 6 consecutive questions, set "followup_needed" to false, assuming the user has provided enough information or doesn't want to continue providing more details for their reply at this point.
+     - If the user skips even one question, analyze very carefully before asking another question - is it truly needed?
+     - If the user skips 2 consecutive questions, set "followup_needed" to false immediately, assuming the user has provided enough information or doesn't want to continue providing more details for their reply at this point.
  
  12. **Define Clear Completion Conditions and Offer to Elaborate for the Reply**
+     - CRITICAL: Your primary goal is to ask the MINIMUM number of questions needed to craft a complete, coherent reply. Think from the user's perspective about what's truly needed.
      - Continuously assess if you have gathered enough information to formulate a reply that addresses the core points of the original text and fulfills the user's intent. If the subsequent questions seem to be eliciting increasingly minor details or if the user's responses become less informative, consider setting "followup_needed" to false. Once you have gathered what appears to be enough information to construct the reply, set "followup_needed" to false.
-     - Set a practical limit on questions based on communication type:
-       a) For simple confirmations or short replies: 3-4 questions maximum
-       b) For standard social communications: 4-6 questions maximum
-       c) For complex business/professional communications: 6-8 questions maximum
-       d) For detailed planning or problem-solving: 8-10 questions maximum
-     - **Important Exception:** These limits should be flexible when:
-       a) The user introduces new, substantive topics during the conversation
-       b) The user provides particularly detailed responses that open new areas for exploration
-       c) The reply task evolves in complexity based on the user's input
+     - After collecting the essential information to address all key points in the original message, STOP asking questions unless there's a clearly critical missing element.
+     - Do NOT adhere to artificial question count limits. Instead, use your judgment to:
+       a) For simple confirmations: Stop as soon as the core response is established
+       b) For social communications: Focus only on essential details needed for an appropriate reply
+       c) For professional communications: Ensure all relevant points from the original text are addressed without unnecessary detail
+       d) For complex planning or problem-solving: Cover all necessary aspects while avoiding tangential information
      - **Response Length Heuristic:** If the user's responses to recent questions are becoming notably shorter (e.g., one-word answers, minimal details), this suggests diminishing returns from continued questioning.
      - **Engagement Signals:** Look for signals that the user is engaged and wants to continue sharing information:
        a) Detailed, multi-sentence responses
        b) Introduction of new aspects not directly prompted
        c) Asking questions or seeking guidance
        d) Expressions of uncertainty that would benefit from further exploration
-     - **Diminishing Returns Check:** After the initial 3 questions, evaluate if each additional question is likely to substantially improve the quality of the final reply. If not, conclude questioning.
-     - **IMPORTANT: Optional Elaborate Prompt Handling:**
-       a) The optional elaborate prompt ("Is there anything else you'd like to add...?") should ONLY be asked as the final question
+     - **Diminishing Returns Check:** After collecting essential information to address the original message, evaluate if each additional question is likely to substantially improve the quality of the final reply. If not, conclude questioning.
+     - **IMPORTANT: Required Final Elaborate Prompt:**
+       a) The elaborate prompt ("Is there anything else you'd like to add...?") MUST be asked as the final question AFTER you've collected the minimum viable information
        b) After asking this question, wait for the user's response before setting followup_needed to false
-       c) If the user provides a non-empty response, continue with appropriate follow-up questions
+       c) If the user provides a non-empty response, continue with appropriate follow-up questions based on their additional input
        d) Only if the user provides an empty response or skips this question should followup_needed be set to false
        e) Never include this question in the output if the user didn't actually answer it
      - Do not ask the elaborate prompt if the user has already provided comprehensive information or the conversation flow indicates they're ready to conclude.
      - **Exit Signals:** Stop asking questions immediately (set "followup_needed" to false) if:
-       a) The user has skipped 3 consecutive questions
+       a) The user has skipped ANY question
        b) The user shows signs of frustration or impatience
        c) Questions are becoming increasingly minor or trivial in nature
        d) You've already asked about core logistics (who/what/when/where) and the rest is non-essential
@@ -308,7 +345,9 @@ export const replyQuestionPrompt = (originalText, qaFormat) => {
      - Help users focus on information that matters for their specific scenario, rather than exhaustively covering all possible details
  
  === OUTPUT FORMAT ===
- Return your result as valid JSON: {"question": "your question here","followup_needed": boolean}
+ Return your result as valid JSON:
+ 
+ if you want send an anwer back to the user, send: {"question": "your question here","followup_needed": boolean}
  
  - If "followup_needed" is false, return: {"question": "","followup_needed": false}
  `;
@@ -345,12 +384,26 @@ ${qaFormat}
 - If recipient's name isn't clear from the original message, use an appropriate greeting like "Hello," or "Hi there,"
 - NEVER start with the user's own name
 
+=== INTELLIGENCE REQUIREMENTS ===
+- CRITICALLY IMPORTANT: Incorporate ALL information the user has provided in ANY way, even if mentioned casually or briefly
+- If the user mentioned something in passing (e.g., "I have a certificate"), DEFINITELY include that detail
+- Pay special attention to brief mentions that might easily be missed but could be important to the user
+- If the user indicates flexibility on a topic, reflect that flexibility rather than making up specific details
+- If a user mentioned a specific timing, location, document, or detail, ensure it's accurately included
+- Pay careful attention to the user's exact phrasing when they express preferences, concerns, or requests
+- If the user skipped questions about a topic, do NOT include that topic in the response
+- For hypothetical examples:
+  * If replying to a job offer and the user mentioned salary negotiation, ensure that's included even if briefly mentioned
+  * If responding to a meeting invitation and the user mentioned dietary restrictions in passing, include those
+  * If answering a complaint and the user mentioned previous positive experiences, incorporate that perspective
+  * If replying to a family message and the user briefly mentioned bringing a gift, include that detail
+
 === Guidelines ===
 - Use simple, direct language.
 ${hasTone ? `- Maintain the specified tone throughout the reply.` : ''}
 - Address all key points from the original message.
 - Keep sentences short and focused on what the user wants to convey.
-- Incorporate any essential details the user provided.
+- Incorporate all essential details the user provided, no matter how briefly mentioned.
 - Reflect the user's thought process, priorities, and reasoning as revealed through the conversation.
 - Maintain the user's voice and perspective while providing structure and clarity.
 - Emphasize topics where the user provided detailed responses or volunteered additional information, as these likely represent their priorities.

@@ -40,7 +40,7 @@ const config = {
       question: {
         model: 'chatgpt-4o-latest',
         temperature: 0.7,
-        maxTokens: 30,
+        maxTokens: 70,
       },
       output: {
         model: 'chatgpt-4o-latest',
@@ -54,7 +54,7 @@ const config = {
       question: {
         model: 'chatgpt-4o-latest',
         temperature: 0.7,
-        maxTokens: 30,
+        maxTokens: 70,
       },
       output: {
         model: 'chatgpt-4o-latest',
@@ -90,7 +90,7 @@ const config = {
 
     // memory settings
     memory: {
-      enabled: true,
+      enabled: false,
       filePath: './data/user_memories.json'
     },
 

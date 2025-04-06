@@ -40,7 +40,8 @@ function TextEditor({
   editorPreferences,
   onPreferencesChange,
   savedHistory,
-  onHistoryChange
+  onHistoryChange,
+  conversationPlanning
 }) {
   const [contentHistory, setContentHistory] = useState(savedHistory || [savedContent || initialContent]);
   const [currentIndex, setCurrentIndex] = useState(savedHistory ? savedHistory.length - 1 : 0);
@@ -984,6 +985,7 @@ function TextEditor({
           <ExperimentEndButton 
             content={content} 
             textOutput={initialContent}
+            conversationPlanning={conversationPlanning}
             ref={endExperimentButtonRef}   
           />
         </Box>

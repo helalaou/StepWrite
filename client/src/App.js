@@ -77,6 +77,7 @@ function WriteFlow() {
       onPreferencesChange={setEditorPreferences}
       savedHistory={editorHistory}
       onHistoryChange={setEditorHistory}
+      conversationPlanning={conversationPlanning}
     />
   ) : isHandsFree ? (
     <HandsFreeInterface
@@ -288,6 +289,7 @@ function ReplyFlow() {
       onPreferencesChange={setEditorPreferences}
       savedHistory={editorHistory}
       onHistoryChange={setEditorHistory}
+      conversationPlanning={conversationPlanning}
     />
   ) : isHandsFree ? (
     <HandsFreeInterface

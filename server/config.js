@@ -26,7 +26,7 @@ const config = {
       question: {
         model: 'chatgpt-4o-latest',
         temperature: 0.7,
-        maxTokens: 30,
+        maxTokens: 100,
       },
       output: {
         model: 'chatgpt-4o-latest',
@@ -40,7 +40,7 @@ const config = {
       question: {
         model: 'chatgpt-4o-latest',
         temperature: 0.7,
-        maxTokens: 70,
+        maxTokens: 100,
       },
       output: {
         model: 'chatgpt-4o-latest',
@@ -54,7 +54,7 @@ const config = {
       question: {
         model: 'chatgpt-4o-latest',
         temperature: 0.7,
-        maxTokens: 70,
+        maxTokens: 100,
       },
       output: {
         model: 'chatgpt-4o-latest',

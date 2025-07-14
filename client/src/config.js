@@ -261,6 +261,14 @@ Professor Williams`
         },
         modify: {
           phrases: [
+            'change my answer',
+            'change my response',
+            'I want to change my answer',
+            'I want to change my response',
+            'I want to modify my answer',
+            'I want to modify my response',
+            'I want to edit my answer',
+            'I want to edit my response',
             'modify answer',
             'modify response',
             'modify question',

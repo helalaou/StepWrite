@@ -527,7 +527,12 @@ function TextEditor({
         throw new Error('No audio URL in response');
       }
 
-      setAudioUrl(`${config.core.apiUrl}${data.audioUrl}`);
+      // Fix for ngrok - check if the audioUrl is already a full URL
+      const audioUrl = data.audioUrl.startsWith('http') 
+        ? data.audioUrl 
+        : `${config.core.apiUrl}${data.audioUrl}`;
+        
+      setAudioUrl(audioUrl);
     } catch (error) {
       console.error('TTS generation error:', error);
     } finally {

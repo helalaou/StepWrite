@@ -3,6 +3,7 @@ import { IconButton, CircularProgress } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { keyframes } from '@mui/system';
 import config from '../config';
+import { initializeAudio, playAudio } from '../utils/audioUtils';
 
 /// Pulse animation fr playing state
 const pulseAnimation = keyframes`
@@ -37,6 +38,29 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
+  
+  // Initialize audio on component mount for mobile browsers
+  useEffect(() => {
+    // Only initialize on user interaction
+    const handleUserInteraction = async () => {
+      try {
+        await initializeAudio();
+        // Remove event listeners once initialized
+        document.removeEventListener('click', handleUserInteraction);
+        document.removeEventListener('touchstart', handleUserInteraction);
+      } catch (err) {
+        console.warn('Audio initialization failed:', err);
+      }
+    };
+    
+    document.addEventListener('click', handleUserInteraction, { once: true });
+    document.addEventListener('touchstart', handleUserInteraction, { once: true });
+    
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, []);
 
   useEffect(() => {
     if (autoPlay && text && !isLoading && !isPlaying) {
@@ -50,10 +74,14 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
     try {
       setIsLoading(true);
 
+      // Stop any previous audio
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+        audioRef.current = null;
       }
+
+      // Initialize audio context (important for mobile)
+      await initializeAudio();
 
       const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
         method: 'POST',
@@ -73,22 +101,33 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
         throw new Error('No audio URL in response');
       }
 
-      const audio = new Audio(`${config.core.apiUrl}${data.audioUrl}`);
-      audioRef.current = audio;
-
-      audio.addEventListener('ended', () => {
-        setIsPlaying(false);
-        if (onComplete) onComplete();
-      });
+      // Fix for ngrok - check if the audioUrl is already a full URL
+      const audioUrl = data.audioUrl.startsWith('http') 
+        ? data.audioUrl 
+        : `${config.core.apiUrl}${data.audioUrl}`;
       
-      audio.addEventListener('error', (e) => {
-        setIsPlaying(false);
-        console.error('Audio playback error:', e);
-        if (onComplete) onComplete();
-      });
-
-      await audio.play();
-      setIsPlaying(true);
+      console.log('Playing audio from URL:', audioUrl);
+      
+      // Use our utility to play audio
+      const audio = await playAudio(
+        audioUrl,
+        // On ended callback
+        () => {
+          setIsPlaying(false);
+          if (onComplete) onComplete();
+        },
+        // On error callback
+        (error) => {
+          console.error('Audio playback error:', error);
+          setIsPlaying(false);
+          if (onComplete) onComplete();
+        }
+      );
+      
+      if (audio) {
+        audioRef.current = audio;
+        setIsPlaying(true);
+      }
     } catch (error) {
       console.error('Speech generation error:', error);
       setIsPlaying(false);

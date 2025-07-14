@@ -1,16 +1,36 @@
 // ====== CORE APPLICATION SETTINGS ======
 // These settings are used across the entire application
 
-// Helper function to get environment variables with defaults
-const getEnvVar = (name, defaultValue) => process.env[name] || defaultValue;
+// ====== DEPLOYMENT MODE ====== 
+const DEPLOY_MODE = 'local'; // 'local' or 'ngrok'
+
+// ====== NGROK SETTINGS ======
+
+const NGROK = {  // if DEPLOY_MODE = 'ngrok'
+  SERVER_URL: 'https://64908c6e5c4d.ngrok.app', // (port 3001) - server
+
+  CLIENT_URL: 'https://stepwrite.ngrok.io', // (port 3000) - client
+
+  USE_CLIENT_URL: false // Whether to use client URL for redirects
+};
+
+const getEnvVar = (name, defaultValue) => {
+  return process.env[name] || defaultValue;
+};
+
+const getApiUrl = () => {
+  if (DEPLOY_MODE === 'ngrok') {
+    return NGROK.SERVER_URL;
+  }
+  return 'http://localhost:3001';
+};
 
 const config = {
-  // Core application settings
   core: {
-    // API URLs
-    apiUrl: getEnvVar('REACT_APP_API_URL', 'http://localhost:3001'),
+    deployMode: DEPLOY_MODE,
 
-    // Application metadata
+    ngrok: NGROK,
+    apiUrl: getApiUrl(),
     app: {
       name: 'StepWrite',
       version: '1.0.0',
@@ -51,7 +71,7 @@ Professor Williams`
 
   // ====== EXPERIMENT TRACKING SETTINGS ======
   experiment: {
-    enabled: true,  //enable/disable experiment tracking functionality
+    enabled: false,  //enable/disable experiment tracking functionality
     outputDir: 'experiment_data', // Directory to store experiment output files
     participantIdRequired: true, // Whether participant ID is required before starting
   },
@@ -90,7 +110,7 @@ Professor Williams`
       minEnergy: 0.004,               // Range: 0.001-0.1, Minimum amplitude for valid speech
       significantThreshold: 0.004,    // Range: 0.001-0.1, Threshold for significant audio
       minSignificantRatio: 0.20,       // Range: 0.1-0.5, Minimum ratio of significant samples
-      
+
       // Audio quality settings
       sampleRate: 16000,              // Sample rate for audio processing
       channels: 1,                    // Mono audio
@@ -98,7 +118,7 @@ Professor Williams`
 
     // Controls when to finalize and submit speech
     speech: {
-      finalizeDelay: 3000,            // Range: 3000-10000ms, Wait time before submitting
+      finalizeDelay: 1000,            // Range: 3000-10000ms, Wait time before submitting
       // Controls question replay behavior when no speech is detected
       replay: {
         maxAttempts: Infinity,        // Number of replay attempts before giving up
@@ -228,6 +248,8 @@ Professor Williams`
         },
         modify: {
           phrases: [
+            'modify answer',
+            'modify response',
             'modify question',
             'modify this question',
             'modify this response',

@@ -26,9 +26,20 @@ if (!fs.existsSync(tempDir)) {
 
 // Middleware
 app.use(cors({
-  origin: `http://localhost:${config.client.port}`,
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow all ngrok domains and localhost
+    if (origin.includes('ngrok') || origin === `http://localhost:${config.client.port}`) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
@@ -419,9 +430,19 @@ app.post('/api/tts/generate', async (req, res) => {
     sessionFiles.add(audioPath);
     sessions.set(req.sessionId, sessionFiles);
 
+    // Check if audio file is already cached
     if (config.audio.tts.cacheEnabled && fs.existsSync(audioPath)) {
       const stats = fs.statSync(audioPath);
       if (stats.size > 0) {
+        // Return absolute URL if request is coming from ngrok
+        const isNgrok = req.headers.origin && req.headers.origin.includes('ngrok');
+        if (isNgrok) {
+          const protocol = req.headers['x-forwarded-proto'] || 'http';
+          const host = req.headers.host;
+          return res.json({ 
+            audioUrl: `${protocol}://${host}/tts/${audioFilename}` 
+          });
+        }
         return res.json({ audioUrl: `/tts/${audioFilename}` });  
       }
     }
@@ -433,12 +454,32 @@ app.post('/api/tts/generate', async (req, res) => {
     });
 
     const buffer = Buffer.from(await response.arrayBuffer());
+    
+    // Ensure directory exists
+    if (!fs.existsSync(config.audio.tts.tempDir)) {
+      fs.mkdirSync(config.audio.tts.tempDir, { recursive: true });
+    }
+    
+    // Write the file
     fs.writeFileSync(audioPath, buffer);
-
-    res.json({ audioUrl: `/tts/${audioFilename}` });   
+    
+    // Return absolute URL if request is coming from ngrok
+    const isNgrok = req.headers.origin && req.headers.origin.includes('ngrok');
+    if (isNgrok) {
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const host = req.headers.host;
+      return res.json({ 
+        audioUrl: `${protocol}://${host}/tts/${audioFilename}` 
+      });
+    }
+    
+    return res.json({ audioUrl: `/tts/${audioFilename}` });
   } catch (error) {
     logger.error('TTS generation error:', error);
-    res.status(500).json({ error: 'Failed to generate speech' });
+    res.status(500).json({ 
+      error: 'Failed to generate speech',
+      details: error.message 
+    });
   }
 });
 

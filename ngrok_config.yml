@@ -1,0 +1,10 @@
+version: "2"
+authtoken: 2vMlC6UpzAmbaGEWLkOw7YjBxQc_7whFSbtbH5t8uykwQDHVX
+tunnels:
+  client:
+    addr: 3000
+    proto: http
+    domain: stepwrite.ngrok.io
+  server:
+    addr: 3001
+    proto: http 

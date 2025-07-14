@@ -512,6 +512,31 @@ async function generateCorrection(qaFormat, output, issues) {
   }
 }
 
+async function generateBackgroundDraft(conversationPlanning, toneClassification, context = null) {
+  logger.section('BACKGROUND DRAFT GENERATION', {
+    questionsCount: conversationPlanning.questions.length,
+    answeredQuestions: conversationPlanning.questions.filter(q => q.response && q.response.trim()).length,
+    factCheckingEnabled: config.openai.continuousDrafts.factCheckContinuousDrafts
+  });
+
+  // here we generate the background draft without fact-checking for speed (configurable)
+  if (!config.openai.continuousDrafts.factCheckContinuousDrafts) {
+    const draft = context 
+      ? await generateReplyOutput(context, conversationPlanning, toneClassification)
+      : await generateWriteOutput(conversationPlanning, toneClassification);
+    
+    logger.section('BACKGROUND DRAFT COMPLETE', {
+      draft: draft.substring(0, 200) + '...',
+      length: draft.length
+    });
+    
+    return draft;
+  }
+
+  //if fact-checking is enabled for continuous drafts, use the full process
+  return await generateOutputWithFactCheck(conversationPlanning, toneClassification, context);
+}
+
 async function generateOutputWithFactCheck(conversationPlanning, toneClassification, context = null) {
   logger.section('FACT CHECKING STATUS', {
     enabled: config.openai.factChecking.enabled,
@@ -781,6 +806,7 @@ export {
   generateReplyOutput,
   classifyTextType,
   generateOutputWithFactCheck,
+  generateBackgroundDraft,
   classifyTone,
   generateInitialReplyQuestion,
   performFactCheck,

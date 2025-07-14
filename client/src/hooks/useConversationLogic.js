@@ -196,7 +196,19 @@ export function useConversationLogic(mode = 'write', initialContext = '') {
 
   const handleBackToEditor = () => {
     setShowEditor(true);
-    if (!hasChanges && currentEditorContent) {
+    
+    // Check if there's a background draft available and we have minimum questions answered
+    const answeredQuestions = conversationPlanning.questions?.filter(q => 
+      q.response && q.response.trim() && q.response !== "user has skipped this question"
+    ) || [];
+    const hasMinimumQuestions = answeredQuestions.length >= config.continuousDrafts.minimumQuestionsForDraft;
+    
+    if (conversationPlanning.backgroundDraft && conversationPlanning.backgroundDraft.content && hasMinimumQuestions) {
+      setFinalOutput(conversationPlanning.backgroundDraft.content);
+      if (!editorHistory) {
+        setEditorHistory([conversationPlanning.backgroundDraft.content]);
+      }
+    } else if (!hasChanges && currentEditorContent) {
       setFinalOutput(currentEditorContent);
       if (!editorHistory) {
         setEditorHistory([currentEditorContent]);

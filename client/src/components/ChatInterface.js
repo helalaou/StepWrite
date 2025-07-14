@@ -499,6 +499,54 @@ function ChatInterface({
         }}
       />
 
+      {/* Draft indicator */}
+      {config.continuousDrafts.enabled && 
+       config.continuousDrafts.showDraftIndicator && 
+       currentQuestion.backgroundDraft && 
+       (() => {
+         // check if we have min questions answered
+         const answeredQuestions = currentQuestion.questions?.filter(q => 
+           q.response && q.response.trim() && q.response !== "user has skipped this question"
+         ) || [];
+         return answeredQuestions.length >= config.continuousDrafts.minimumQuestionsForDraft;
+       })() && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '20px',
+            right: '20px',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            fontSize: '0.875rem',
+            fontWeight: 'bold',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
+            animation: 'pulse 2s infinite ease-in-out',
+            '@keyframes pulse': {
+              '0%': { transform: 'scale(1)' },
+              '50%': { transform: 'scale(1.05)' },
+              '100%': { transform: 'scale(1)' }
+            }
+          }}
+        >
+          <Box
+            sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              animation: 'blink 1s infinite'
+            }}
+          />
+          Draft Ready
+        </Box>
+      )}
+
 
       {/* Back to Home Button - Only show on first question */}
       {currentQuestionIndex === 0 && (

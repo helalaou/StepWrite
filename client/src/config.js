@@ -204,7 +204,11 @@ Professor Williams`
         },
         toEditor: {
           phrases: [
-            'next question',
+            'show draft',
+            'show me the draft',
+            'display draft',
+            'i want to see the draft',
+            'i want to see the background draft',
             'go to editor',
             'open editor',
             'move to editor',
@@ -478,7 +482,16 @@ Professor Williams`
       minSignificantPercent: 15,      // Range: 1-50, Lower = accept shorter speech
       sampleSize: 2000                // Range: 500-5000, Higher = more accurate noise detection
     }
-  }
+  },
+
+  // ====== CONTINUOUS DRAFT SETTINGS ======
+  // used for background draft generation (if you change this, you need to change the same settings in the server config)
+  continuousDrafts: {
+    enabled: true,
+    showDraftIndicator: true, // Show indicator when draft is available
+    autoSwitchToEditor: false, //auto switch to editor when draft is ready
+    minimumQuestionsForDraft: 3, // the miinimum number of answered questions required before generating background drafts
+  },
 };
 
 export default config;

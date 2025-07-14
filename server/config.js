@@ -145,6 +145,16 @@ const config = {
       temperature: 0.3,  // low for consistency
       maxTokens: 1000,  
     },
+
+    //Continuous draft generation settings, if you change this, you need to change the same settings in the client config
+    continuousDrafts: {
+      enabled: true,
+      generateAfterEachAnswer: true,
+      generateAfterModifications: true,
+      storeInConversationPlanning: true,
+      factCheckContinuousDrafts: false, // we disable fact-checking for background drafts for speed!
+      minimumQuestionsForDraft: 3, // the minimum number of answered questions required before generating a background drafts
+    },
   },
 
   // logging settings

@@ -10,6 +10,7 @@ import {
   generateReplyOutput,
   classifyTextType,
   generateOutputWithFactCheck,
+  generateBackgroundDraft,
   classifyTone,
   generateInitialReplyQuestion,
   performFactCheck,
@@ -116,6 +117,67 @@ function forceContinue(conversationPlanning) {
   return updateFollowupStatus(conversationPlanning, true);
 }
 
+// generate a background draft and update conversation planning
+async function generateAndStoreDraft(conversationPlanning, context = null) {
+  if (!config.openai.continuousDrafts.enabled) {
+    return conversationPlanning;
+  }
+
+  // case: only generate draft if there are answered questions
+  const answeredQuestions = conversationPlanning.questions.filter(q => 
+    q.response && q.response.trim() && q.response !== "user has skipped this question"
+  );
+
+  if (answeredQuestions.length === 0) {
+    logger.info('No answered questions yet, skipping background draft generation');
+    return conversationPlanning;
+  }
+
+  // case: check if we have minimum required questions answered
+  const minQuestions = config.openai.continuousDrafts.minimumQuestionsForDraft;
+  if (answeredQuestions.length < minQuestions) {
+    logger.info(`Only ${answeredQuestions.length} questions answered, need at least ${minQuestions} for background draft generation`);
+    return conversationPlanning;
+  }
+
+  try {
+    // Generate tone classification if enabled
+    let toneClassification = null;
+    if (config.openai.toneClassification.enabled) {
+      const qaFormat = conversationPlanning.questions
+        .map(q => `Q: ${q.question}\nA: ${q.response}`)
+        .join('\n\n');
+      toneClassification = await classifyTone(qaFormat, context || '');
+    }
+
+    // generate background draft
+    const draft = await generateBackgroundDraft(conversationPlanning, toneClassification, context);
+    
+    //put draft in conversation planning
+    const updatedPlanning = {
+      ...conversationPlanning,
+      backgroundDraft: {
+        content: draft,
+        generatedAt: new Date().toISOString(),
+        questionsCount: conversationPlanning.questions.length,
+        answeredCount: answeredQuestions.length
+      }
+    };
+
+    logger.section('BACKGROUND DRAFT STORED', {
+      questionsCount: conversationPlanning.questions.length,
+      answeredCount: answeredQuestions.length,
+      draftLength: draft.length
+    });
+
+    return updatedPlanning;
+  } catch (error) {
+    logger.error('Error generating background draft:', error);
+    // Return original planning if draft generation fails
+    return conversationPlanning;
+  }
+}
+
 // Submit Answer Route
 app.post('/api/write', async (req, res) => {
   try {
@@ -176,6 +238,11 @@ app.post('/api/write', async (req, res) => {
       // Only force followup if not a finish command
       if (!isFinishCommand) {
         updatedPlanning = updateFollowupStatus(updatedPlanning, true);
+      }
+
+      //generate background draft after modification if enabled
+      if (config.openai.continuousDrafts.enabled && config.openai.continuousDrafts.generateAfterModifications) {
+        updatedPlanning = await generateAndStoreDraft(updatedPlanning, context);
       }
     }
 
@@ -247,13 +314,19 @@ app.post('/api/write', async (req, res) => {
         return;
       }
 
+      //generate background draft after new question if enabled
+      let planningWithDraft = newPlanning;
+      if (config.openai.continuousDrafts.enabled && config.openai.continuousDrafts.generateAfterEachAnswer) {
+        planningWithDraft = await generateAndStoreDraft(newPlanning, context);
+      }
+
       res.json({ 
         question, 
-        conversationPlanning: newPlanning,
+        conversationPlanning: planningWithDraft,
         followup_needed: true 
       });
     } else {
-      // Generate output with fact checking
+      //generate output with fact checking
       logger.section('FINAL OUTPUT GENERATION', {
         factCheckingEnabled: config.openai.factChecking.enabled
       });
@@ -295,7 +368,7 @@ app.post('/api/edit', async (req, res) => {
     const { originalText, conversationPlanning, changedIndex, answer } = req.body;
     logger.info('Processing edit submission:', { originalText, conversationPlanning, changedIndex });
 
-    // If a response was changed, use intelligent dependency analysis
+    // if a response was changed, use intelligent dependency analysis
     let updatedPlanning = { ...conversationPlanning };
     if (typeof changedIndex === 'number') {
       // Store original answer for dependency analysis
@@ -347,6 +420,11 @@ app.post('/api/edit', async (req, res) => {
       }
 
       updatedPlanning = updateFollowupStatus(updatedPlanning, true);
+
+      // generate background draft after modification if enabled
+      if (config.openai.continuousDrafts.enabled && config.openai.continuousDrafts.generateAfterModifications) {
+        updatedPlanning = await generateAndStoreDraft(updatedPlanning, originalText);
+      }
     }
 
     if (isFollowupNeeded(updatedPlanning)) {
@@ -355,9 +433,15 @@ app.post('/api/edit', async (req, res) => {
         updatedPlanning
       );
 
+      // generate background draft after new question if enabled
+      let planningWithDraft = newPlanning;
+      if (config.openai.continuousDrafts.enabled && config.openai.continuousDrafts.generateAfterEachAnswer) {
+        planningWithDraft = await generateAndStoreDraft(newPlanning, originalText);
+      }
+
       res.json({ 
         question, 
-        conversationPlanning: newPlanning,
+        conversationPlanning: planningWithDraft,
         followup_needed: true 
       });
     } else {
@@ -388,6 +472,36 @@ app.post('/api/classify/text-type', async (req, res) => {
     logger.error('Error classifying text type:', error);
     res.status(500).json({ 
       error: 'Failed to classify text type',
+      details: error.message 
+    });
+  }
+});
+
+// Get current background draft
+app.post('/api/draft/current', async (req, res) => {
+  try {
+    const { conversationPlanning } = req.body;
+    
+    if (!conversationPlanning) {
+      return res.status(400).json({ error: 'Conversation planning is required' });
+    }
+
+    if (!conversationPlanning.backgroundDraft) {
+      return res.status(404).json({ error: 'No background draft available' });
+    }
+
+    res.json({
+      draft: conversationPlanning.backgroundDraft.content,
+      metadata: {
+        generatedAt: conversationPlanning.backgroundDraft.generatedAt,
+        questionsCount: conversationPlanning.backgroundDraft.questionsCount,
+        answeredCount: conversationPlanning.backgroundDraft.answeredCount
+      }
+    });
+  } catch (error) {
+    logger.error('Error retrieving background draft:', error);
+    res.status(500).json({ 
+      error: 'Failed to retrieve background draft',
       details: error.message 
     });
   }
@@ -487,6 +601,11 @@ app.post('/api/reply', async (req, res) => {
       if (!isFinishCommand) {
         updatedPlanning = updateFollowupStatus(updatedPlanning, true);
       }
+
+      // Generate background draft after modification if enabled
+      if (config.openai.continuousDrafts.enabled && config.openai.continuousDrafts.generateAfterModifications) {
+        updatedPlanning = await generateAndStoreDraft(updatedPlanning, originalText);
+      }
     }
 
     // for finish command, force output generation regardless of followup status
@@ -557,9 +676,15 @@ app.post('/api/reply', async (req, res) => {
         return;
       }
 
+      // Generate background draft after new question if enabled
+      let planningWithDraft = newPlanning;
+      if (config.openai.continuousDrafts.enabled && config.openai.continuousDrafts.generateAfterEachAnswer) {
+        planningWithDraft = await generateAndStoreDraft(newPlanning, originalText);
+      }
+
       res.json({ 
         question,
-        conversationPlanning: newPlanning,
+        conversationPlanning: planningWithDraft,
         followup_needed: true 
       });
     } else {
@@ -569,9 +694,15 @@ app.post('/api/reply', async (req, res) => {
         updatedPlanning
       );
 
+      // Generate background draft after first question if enabled
+      let planningWithDraft = newPlanning;
+      if (config.openai.continuousDrafts.enabled && config.openai.continuousDrafts.generateAfterEachAnswer) {
+        planningWithDraft = await generateAndStoreDraft(newPlanning, originalText);
+      }
+
       res.json({
         question,
-        conversationPlanning: newPlanning,
+        conversationPlanning: planningWithDraft,
         followup_needed: true
       });
     }

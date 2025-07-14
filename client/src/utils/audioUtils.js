@@ -152,3 +152,51 @@ export const checkAudioRecordingSupport = async () => {
     return false;
   }
 }; 
+
+/**
+ * Filter and clean audio using noise reduction and gating.
+ * @param {Float32Array} rawData - The raw audio data (single channel)
+ * @param {Object} noiseConfig - Noise reduction config (floorMultiplier, maxNoisePercent, minSignificantPercent, sampleSize, volumeThreshold)
+ * @returns {Float32Array|null} Cleaned audio data, or null if rejected as noise
+ */
+export function filterAndCleanAudio(rawData, noiseConfig) {
+  // Calculate amplitudes
+  const amplitudes = rawData.map(Math.abs);
+  const sortedAmplitudes = [...amplitudes].sort((a, b) => a - b);
+
+  // Noise floor (lowest 20%)
+  const noiseFloorIndex = Math.floor(sortedAmplitudes.length * 0.2);
+  const noiseFloor = sortedAmplitudes[noiseFloorIndex];
+  const medianAmplitude = sortedAmplitudes[Math.floor(sortedAmplitudes.length * 0.5)];
+
+  // Percent of samples likely noise
+  const percentNoise = (amplitudes.filter(a => a <= noiseFloor * 2).length / amplitudes.length) * 100;
+  if (percentNoise > noiseConfig.maxNoisePercent) {
+    // Too much noise, reject
+    return null;
+  }
+
+  // Clean the audio
+  const cleanedData = rawData.map(sample => {
+    const amplitude = Math.abs(sample);
+    // Noise gate
+    if (amplitude < noiseFloor * noiseConfig.floorMultiplier) {
+      return 0;
+    }
+    // Noise reduction
+    const scaledSample = sample * (1 - (noiseFloor / amplitude));
+    return scaledSample;
+  });
+
+  // Check for enough significant sound
+  const significantSamples = cleanedData.filter(sample =>
+    Math.abs(sample) > noiseConfig.volumeThreshold
+  ).length;
+  const percentSignificant = (significantSamples / cleanedData.length) * 100;
+  if (percentSignificant < noiseConfig.minSignificantPercent) {
+    // Not enough speech, reject
+    return null;
+  }
+
+  return Float32Array.from(cleanedData);
+} 

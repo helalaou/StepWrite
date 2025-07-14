@@ -12,6 +12,7 @@ import config from '../config';
 import axios from 'axios';
 import { keyframes } from '@emotion/react';
 import { playClickSound } from '../utils/soundUtils';
+import { filterAndCleanAudio } from '../utils/audioUtils';
 
 // Animations
 const pulseAnimation = keyframes`
@@ -1188,19 +1189,29 @@ function HandsFreeInterface({
           }
           setIsSpeechActive(false);
 
+          // === Pre-VAD noise filtering (paused mode) ===
+          const cleanedAudio = filterAndCleanAudio(audio, config.handsFree.noiseReduction);
+          if (!cleanedAudio) {
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('Filtered out as noise by pre-VAD filter (paused mode).');
+            }
+            displayFeedback('Too much noise detected, please try again.', 'error');
+            return;
+          }
+
           // Only process if we're still in paused mode
           if (!isPaused && !isPausedRef.current) return;
 
-          // Check if audio is silent or too short
-          if (checkAudioSilence(audio)) {
+          // Check if audio is silent or too short (after cleaning)
+          if (checkAudioSilence(cleanedAudio)) {
             if (process.env.NODE_ENV !== 'production') {
-              console.log('Audio segment was silent or too short, ignoring');
+              console.log('Audio segment was silent or too short after cleaning, ignoring');
             }
             return;
           }
 
-          // Convert audio to WAV format
-          const wavBuffer = float32ArrayToWav(audio);
+          // Convert cleaned audio to WAV format
+          const wavBuffer = float32ArrayToWav(cleanedAudio);
           const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
 
           // Create form data for API request
@@ -1303,9 +1314,24 @@ function HandsFreeInterface({
           setIsRecording(false);
           setIsProcessing(true);
 
-          if (checkAudioSilence(audio)) {
+          // === Pre-VAD noise filtering ===
+          const cleanedAudio = filterAndCleanAudio(audio, config.handsFree.noiseReduction);
+          if (!cleanedAudio) {
             if (process.env.NODE_ENV !== 'production') {
-              console.log('Silent segment detected – ignoring and waiting for new input');
+              console.log('Filtered out as noise by pre-VAD filter.');
+            }
+            displayFeedback('Too much noise detected, please try again.', 'error');
+            setIsProcessing(false);
+            if (!isModifying && !isModifyingRef.current) {
+              startReplayTimeout();
+            }
+            return;
+          }
+
+          // Use cleaned audio for silence check and transcription
+          if (checkAudioSilence(cleanedAudio)) {
+            if (process.env.NODE_ENV !== 'production') {
+              console.log('Silent segment detected after cleaning – ignoring and waiting for new input');
             }
             setIsProcessing(false);
             if (!isModifying && !isModifyingRef.current) {
@@ -1316,7 +1342,7 @@ function HandsFreeInterface({
 
           try {
             const formData = new FormData();
-            const wavBlob = float32ArrayToWav(audio);
+            const wavBlob = float32ArrayToWav(cleanedAudio);
             formData.append('audio', wavBlob, 'recording.wav');
             const response = await axios.post(
               `${config.core.apiUrl}${config.core.endpoints.transcribe}`,

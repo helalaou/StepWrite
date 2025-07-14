@@ -116,6 +116,15 @@ Professor Williams`
       channels: 1,                    // Mono audio
     },
 
+    // ====== NOISE REDUCTION FOR HANDS-FREE (pre-VAD) ======
+    noiseReduction: {
+      floorMultiplier: 1.15,            
+      maxNoisePercent: 85,             
+      minSignificantPercent: 12,      
+      sampleSize: 2000,                
+      volumeThreshold: 0.012           
+    },
+
     // Controls when to finalize and submit speech
     speech: {
       finalizeDelay: 1000,            // Range: 3000-10000ms, Wait time before submitting

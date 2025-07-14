@@ -1,7 +1,20 @@
 import express from 'express';
 import cors from 'cors';
 import config from './config.js';
-import { generateWriteQuestion, generateWriteOutput, generateEditQuestion, generateEditOutput, classifyTextType, generateReplyQuestion, generateReplyOutput, generateOutputWithFactCheck, classifyTone, generateInitialReplyQuestion } from './openaiModule.js';
+import {
+  generateWriteQuestion,
+  generateWriteOutput,
+  generateEditQuestion,
+  generateEditOutput,
+  generateReplyQuestion,
+  generateReplyOutput,
+  classifyTextType,
+  generateOutputWithFactCheck,
+  classifyTone,
+  generateInitialReplyQuestion,
+  performFactCheck,
+  analyzeDependencies
+} from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -106,14 +119,61 @@ function forceContinue(conversationPlanning) {
 // Submit Answer Route
 app.post('/api/write', async (req, res) => {
   try {
-    const { conversationPlanning, changedIndex, context, isFinishCommand } = req.body;
+    const { conversationPlanning, changedIndex, context, isFinishCommand, answer } = req.body;
     logger.info('Processing submission with conversation planning:', conversationPlanning);
 
-    // if a response was changed, remove subsequent questions
+    // if a response was changed, use intelligent dependency analysis
     let updatedPlanning = { ...conversationPlanning };
     if (typeof changedIndex === 'number') {
-      updatedPlanning.questions = updatedPlanning.questions.slice(0, changedIndex + 1);
-      // oonly force followup if not a finish command
+      // store original answer for dependency analysis
+      const originalAnswer = updatedPlanning.questions[changedIndex]?.response || '';
+      const newAnswer = answer || '';
+      
+      logger.section('DEPENDENCY ANALYSIS START', {
+        changedQuestionId: changedIndex + 1, // Questions are 1-indexed in the prompt
+        originalAnswer,
+        newAnswer,
+        totalQuestions: updatedPlanning.questions.length
+      });
+
+      // Perform dependency analysis
+      const dependencyAnalysis = await analyzeDependencies(
+        originalAnswer,
+        newAnswer,
+        changedIndex + 1, // Convert to 1-indexed for the prompt
+        updatedPlanning.questions
+      );
+
+      logger.section('DEPENDENCY ANALYSIS RESULTS', dependencyAnalysis);
+
+      // Update the changed question with new answer
+      updatedPlanning.questions[changedIndex] = {
+        ...updatedPlanning.questions[changedIndex],
+        response: newAnswer
+      };
+
+      // Remove only the affected questions
+      const affectedQuestionIds = dependencyAnalysis.affectedQuestions
+        .filter(q => q.status === 'AFFECTED')
+        .map(q => q.questionId);
+
+      if (affectedQuestionIds.length > 0) {
+        // Filter out affected questions (convert back to 0-indexed)
+        updatedPlanning.questions = updatedPlanning.questions.filter(q => 
+          q.id <= changedIndex + 1 || !affectedQuestionIds.includes(q.id)
+        );
+        
+        logger.section('QUESTIONS REMOVED', {
+          removedQuestionIds: affectedQuestionIds,
+          remainingQuestions: updatedPlanning.questions.length
+        });
+      } else {
+        logger.section('NO QUESTIONS REMOVED', {
+          message: 'All subsequent questions remain valid'
+        });
+      }
+
+      // Only force followup if not a finish command
       if (!isFinishCommand) {
         updatedPlanning = updateFollowupStatus(updatedPlanning, true);
       }
@@ -232,28 +292,68 @@ app.post('/api/write', async (req, res) => {
 
 app.post('/api/edit', async (req, res) => {
   try {
-    const { originalText, conversationPlanning, changedIndex } = req.body;
+    const { originalText, conversationPlanning, changedIndex, answer } = req.body;
     logger.info('Processing edit submission:', { originalText, conversationPlanning, changedIndex });
 
-    // If a response was changed, remove subsequent questions
+    // If a response was changed, use intelligent dependency analysis
     let updatedPlanning = { ...conversationPlanning };
     if (typeof changedIndex === 'number') {
-      updatedPlanning.questions = updatedPlanning.questions.slice(0, changedIndex + 1);
+      // Store original answer for dependency analysis
+      const originalAnswer = updatedPlanning.questions[changedIndex]?.response || '';
+      const newAnswer = answer || '';
+      
+      logger.section('DEPENDENCY ANALYSIS START (EDIT)', {
+        changedQuestionId: changedIndex + 1, // Questions are 1-indexed in the prompt
+        originalAnswer,
+        newAnswer,
+        totalQuestions: updatedPlanning.questions.length
+      });
+
+      // Perform dependency analysis
+      const dependencyAnalysis = await analyzeDependencies(
+        originalAnswer,
+        newAnswer,
+        changedIndex + 1, // Convert to 1-indexed for the prompt
+        updatedPlanning.questions
+      );
+
+      logger.section('DEPENDENCY ANALYSIS RESULTS (EDIT)', dependencyAnalysis);
+
+      // Update the changed question with new answer
+      updatedPlanning.questions[changedIndex] = {
+        ...updatedPlanning.questions[changedIndex],
+        response: newAnswer
+      };
+
+      // Remove only the affected questions
+      const affectedQuestionIds = dependencyAnalysis.affectedQuestions
+        .filter(q => q.status === 'AFFECTED')
+        .map(q => q.questionId);
+
+      if (affectedQuestionIds.length > 0) {
+        // Filter out affected questions (convert back to 0-indexed)
+        updatedPlanning.questions = updatedPlanning.questions.filter(q => 
+          q.id <= changedIndex + 1 || !affectedQuestionIds.includes(q.id)
+        );
+        
+        logger.section('QUESTIONS REMOVED (EDIT)', {
+          removedQuestionIds: affectedQuestionIds,
+          remainingQuestions: updatedPlanning.questions.length
+        });
+      } else {
+        logger.section('NO QUESTIONS REMOVED (EDIT)', {
+          message: 'All subsequent questions remain valid'
+        });
+      }
+
       updatedPlanning = updateFollowupStatus(updatedPlanning, true);
     }
 
     if (isFollowupNeeded(updatedPlanning)) {
-      const { question, conversationPlanning: newPlanning } = await generateEditQuestion(originalText, updatedPlanning);
-      
-      // If no more questions needed, generate final output
-      if (!isFollowupNeeded(newPlanning)) {
-        const output = await generateEditOutput(originalText, newPlanning);
-        res.json({ 
-          output,
-          followup_needed: false 
-        });
-        return;
-      }
+      const { question, conversationPlanning: newPlanning } = await generateEditQuestion(
+        originalText,
+        updatedPlanning
+      );
 
       res.json({ 
         question, 
@@ -261,16 +361,16 @@ app.post('/api/edit', async (req, res) => {
         followup_needed: true 
       });
     } else {
-      const output = await generateEditOutput(originalText, updatedPlanning);
+      const editedText = await generateEditOutput(originalText, updatedPlanning);
       res.json({ 
-        output,
+        editedText,
         followup_needed: false 
       });
     }
   } catch (error) {
     logger.error('Error processing edit submission:', error);
     res.status(500).json({ 
-      error: 'Failed to process submission',
+      error: 'Failed to process edit submission',
       details: error.message 
     });
   }
@@ -329,50 +429,120 @@ app.post('/api/fact-check', async (req, res) => {
 
 app.post('/api/reply', async (req, res) => {
   try {
-    const { originalText, conversationPlanning, changedIndex, answer } = req.body;
-    logger.section('PROCESSING REPLY SUBMISSION', {
-      originalText,
-      conversationPlanning,
-      changedIndex,
-      answer,
-      questionsCount: conversationPlanning?.questions?.length || 0
-    });
+    const { originalText, conversationPlanning, changedIndex, context, isFinishCommand, answer } = req.body;
+    logger.info('Processing reply submission:', { originalText, conversationPlanning, changedIndex });
 
-    // If a response was changed, remove subsequent questions
-    let updatedConversationPlanning = { ...conversationPlanning };
+    // if a response was changed, use intelligent dependency analysis
+    let updatedPlanning = { ...conversationPlanning };
     if (typeof changedIndex === 'number') {
-      updatedConversationPlanning.questions = conversationPlanning.questions.slice(0, changedIndex + 1);
-      if (changedIndex >= 0) {
-        updatedConversationPlanning.questions[changedIndex].response = answer;
+      // store original answer for dependency analysis
+      const originalAnswer = updatedPlanning.questions[changedIndex]?.response || '';
+      const newAnswer = answer || '';
+      
+      logger.section('DEPENDENCY ANALYSIS START (REPLY)', {
+        changedQuestionId: changedIndex + 1, // Questions are 1-indexed in the prompt
+        originalAnswer,
+        newAnswer,
+        totalQuestions: updatedPlanning.questions.length
+      });
+
+      // perform dependency analysis
+      const dependencyAnalysis = await analyzeDependencies(
+        originalAnswer,
+        newAnswer,
+        changedIndex + 1, // Convert to 1-indexed for the prompt
+        updatedPlanning.questions
+      );
+
+      logger.section('DEPENDENCY ANALYSIS RESULTS (REPLY)', dependencyAnalysis);
+
+      // Update the changed question with new answer
+      updatedPlanning.questions[changedIndex] = {
+        ...updatedPlanning.questions[changedIndex],
+        response: newAnswer
+      };
+
+      // Remove only the affected questions
+      const affectedQuestionIds = dependencyAnalysis.affectedQuestions
+        .filter(q => q.status === 'AFFECTED')
+        .map(q => q.questionId);
+
+      if (affectedQuestionIds.length > 0) {
+        // Filter out affected questions (convert back to 0-indexed)
+        updatedPlanning.questions = updatedPlanning.questions.filter(q => 
+          q.id <= changedIndex + 1 || !affectedQuestionIds.includes(q.id)
+        );
+        
+        logger.section('QUESTIONS REMOVED (REPLY)', {
+          removedQuestionIds: affectedQuestionIds,
+          remainingQuestions: updatedPlanning.questions.length
+        });
+      } else {
+        logger.section('NO QUESTIONS REMOVED (REPLY)', {
+          message: 'All subsequent questions remain valid'
+        });
       }
-      updatedConversationPlanning = updateFollowupStatus(updatedConversationPlanning, true);
+
+      // only force followup if not a finish command
+      if (!isFinishCommand) {
+        updatedPlanning = updateFollowupStatus(updatedPlanning, true);
+      }
     }
 
-    if (isFollowupNeeded(updatedConversationPlanning)) {
+    // for finish command, force output generation regardless of followup status
+    if (isFinishCommand) {
+      logger.section('FORCED OUTPUT GENERATION (FINISH COMMAND - REPLY)', {
+        factCheckingEnabled: config.openai.factChecking.enabled
+      });
+      
+      let toneClassification = null;
+      if (config.openai.toneClassification.enabled) {
+        const qaFormat = updatedPlanning.questions
+          .map(q => `Q: ${q.question}\nA: ${q.response}`)
+          .join('\n\n');
+        toneClassification = await classifyTone(qaFormat, originalText || '');
+      }
+      
+      const output = await generateOutputWithFactCheck(updatedPlanning, toneClassification, originalText);
+      
+      logger.section('GENERATION COMPLETE (REPLY)', {
+        output,
+        length: output.length,
+        characters: output.length,
+        words: output.split(/\s+/).length,
+        ...(toneClassification && { usedTone: toneClassification.tone })
+      });
+      
+      res.json({ 
+        output,
+        followup_needed: false 
+      });
+      return;
+    }
+
+    if (isFollowupNeeded(updatedPlanning)) {
       const { question, conversationPlanning: newPlanning } = await generateReplyQuestion(
         originalText,
-        updatedConversationPlanning
+        updatedPlanning
       );
       
-      // If no more questions needed, generate final output with fact checking
+      //ff no more questions needed, generate final output
       if (!isFollowupNeeded(newPlanning)) {
-        logger.section('FINAL OUTPUT GENERATION', {
+        logger.section('FINAL OUTPUT GENERATION (REPLY)', {
           factCheckingEnabled: config.openai.factChecking.enabled
         });
-
-        // First get tone classification
+        
         let toneClassification = null;
         if (config.openai.toneClassification.enabled) {
           const qaFormat = newPlanning.questions
             .map(q => `Q: ${q.question}\nA: ${q.response}`)
             .join('\n\n');
-          toneClassification = await classifyTone(qaFormat, originalText);
+          toneClassification = await classifyTone(qaFormat, originalText || '');
         }
         
-        // Then generate output with fact checking
         const output = await generateOutputWithFactCheck(newPlanning, toneClassification, originalText);
         
-        logger.section('GENERATION COMPLETE', {
+        logger.section('GENERATION COMPLETE (REPLY)', {
           output,
           length: output.length,
           characters: output.length,
@@ -396,7 +566,7 @@ app.post('/api/reply', async (req, res) => {
       // If no followup needed, start with first question
       const { question, conversationPlanning: newPlanning } = await generateReplyQuestion(
         originalText,
-        updatedConversationPlanning
+        updatedPlanning
       );
 
       res.json({

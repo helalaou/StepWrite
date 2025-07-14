@@ -25,6 +25,7 @@ export function useEditLogic() {
   const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning) => {
     setIsLoading(true);
     try {
+      // send the full conversation planning to backend for intelligent dependency analysis
       const response = await axios.post(`${config.core.apiUrl}/submit-edit-answer`, {
         originalText,
         conversationPlanning: updatedConversationPlanning,
@@ -45,12 +46,30 @@ export function useEditLogic() {
         return null;
       }
 
+      // backend has performed intelligent dependency analysis
+      // we uppdate UI state with the filtered conversation planning
       if (response.data.conversationPlanning) {
         const updatedPlanning = {
           ...response.data.conversationPlanning,
           followup_needed: needsFollowup
         };
+        
+        // clean up question status for questions that were removed by dependency analysis
+        const newQuestionStatus = { ...questionStatus };
+        Object.keys(newQuestionStatus).forEach((key) => {
+          if (parseInt(key, 10) >= updatedPlanning.questions.length) {
+            delete newQuestionStatus[key];
+          }
+        });
+        
         setConversationPlanning(updatedPlanning);
+        setQuestionStatus(newQuestionStatus);
+        
+        // here wee update current question index if it'ss beyond the remaining questions
+        if (currentQuestionIndex >= updatedPlanning.questions.length) {
+          setCurrentQuestionIndex(Math.max(0, updatedPlanning.questions.length - 1));
+        }
+        
         return updatedPlanning.questions.length;
       }
       

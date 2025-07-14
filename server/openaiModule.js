@@ -9,6 +9,7 @@ import { factCheckPrompt, factCorrectionPrompt } from './prompts/factCheckingPro
 import { logger } from './config.js';
 import { toneClassificationPrompt } from './prompts/toneClassificationPrompt.js';
 import memoryManager from './memory/memoryManager.js';
+import { dependencyAnalysisPrompt } from './prompts/dependencyAnalysisPrompt.js';
 
 dotenv.config();
 
@@ -51,7 +52,7 @@ async function generateWriteQuestion(conversationPlanning) {
       rawResponse: responseText
     });
 
-    // Remove markdown code blocks if present
+    // clean
     const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
     logger.section('CLEANED RESPONSE', {
       original: responseText,
@@ -83,12 +84,15 @@ async function generateWriteQuestion(conversationPlanning) {
 
     const { question, followup_needed } = parsedResponse;
     
+    // find the maxisting ID to avoid conflicts when questions are removed
+    const maxId = conversationPlanning.questions.reduce((max, q) => Math.max(max, q.id), 0);
+    
     let updatedConversationPlanning = {
       ...conversationPlanning,
       questions: [
         ...conversationPlanning.questions,
         {
-          id: conversationPlanning.questions.length + 1,
+          id: maxId + 1,
           question,
           response: ''
         }
@@ -189,12 +193,15 @@ async function generateEditQuestion(originalText, conversationPlanning) {
 
     const { question, followup_needed } = parsedResponse;
     
+    //fnd the max existing ID to avoid conflicts when questions are removed
+    const maxId = conversationPlanning.questions.reduce((max, q) => Math.max(max, q.id), 0);
+    
     let updatedConversationPlanning = {
       ...conversationPlanning,
       questions: [
         ...conversationPlanning.questions,
         {
-          id: conversationPlanning.questions.length + 1,
+          id: maxId + 1,
           question,
           response: ''
         }
@@ -351,12 +358,15 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
 
     const { question, followup_needed } = parsedResponse;
     
+    // Find the maximum existing ID to avoid conflicts when questions are removed
+    const maxId = conversationPlanning.questions.reduce((max, q) => Math.max(max, q.id), 0);
+    
     let updatedConversationPlanning = {
       ...conversationPlanning,
       questions: [
         ...conversationPlanning.questions,
         {
-          id: conversationPlanning.questions.length + 1,
+          id: maxId + 1,
           question,
           response: ''
         }
@@ -695,6 +705,73 @@ async function generateInitialReplyQuestion(originalText) {
   }
 }
 
+async function analyzeDependencies(originalAnswer, newAnswer, changedQuestionId, allQuestions) {
+  const prompt = dependencyAnalysisPrompt(originalAnswer, newAnswer, changedQuestionId, allQuestions);
+
+  logger.section('OPENAI REQUEST (Dependency Analysis)', {
+    prompt,
+    model: config.openai.dependencyAnalysis.model,
+    maxTokens: config.openai.dependencyAnalysis.maxTokens,
+    temperature: config.openai.dependencyAnalysis.temperature,
+    changedQuestionId,
+    totalQuestions: allQuestions.length
+  });
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: config.openai.dependencyAnalysis.model,
+      messages: [{ role: 'system', content: prompt }],
+      max_tokens: config.openai.dependencyAnalysis.maxTokens,
+      temperature: config.openai.dependencyAnalysis.temperature,
+    });
+
+    const responseText = completion.choices[0].message.content.trim();
+    logger.section('OPENAI RESPONSE (Dependency Analysis)', {
+      rawResponse: responseText
+    });
+
+    // cleaning json response
+    const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+    
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(cleanedResponse);
+      logger.section('PARSED DEPENDENCY ANALYSIS', parsedResponse);
+    } catch (parseError) {
+      logger.warn('Failed to parse dependency analysis response:', parseError);
+      logger.info('Falling back to conservative approach (invalidate all)');
+      
+      // fallback: mark all subsequent questions as affected
+      const subsequentQuestions = allQuestions.filter(q => q.id > changedQuestionId);
+      parsedResponse = {
+        affectedQuestions: subsequentQuestions.map(q => ({
+          questionId: q.id,
+          question: q.question,
+          status: 'AFFECTED',
+          reasoning: 'Fallback due to parsing error - invalidating for safety'
+        })),
+        summary: 'Parsing failed, using conservative approach'
+      };
+    }
+
+    return parsedResponse;
+  } catch (error) {
+    logger.error('Failed to analyze dependencies:', error);
+    
+    //fallback: mark all subsequent questions as affected
+    const subsequentQuestions = allQuestions.filter(q => q.id > changedQuestionId);
+    return {
+      affectedQuestions: subsequentQuestions.map(q => ({
+        questionId: q.id,
+        question: q.question,
+        status: 'AFFECTED',
+        reasoning: 'Error in analysis - invalidating for safety'
+      })),
+      summary: 'Analysis failed, using conservative approach'
+    };
+  }
+}
+
 export {
   generateWriteQuestion,
   generateWriteOutput,
@@ -706,5 +783,6 @@ export {
   generateOutputWithFactCheck,
   classifyTone,
   generateInitialReplyQuestion,
-  performFactCheck
+  performFactCheck,
+  analyzeDependencies
 }; 

@@ -970,14 +970,7 @@ function HandsFreeInterface({
         response: text
       };
 
-      // Clear subsequent question responses
-      for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
-        updatedQuestions[i] = {
-          ...updatedQuestions[i],
-          response: ''
-        };
-      }
-
+      // Send full conversation planning - let backend handle dependency analysis
       const updatedConversationPlanning = {
         ...currentQuestion,
         questions: updatedQuestions
@@ -1061,12 +1054,10 @@ function HandsFreeInterface({
         response: text
       };
 
-      // Remove all subsequent questions
-      const trimmedQuestions = updatedQuestions.slice(0, currentQuestionIndex + 1);
-
+      // Send full conversation planning - let backend handle dependency analysis
       const updatedConversationPlanning = {
         ...currentQuestion,
-        questions: trimmedQuestions,
+        questions: updatedQuestions,
         followup_needed: true
       };
 
@@ -1083,11 +1074,6 @@ function HandsFreeInterface({
       const newQuestionStatus = { ...questionStatus };
       newQuestionStatus[currentQuestionIndex] = { type: 'answered', answer: text };
       
-      // Also remove status entries for deleted questions
-      for (let i = currentQuestionIndex + 1; i < updatedQuestions.length; i++) {
-        delete newQuestionStatus[i];
-      }
-     
       setQuestionStatus(newQuestionStatus);
       displayFeedback("Answer updated successfully and saved to conversation.", 'success');
       
@@ -1109,7 +1095,6 @@ function HandsFreeInterface({
         // LLM decided to end conversation
         displayFeedback("Moving to editor view...", 'success');
 
-        currentQuestion.questions = trimmedQuestions;
         currentQuestion.followup_needed = false;
 
         setTimeout(() => {

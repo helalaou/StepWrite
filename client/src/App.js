@@ -46,12 +46,12 @@ function WriteFlow() {
   // Add voice-only mode check
   const isHandsFree = config.input.mode === 'HANDS_FREE';
 
-  const handleSendMessage = async (changedIndex, updatedConversationPlanning, isFinishCommand = false) => {
+  const handleSendMessage = async (currentQuestionIndex, updatedConversationPlanning, isFinishCommand = false) => {
     try {
       const result = await submitAnswer(
-        updatedConversationPlanning.questions[changedIndex].id, 
+        updatedConversationPlanning.questions[currentQuestionIndex].id, 
         input,
-        changedIndex,
+        undefined, // changedIndex should be undefined for first-time answers
         updatedConversationPlanning,
         isFinishCommand
       );
@@ -258,12 +258,12 @@ function ReplyFlow() {
     setupReplyFlow();
   }, [setContext, setConversationPlanning, setIsLoading, showIdInput]);
 
-  const handleSendMessage = async (changedIndex, updatedConversationPlanning, isFinishCommand = false) => {
+  const handleSendMessage = async (currentQuestionIndex, updatedConversationPlanning, isFinishCommand = false) => {
     try {
       const result = await chatLogic.submitAnswer(
-        updatedConversationPlanning.questions[changedIndex].id, 
+        updatedConversationPlanning.questions[currentQuestionIndex].id, 
         input,
-        changedIndex,
+        undefined, // changedIndex should be undefined for first-time answers
         updatedConversationPlanning,
         isFinishCommand
       );

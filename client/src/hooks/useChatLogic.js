@@ -86,8 +86,8 @@ export function useChatLogic(mode = 'write') {
             oneSentencePerLine: false
           });
           
+          // Update only the changed answer - let backend handle dependency analysis
           conversationPlanningToSubmit.questions = conversationPlanningToSubmit.questions
-            .slice(0, changedIndex + 1)
             .map((q, idx) => idx === changedIndex ? { ...q, response: answer } : q);
           
           conversationPlanningToSubmit.followup_needed = true;
@@ -170,12 +170,15 @@ export function useChatLogic(mode = 'write') {
         return null;
       }
 
+      // Backend has performed intelligent dependency analysis
+      // Update UI state with the filtered conversation planning
       if (response.data.conversationPlanning) {
         const updatedPlanning = {
           ...response.data.conversationPlanning,
           followup_needed: needsFollowup
         };
 
+        // Clean up question status for questions that were removed by dependency analysis
         const newQuestionStatus = { ...questionStatus };
         Object.keys(newQuestionStatus).forEach((key) => {
           if (parseInt(key, 10) >= updatedPlanning.questions.length) {
@@ -189,6 +192,11 @@ export function useChatLogic(mode = 'write') {
           conversationPlanning: updatedPlanning, 
           questionStatus: newQuestionStatus
         });
+
+        // Update current question index if it's beyond the remaining questions
+        if (currentQuestionIndex >= updatedPlanning.questions.length) {
+          setCurrentQuestionIndex(Math.max(0, updatedPlanning.questions.length - 1));
+        }
 
         return updatedPlanning.questions.length;
       }

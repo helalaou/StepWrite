@@ -138,6 +138,13 @@ const config = {
       temperature: 0.7,
       maxTokens: 100,
     },
+
+    // Dependency analysis settings
+    dependencyAnalysis: {
+      model: 'chatgpt-4o-latest',
+      temperature: 0.3,  // low for consistency
+      maxTokens: 1000,  
+    },
   },
 
   // logging settings

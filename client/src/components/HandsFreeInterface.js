@@ -126,6 +126,7 @@ function HandsFreeInterface({
   const lastSpeechDetectionTimeRef = useRef(0);
   const isModifyingRef = useRef(false);
   const [modifiedQuestions, setModifiedQuestions] = useState(new Set());
+  const [hasAnnouncedDraft, setHasAnnouncedDraft] = useState(false);
 
   // Debug wrapper for question navigation
   const setCurrentQuestionIndexWithDebug = (newIndex) => {
@@ -170,12 +171,76 @@ function HandsFreeInterface({
     lastSpeechDetectionTimeRef.current = Date.now();
   };
 
-  // Display user feedback with auto-hide after 3 seconds
-  const displayFeedback = (message, type = 'default') => {
+  // Play audio feedback for different system states with local caching
+  const playAudioFeedback = async (message, type = 'default') => {
+    if (!message) return;
+    
+    try {
+      // Create a filename based on the message for caching
+      const filename = message
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+        .replace(/\s+/g, '_') // Replace spaces with underscores
+        .substring(0, 30); // Limit length
+      
+      // First, try to get cached audio
+      const cacheResponse = await fetch(`${config.core.apiUrl}/tts/feedback_${filename}.mp3`, {
+        method: 'HEAD' // Just check if file exists
+      });
+      
+      let audioUrl;
+      
+      if (cacheResponse.ok) {
+        // Use cached version
+        audioUrl = `${config.core.apiUrl}/tts/feedback_${filename}.mp3`;
+      } else {
+        // Generate new audio and cache it
+        const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ 
+            text: message,
+            cache_as: `feedback_${filename}.mp3` // Tell server to cache with this name
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.audioUrl) {
+          throw new Error('No audio URL in response');
+        }
+
+        audioUrl = `${config.core.apiUrl}${data.audioUrl}`;
+      }
+
+      const audio = new Audio(audioUrl);
+      
+      // Set lower volume for feedback sounds so they don't interfere with main TTS
+      audio.volume = 0.7;
+      
+      await audio.play();
+    } catch (error) {
+      console.warn('Audio feedback failed:', error);
+    }
+  };
+
+  // Display user feedback with audio and auto-hide after 3 seconds
+  const displayFeedback = (message, type = 'default', playAudio = true) => {
     setRecognitionFeedback(message);
     setFeedbackType(type);
     setShowFeedback(true);
     setTimeout(() => setShowFeedback(false), 3000);
+    
+    // Play audio feedback for important system states
+    if (playAudio && (type === 'command' || type === 'success' || type === 'error')) {
+      playAudioFeedback(message, type);
+    }
   };
 
   // Navigation controls remain unchanged
@@ -302,6 +367,24 @@ function HandsFreeInterface({
       vadRef.current = null;
     }
   }, [currentQuestionIndex, currentQuestion]);
+
+  // Monitor draft availability and provide audio feedback (only once)
+  useEffect(() => {
+    if (!currentQuestion?.backgroundDraft || hasAnnouncedDraft) return;
+    
+    // Check if we have minimum questions answered for draft
+    const answeredQuestions = currentQuestion.questions?.filter(q => 
+      q.response && q.response.trim() && q.response !== "user has skipped this question"
+    ) || [];
+    
+    if (answeredQuestions.length >= config.continuousDrafts.minimumQuestionsForDraft) {
+      // Provide audio feedback that draft is ready (only once)
+      setTimeout(() => {
+        playAudioFeedback("Draft ready!");
+        setHasAnnouncedDraft(true);
+      }, 1000); // Delay to avoid conflicts with other audio
+    }
+  }, [currentQuestion?.backgroundDraft, hasAnnouncedDraft]);
 
   // Detect silent audio to avoid processing background noise
   const checkAudioSilence = (audio) => {
@@ -635,7 +718,7 @@ function HandsFreeInterface({
       case 'pause':
         setIsPaused(true);
         isPausedRef.current = true;
-        displayFeedback(config.handsFree.ui.messages.paused, 'command');
+        displayFeedback(config.handsFree.ui.messages.paused, 'command'); 
 
         // Stop VAD/speech recognition
         if (vadRef.current) {
@@ -652,7 +735,7 @@ function HandsFreeInterface({
       case 'continue':
         setIsPaused(false);
         isPausedRef.current = false;
-        displayFeedback("Resuming writing...", 'command');
+        displayFeedback("Writing resumed.", 'command'); 
 
         // Restart normal recording
         if (vadRef.current) {
@@ -666,7 +749,7 @@ function HandsFreeInterface({
         break;
 
       case 'finish':
-        displayFeedback(config.handsFree.commands.handsFree.finish.response, 'command');
+        displayFeedback(config.handsFree.commands.handsFree.finish.response, 'command'); 
 
         // use static txt as current answer for question we are on
         const staticAnswer = config.handsFree.commands.handsFree.finish.staticAnswer;
@@ -688,7 +771,7 @@ function HandsFreeInterface({
           [currentQuestionIndex]: { type: 'answered', answer: staticAnswer }
         });
 
-        // Stop recording and clean up BEFORE submitting the answer
+        // stop recording and clean up BEFORE submitting the answer
         if (vadRef.current) {
           await vadRef.current.destroy();
           vadRef.current = null;
@@ -749,8 +832,7 @@ function HandsFreeInterface({
         } else {
           // If we're already in editor view, we'd need access to end experiment button
           // This part would need to be handled in TextEditor component
-          displayFeedback("Please say 'end writing' in editor view", 'command');
-        }
+         }
         break;
 
       case 'skip':
@@ -780,7 +862,7 @@ function HandsFreeInterface({
         isModifyingRef.current = true;
         segmentsRef.current = [];
         setMergedSpeech('');
-        displayFeedback("Now modifying. Speak your new answer.", 'command');
+        displayFeedback("Now modifying. Speak your new answer.", 'command'); 
 
         setModifiedQuestions(prev => {
           const updated = new Set(prev);
@@ -799,18 +881,17 @@ function HandsFreeInterface({
 
       case 'next':
         if (currentQuestionIndex < currentQuestion.questions.length - 1) {
-          displayFeedback("Moving to next question...", 'command');
-          setCurrentQuestionIndex(currentQuestionIndex + 1);
+           setCurrentQuestionIndex(currentQuestionIndex + 1);
         } else {
           if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
             !hasChanges && cameFromEditor && onBackToEditor) {
-            displayFeedback("Moving to editor view...", 'command');
+            displayFeedback("Moving to editor view...", 'command'); 
             onBackToEditor();
           } else {
-            displayFeedback("No more questions available yet", 'error');
+            displayFeedback("No more questions available yet", 'error'); 
             setShowFeedback(false);
             setTimeout(() => {
-              displayFeedback("No more questions available yet", 'error');
+              displayFeedback("No more questions available yet", 'error'); 
             }, 50);
           }
         }
@@ -818,10 +899,10 @@ function HandsFreeInterface({
 
       case 'previous':
         if (currentQuestionIndex > 0) {
-          displayFeedback("Moving to previous question...", 'command');
+          displayFeedback("Moving to previous question...", 'command'); 
           setCurrentQuestionIndex(currentQuestionIndex - 1);
         } else {
-          displayFeedback("This is the first question", 'error');
+          displayFeedback("This is the first question!", 'error'); 
         }
         break;
 
@@ -838,7 +919,7 @@ function HandsFreeInterface({
         break;
 
       case 'toEditor':
-        displayFeedback("Going to editor...", 'command');
+        displayFeedback("Editor is open.", 'command');
         if (onBackToEditor) {
           onBackToEditor();
         }
@@ -863,7 +944,6 @@ function HandsFreeInterface({
     updateSpeechDetectionTime();
 
     setIsPreviewMode(true);
-    displayFeedback("Saving your answer...", 'success');
 
     await new Promise(resolve => setTimeout(resolve, 800));
 
@@ -996,9 +1076,7 @@ function HandsFreeInterface({
       if (!isModifying && newLength && currentQuestionIndex < newLength - 1) {
         if (process.env.NODE_ENV !== 'production') {
           console.log(`Auto-advancing to next question (index ${currentQuestionIndex + 1})`);
-        }
-
-        displayFeedback("Answer saved. Moving to next question.", 'success');
+        } 
 
         try {
           const navigationSound = new Audio('/click.mp3');
@@ -1074,9 +1152,7 @@ function HandsFreeInterface({
       const newQuestionStatus = { ...questionStatus };
       newQuestionStatus[currentQuestionIndex] = { type: 'answered', answer: text };
       
-      setQuestionStatus(newQuestionStatus);
-      displayFeedback("Answer updated successfully and saved to conversation.", 'success');
-      
+      setQuestionStatus(newQuestionStatus); 
       // If no followup needed (transitioning to editor), update time tracking
       if (newLength === null) {
         // Calculate writing time
@@ -1305,7 +1381,7 @@ function HandsFreeInterface({
             if (process.env.NODE_ENV !== 'production') {
               console.log('Filtered out as noise by pre-VAD filter.');
             }
-            displayFeedback('Too much noise detected, please try again.', 'error');
+            displayFeedback('Too much noise detected, please try again.', 'error'); 
             setIsProcessing(false);
             if (!isModifying && !isModifyingRef.current) {
               startReplayTimeout();
@@ -1500,6 +1576,7 @@ function HandsFreeInterface({
             }
           } catch (err) {
             console.error('Transcription error:', err);
+            displayFeedback('Speech recognition failed, please try again.', 'error'); 
             if (!isModifying && !isModifyingRef.current) {
               startReplayTimeout();
             }

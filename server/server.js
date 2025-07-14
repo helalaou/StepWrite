@@ -717,19 +717,29 @@ app.post('/api/reply', async (req, res) => {
 
 // TTS endpoint
 app.post('/api/tts/generate', async (req, res) => {
-  const { text } = req.body;
+  const { text, cache_as } = req.body;
   if (!text) {
     return res.status(400).json({ error: 'Text is required' });
   }
 
   try {
-    const hash = crypto.createHash('md5').update(text).digest('hex');
-    const audioFilename = `${hash}.${config.audio.tts.format}`;
+    // use custom filename for feedback caching or default hash-based filename
+    let audioFilename;
+    if (cache_as) {
+      audioFilename = cache_as;
+    } else {
+      const hash = crypto.createHash('md5').update(text).digest('hex');
+      audioFilename = `${hash}.${config.audio.tts.format}`;
+    }
+    
     const audioPath = path.join(config.audio.tts.tempDir, audioFilename);
 
-    const sessionFiles = sessions.get(req.sessionId) || new Set();
-    sessionFiles.add(audioPath);
-    sessions.set(req.sessionId, sessionFiles);
+    // only track regular TTS files in sessions, not feedback files (they should persist)
+    if (!cache_as) {
+      const sessionFiles = sessions.get(req.sessionId) || new Set();
+      sessionFiles.add(audioPath);
+      sessions.set(req.sessionId, sessionFiles);
+    }
 
     // Check if audio file is already cached
     if (config.audio.tts.cacheEnabled && fs.existsSync(audioPath)) {

@@ -342,7 +342,7 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
       if (questionMatch && followupMatch) {
         parsedResponse = {
           question: questionMatch[1],
-          followup_needed: followupMatch[1] === 'true'
+          followup_needed: followupMatch[1] === 'true' 
         };
       } else {
         throw new Error('Could not parse response into required format');

@@ -1,0 +1,47 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "StepWrite: Adaptive Planning for Speech-Driven Text Generation"
+type: software
+authors:
+  - family-names: "El Alaoui"
+    given-names: "Hamza"
+    email: helalaou@cs.cmu.edu
+  - family-names: "Taheri"
+    given-names: "Atieh"
+  - family-names: "Peng"
+    given-names: "Yi-Hao"
+  - family-names: "Bigham"
+    given-names: "Jeffrey P."
+repository-code: "https://github.com/helalaou/StepWrite"
+url: "https://www.cs.cmu.edu/~helalaou/publications/stepwrite/"
+keywords:
+  - speech interfaces
+  - text generation
+  - large language models
+  - hands-free interaction
+preferred-citation:
+  type: conference-paper
+  title: "StepWrite: Adaptive Planning for Speech-Driven Text Generation"
+  authors:
+    - family-names: "El Alaoui"
+      given-names: "Hamza"
+    - family-names: "Taheri"
+      given-names: "Atieh"
+    - family-names: "Peng"
+      given-names: "Yi-Hao"
+    - family-names: "Bigham"
+      given-names: "Jeffrey P."
+  collection-title: "Proceedings of the 38th Annual ACM Symposium on User Interface Software and Technology"
+  conference:
+    name: "UIST '25"
+  publisher:
+    name: "ACM"
+  year: 2025
+  doi: "10.1145/3746059.3747610"
+  url: "https://doi.org/10.1145/3746059.3747610"
+  identifiers:
+    - type: doi
+      value: "10.1145/3746059.3747610"
+    - type: url
+      value: "https://arxiv.org/abs/2508.04011"
+      description: "arXiv preprint"

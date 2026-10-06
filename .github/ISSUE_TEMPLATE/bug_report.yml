@@ -1,0 +1,44 @@
+name: Bug report
+description: Something is not working as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open http://localhost:3000 and choose Start New
+        2. Answer …
+        3. See error …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+  - type: dropdown
+    id: input-mode
+    attributes:
+      label: Input mode
+      options:
+        - HANDS_FREE (default)
+        - TEXT_ONLY
+        - TEXT_AND_VOICE
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, device and Node.js version
+      placeholder: e.g. Chrome 141 on macOS, Node.js 22
+  - type: textarea
+    id: logs
+    attributes:
+      label: Browser console or server logs
+      description: Server logs are written to server/temp/app.log. Remove any API keys or personal data first.
+      render: text

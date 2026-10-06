@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: StepWrite project page
+    url: https://www.cs.cmu.edu/~helalaou/publications/stepwrite/
+    about: Paper, video and project details.
+  - name: UIST '25 paper
+    url: https://doi.org/10.1145/3746059.3747610
+    about: For questions about the research, see the paper or contact the authors.

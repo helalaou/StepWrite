@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, IconButton, Paper } from '@mui/material';
+import { Box, Typography, IconButton, Paper, useMediaQuery } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EditIcon from '@mui/icons-material/Edit';
@@ -101,6 +101,9 @@ function HandsFreeInterface({
   setInput,
   mode,
 }) {
+  // Watch-sized screens get a compact single-column layout; navigation stays voice-driven.
+  const isWatch = useMediaQuery('(max-width:360px)');
+
   const navigate = useNavigate();
 
   // UI state indicators
@@ -1755,6 +1758,7 @@ function HandsFreeInterface({
         src="/images/logo.png"
         alt="StepWrite Logo"
         sx={{
+          display: isWatch ? 'none' : 'block',
           position: 'absolute',
           top: '15px',
           left: '20px',
@@ -1945,7 +1949,7 @@ function HandsFreeInterface({
       )}
 
       {/* Navigation controls */}
-      {currentQuestionIndex === 0 && (
+      {currentQuestionIndex === 0 && !isWatch && (
         <NavigationButton
           direction="left"
           onClick={() => navigate('/')}
@@ -1962,6 +1966,7 @@ function HandsFreeInterface({
             tooltip="Back to Editor"
           />
         )}
+      {!isWatch && (<>
       <Box sx={getNavStyles(true)}>
         <IconButton
           onClick={handlePrevClick}
@@ -1980,26 +1985,28 @@ function HandsFreeInterface({
           <ArrowForwardIcon />
         </IconButton>
       </Box>
+      </>)}
       <Box
         sx={{
           width: '100%',
           maxWidth: '1700px',
-          padding: { xs: '0 60px', sm: '0 15%' },
+          padding: isWatch ? '0 10px' : { xs: '0 60px', sm: '0 15%' },
           boxSizing: 'border-box',
           position: 'relative',
           zIndex: 1
         }}
       >
         {/* Current question display */}
-        <Box sx={{ position: 'relative', width: '100%', mb: 4 }}>
+        <Box sx={{ position: 'relative', width: '100%', mb: isWatch ? 1.5 : 4 }}>
           <Typography
             variant="h4"
             sx={{
-              fontSize: { xs: '24pt', sm: '32pt', md: '42pt' },
+              fontSize: isWatch ? '15pt' : { xs: '24pt', sm: '32pt', md: '42pt' },
+              lineHeight: isWatch ? 1.25 : undefined,
               textAlign: 'center',
               transition: 'all 0.3s ease',
               width: '100%',
-              pr: { xs: '32px', sm: '48px' }
+              pr: isWatch ? '30px' : { xs: '32px', sm: '48px' }
             }}
           >
             {currentQuestion.questions[currentQuestionIndex]?.question || ''}
@@ -2023,8 +2030,8 @@ function HandsFreeInterface({
         <Paper
           elevation={isModifying ? 4 : 1}
           sx={{
-            mt: 4,
-            p: 2,
+            mt: isWatch ? 1 : 4,
+            p: isWatch ? 0.5 : 2,
             position: 'relative',
             backgroundColor: isModifying ? '#fff' : 'rgba(0, 0, 0, 0.04)',
             transition: 'all 0.3s ease',
@@ -2038,7 +2045,7 @@ function HandsFreeInterface({
               : isModifying
                 ? '2px solid #1976d2'
                 : '1px solid rgba(0, 0, 0, 0.12)',
-            minHeight: '100px',
+            minHeight: isWatch ? '72px' : '100px',
             display: 'flex',
             flexDirection: 'column',
             width: '100%',
@@ -2071,10 +2078,11 @@ function HandsFreeInterface({
           <Typography
             variant="body1"
             sx={{
-              p: 2,
+              p: isWatch ? 1 : 2,
+              pb: isWatch ? 4 : 2,
               color: (isModifying || isPreviewMode) ? 'text.primary' : 'text.secondary',
               transition: 'all 0.3s ease',
-              fontSize: { xs: '0.9rem', sm: '1rem' },
+              fontSize: isWatch ? '0.8rem' : { xs: '0.9rem', sm: '1rem' },
               lineHeight: 1.6,
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
@@ -2189,9 +2197,9 @@ function HandsFreeInterface({
         </Paper>
 
         {/* Audio visualizer and status */}
-        <Box sx={{ mt: 3, textAlign: 'center' }}>
+        <Box sx={{ mt: isWatch ? 1.5 : 3, textAlign: 'center' }}>
           {!isPaused && <AudioVisualizer isSpeechDetected={isSpeechActive} />}
-          <Typography sx={{ mb: 2 }}>
+          <Typography sx={{ mb: 2, fontSize: isWatch ? '0.8rem' : undefined }}>
             {isProcessing
               ? 'Processing...'
               : isRecording
@@ -2208,13 +2216,14 @@ function HandsFreeInterface({
         text={recognitionFeedback}
         isVisible={showFeedback}
         type={feedbackType}
+        compact={isWatch}
       />
     </Box>
   );
 }
 
 // Visual feedback component for speech recognition and commands
-const RecognitionFeedback = ({ text, isVisible, type = 'default' }) => {
+const RecognitionFeedback = ({ text, isVisible, type = 'default', compact = false }) => {
   // Select background color based on feedback type
   const getBackgroundColor = () => {
     switch (type) {
@@ -2251,7 +2260,8 @@ const RecognitionFeedback = ({ text, isVisible, type = 'default' }) => {
     <Box
       sx={{
         position: 'fixed',
-        bottom: 40,
+        bottom: compact ? 24 : 40,
+        width: compact ? 'calc(100vw - 32px)' : 'auto',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 1000,
@@ -2263,8 +2273,8 @@ const RecognitionFeedback = ({ text, isVisible, type = 'default' }) => {
       <Paper
         elevation={3}
         sx={{
-          px: 3,
-          py: 2,
+          px: compact ? 1.5 : 3,
+          py: compact ? 1 : 2,
           backgroundColor: getBackgroundColor(),
           backdropFilter: 'blur(8px)',
           borderRadius: 2,
@@ -2282,6 +2292,7 @@ const RecognitionFeedback = ({ text, isVisible, type = 'default' }) => {
           sx={{
             color: 'text.primary',
             fontWeight: 500,
+            fontSize: compact ? '0.8rem' : undefined,
             display: 'flex',
             alignItems: 'center',
           }}

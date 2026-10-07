@@ -92,13 +92,21 @@ and each command has many variants in [`client/src/config.js`](client/src/config
 | Editor    | "go back to questions"                    | Return to the question flow                                   |
 | Editor    | "read it again" / "stop reading"          | Replay or stop the spoken text                                |
 
-### Mobile
+### Mobile and smartwatch
 
 The interface is responsive and works in a phone browser (for example over an
 [ngrok HTTPS tunnel](#remote-access-with-ngrok)).
 
 <p align="center">
   <img src="docs/assets/mobile.png" alt="StepWrite question flow and editor on a phone" width="560" />
+</p>
+
+StepWrite also works in a smartwatch browser. On watch-sized screens the interface switches to a
+compact layout, and because the whole flow is driven by voice, a text can be composed entirely from
+the wrist.
+
+<p align="center">
+  <img src="docs/assets/watch.png" alt="StepWrite asking a question and transcribing an answer on a smartwatch" width="520" />
 </p>
 
 ## Architecture

@@ -1,0 +1,12 @@
+# Copy to ngrok_config.yml (git-ignored) and fill in your own token and domain:
+#   ngrok start --all --config ngrok_config.yml
+version: "2"
+authtoken: YOUR_NGROK_AUTHTOKEN
+tunnels:
+  client:
+    addr: 3000
+    proto: http
+    domain: your-domain.ngrok.io
+  server:
+    addr: 3001
+    proto: http

@@ -220,7 +220,7 @@ config files and should be kept in sync.
 
 To use StepWrite from a phone, expose both ports over HTTPS. Set `DEPLOY_MODE = 'ngrok'` and the
 `NGROK.SERVER_URL` / `NGROK.CLIENT_URL` values in [`client/src/config.js`](client/src/config.js),
-and start tunnels for ports 3000 and 3001 (see [`ngrok_config.yml`](ngrok_config.yml) for the
+and start tunnels for ports 3000 and 3001 (copy [`ngrok_config.example.yml`](ngrok_config.example.yml) to the git-ignored `ngrok_config.yml` for the
 tunnel layout; use your own ngrok auth token and domain). The server accepts requests from ngrok
 origins.
 
@@ -263,7 +263,7 @@ directory is git-ignored.
 │   └── .env.template
 ├── docs/assets/                screenshots
 ├── install.sh, run.sh, deploy.sh
-└── ngrok_config.yml
+└── ngrok_config.example.yml
 ```
 
 ## Citation

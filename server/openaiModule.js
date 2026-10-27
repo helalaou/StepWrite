@@ -566,6 +566,9 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
   return output;
 }
 
+// Used when classification fails; must be a key of config.openai.toneClassification.categories.
+const DEFAULT_TONE = 'FORMAL';
+
 async function classifyTone(qaFormat, originalText = '') {
   // Process template variables in the original text if provided
   let processedText = originalText;
@@ -588,37 +591,32 @@ async function classifyTone(qaFormat, originalText = '') {
     extractedRecipientName: extractedName
   });
 
+  const fallback = (reason) => ({ tone: DEFAULT_TONE, confidence: 0, reasoning: reason });
+
+  // Tone only steers wording, so a failed classification should never fail the request.
   try {
     const responseText = await complete(config.openai.toneClassification, prompt);
     const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
-    
-    try {
-      const parsedResponse = JSON.parse(cleanedResponse);
-      logger.section('TONE CLASSIFICATION RESULT', {
-        tone: parsedResponse.tone,
-        confidence: parsedResponse.confidence,
-        reasoning: parsedResponse.reasoning,
-        rawResponse: responseText
-      });
-      return parsedResponse;
-    } catch (parseError) {
-      logger.error('Error parsing tone classification response:', {
-        error: parseError,
-        responseText,
-        cleanedResponse
-      });
-      return {
-        tone: 'FORMAL_PROFESSIONAL',
-        confidence: 1.0,
-        reasoning: 'Default tone due to parsing error'
-      };
+    const parsedResponse = JSON.parse(cleanedResponse);
+
+    if (!(parsedResponse.tone in config.openai.toneClassification.categories)) {
+      logger.warn(`Unknown tone "${parsedResponse.tone}", using ${DEFAULT_TONE}`);
+      return fallback(`Model returned unknown tone "${parsedResponse.tone}"`);
     }
+
+    logger.section('TONE CLASSIFICATION RESULT', {
+      tone: parsedResponse.tone,
+      confidence: parsedResponse.confidence,
+      reasoning: parsedResponse.reasoning,
+      rawResponse: responseText
+    });
+    return parsedResponse;
   } catch (error) {
-    logger.error('Error in tone classification:', {
+    logger.error('Tone classification failed, using default tone:', {
       error: error.message,
       stack: error.stack
     });
-    throw error;
+    return fallback('Default tone due to classification error');
   }
 }
 

@@ -447,8 +447,7 @@ async function performFactCheck(qaFormat, output) {
     const completion = await openai.chat.completions.create({
       model: config.openai.factChecking.check.model,
       messages: [{ role: 'system', content: prompt }],
-      temperature: config.openai.factChecking.check.temperature,
-      max_tokens: config.openai.factChecking.check.maxTokens,
+  
     });
 
     const responseText = completion.choices[0].message.content.trim();
@@ -501,8 +500,6 @@ async function generateCorrection(qaFormat, output, issues) {
     const completion = await openai.chat.completions.create({
       model: config.openai.factChecking.correction.model,
       messages: [{ role: 'system', content: prompt }],
-      temperature: config.openai.factChecking.correction.temperature,
-      max_tokens: config.openai.factChecking.correction.maxTokens,
     });
 
     return completion.choices[0].message.content.trim();

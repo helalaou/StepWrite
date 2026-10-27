@@ -38,12 +38,12 @@ const config = {
     // Edit flow settings
     edit: {
       question: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4.1-mini-2025-04-14',
         temperature: 0.7,
         maxTokens: 100,
       },
       output: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4.1-mini-2025-04-14',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -52,12 +52,12 @@ const config = {
     // Reply flow settings
     reply: {
       question: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4.1-mini-2025-04-14',
         temperature: 0.7,
         maxTokens: 100,
       },
       output: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4.1-mini-2025-04-14',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -77,14 +77,11 @@ const config = {
       enabled: true,
       maxAttempts: 5,
       check: {
-        model: 'chatgpt-4o-latest',
-        temperature: 0.3,
-        maxTokens: 10000,
+        model: 'o4-mini-2025-04-16',
       },
       correction: {
-        model: 'chatgpt-4o-latest',
-        temperature: 0.7,
-        maxTokens: 10000,
+        model: 'o4-mini-2025-04-16',
+     
       }
     },
 
@@ -95,7 +92,7 @@ const config = {
     },
 
     toneClassification: {
-      model: 'chatgpt-4o-latest',
+      model: 'gpt-4.1-2025-04-14',
       temperature: 0.5,
       maxTokens: 200,
       enabled: true,
@@ -141,7 +138,7 @@ const config = {
 
     // Dependency analysis settings
     dependencyAnalysis: {
-      model: 'chatgpt-4o-latest',
+      model: 'o3-2025-04-16',
       temperature: 0.3,  // low for consistency
       maxTokens: 1000,  
     },

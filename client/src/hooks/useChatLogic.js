@@ -110,6 +110,12 @@ export function useChatLogic(mode = 'write') {
         isFinishCommand
       };
 
+      // The submitted planning already holds the new answer, so send the one the
+      // server last saw (still in hook state) for dependency analysis.
+      if (typeof changedIndex === 'number') {
+        payload.previousAnswer = conversationPlanning.questions[changedIndex]?.response || '';
+      }
+
       // Add context for reply mode
       if (mode === 'reply' && context) {
         payload.context = context;

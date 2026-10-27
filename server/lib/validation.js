@@ -1,5 +1,5 @@
 // Returns an error message for a malformed conversation turn, or null if it is usable.
-export function validateTurnRequest({ conversationPlanning, changedIndex, answer }) {
+export function validateTurnRequest({ conversationPlanning, changedIndex, answer, previousAnswer }) {
   const questions = conversationPlanning?.questions;
   if (!Array.isArray(questions) || questions.length === 0) {
     return 'conversationPlanning.questions must be a non-empty array';
@@ -19,6 +19,9 @@ export function validateTurnRequest({ conversationPlanning, changedIndex, answer
     }
     if (answer !== undefined && typeof answer !== 'string') {
       return 'answer must be a string';
+    }
+    if (previousAnswer !== undefined && typeof previousAnswer !== 'string') {
+      return 'previousAnswer must be a string';
     }
   }
 

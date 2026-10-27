@@ -36,43 +36,58 @@ async function classifyToneIfEnabled(conversationPlanning, context) {
 }
 
 // Store a changed answer and drop the later questions that depended on the old one.
-async function applyAnswerChange(conversationPlanning, changedIndex, newAnswer) {
+// `previousAnswer` is the answer the server last saw; the submitted planning
+// already contains the new answer, so it cannot be recovered from there.
+async function applyAnswerChange(conversationPlanning, changedIndex, newAnswer, previousAnswer) {
   const questions = [...conversationPlanning.questions];
-  const originalAnswer = questions[changedIndex]?.response || '';
+  const changedQuestion = questions[changedIndex];
+  const originalAnswer = typeof previousAnswer === 'string'
+    ? previousAnswer
+    : (changedQuestion.response || '');
+
+  questions[changedIndex] = { ...changedQuestion, response: newAnswer };
+
+  const laterQuestionCount = questions.length - changedIndex - 1;
+  if (laterQuestionCount === 0 || originalAnswer === newAnswer) {
+    logger.info(`Skipping dependency analysis for question ${changedQuestion.id}: ${laterQuestionCount === 0 ? 'no later questions' : 'answer unchanged'}`);
+    return { ...conversationPlanning, questions };
+  }
 
   logger.section('DEPENDENCY ANALYSIS START', {
-    changedQuestionId: changedIndex + 1, // Questions are 1-indexed in the prompt
+    changedQuestionId: changedQuestion.id,
     originalAnswer,
     newAnswer,
     totalQuestions: questions.length
   });
 
+  // Question ids are not positions once earlier questions have been removed,
+  // so the prompt and the filter below both work with ids.
   const dependencyAnalysis = await analyzeDependencies(
     originalAnswer,
     newAnswer,
-    changedIndex + 1, // Convert to 1-indexed for the prompt
+    changedQuestion.id,
     questions
   );
 
   logger.section('DEPENDENCY ANALYSIS RESULTS', dependencyAnalysis);
 
-  questions[changedIndex] = { ...questions[changedIndex], response: newAnswer };
+  const affectedQuestionIds = new Set(
+    (dependencyAnalysis.affectedQuestions || [])
+      .filter(q => q.status === 'AFFECTED')
+      .map(q => q.questionId)
+  );
 
-  const affectedQuestionIds = dependencyAnalysis.affectedQuestions
-    .filter(q => q.status === 'AFFECTED')
-    .map(q => q.questionId);
-
-  if (affectedQuestionIds.length === 0) {
+  if (affectedQuestionIds.size === 0) {
     logger.section('NO QUESTIONS REMOVED', { message: 'All subsequent questions remain valid' });
     return { ...conversationPlanning, questions };
   }
 
-  const remaining = questions.filter(q =>
-    q.id <= changedIndex + 1 || !affectedQuestionIds.includes(q.id)
+  const remaining = questions.filter((q, index) =>
+    index <= changedIndex || !affectedQuestionIds.has(q.id)
   );
 
   logger.section('QUESTIONS REMOVED', {
-    removedQuestionIds: affectedQuestionIds,
+    removedQuestionIds: [...affectedQuestionIds],
     remainingQuestions: remaining.length
   });
 
@@ -161,11 +176,11 @@ async function finish(flow, conversationPlanning) {
 
 // One conversation turn: apply an edited answer if there is one, then either
 // ask the next question or produce the final text.
-export async function runConversationTurn(flow, { conversationPlanning, changedIndex, answer, isFinishCommand }) {
+export async function runConversationTurn(flow, { conversationPlanning, changedIndex, answer, previousAnswer, isFinishCommand }) {
   let planning = { ...conversationPlanning };
 
   if (typeof changedIndex === 'number') {
-    planning = await applyAnswerChange(planning, changedIndex, answer || '');
+    planning = await applyAnswerChange(planning, changedIndex, answer || '', previousAnswer);
 
     if (!isFinishCommand) {
       planning = setFollowup(planning, true);

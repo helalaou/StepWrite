@@ -187,7 +187,7 @@ Open <http://localhost:3000>, allow microphone access, and choose **Start New** 
 ### Environment
 
 `server/.env` (copied from [`server/.env.template`](server/.env.template)) is loaded with dotenv
-when the server starts from the `server/` directory:
+from the server directory, whichever directory the server is started from:
 
 | Variable         | Required | Description                                                         |
 | ---------------- | -------- | ------------------------------------------------------------------- |

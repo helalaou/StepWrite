@@ -18,8 +18,6 @@ import {
 } from './openaiModule.js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import OpenAI from 'openai';
 import { logger } from './config.js';
 import multer from 'multer';
 import { Readable } from 'stream';
@@ -29,16 +27,9 @@ import cookieParser from 'cookie-parser';
 import { cleanupOnStartup } from './utils/cleanup.js';
 import { isSafeCacheName } from './lib/tts.js';
 import { isAllowedOrigin } from './lib/origins.js';
+import { openai } from './lib/openaiClient.js';
 
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Add near the top of the file, after imports
-const tempDir = path.join(__dirname, 'temp');
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir);
-}
 
 // Middleware
 app.use(cors({
@@ -58,11 +49,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
-
-// Update initialization:
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 // Configure multer for memory storage
 const upload = multer({ storage: multer.memoryStorage() });

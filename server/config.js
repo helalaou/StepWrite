@@ -1,6 +1,13 @@
 import logger from './utils/logger.js';
+import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Resolve everything against the server directory so the server behaves the
+// same whether it is started from server/ or from the repository root.
+const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(SERVER_DIR, '.env') });
 
 const config = {
   server: {
@@ -16,7 +23,7 @@ const config = {
   // Experiment tracking settings
   experiment: {
     enabled: true,
-    outputDir: './temp/experiment_data',
+    outputDir: path.join(SERVER_DIR, 'temp', 'experiment_data'),
   },
   openai: {
     timeout: 70000, // 70 seconds
@@ -88,7 +95,7 @@ const config = {
     // memory settings
     memory: {
       enabled: false,
-      filePath: './data/user_memories.json'
+      filePath: path.join(SERVER_DIR, 'data', 'user_memories.json')
     },
 
     toneClassification: {
@@ -180,12 +187,12 @@ const config = {
       model: 'tts-1',
       voice: 'nova', // you can find all the supported voices here: https://platform.openai.com/docs/guides/text-to-speech/voices
       format: 'mp3',
-      tempDir: './temp/tts',  
+      tempDir: path.join(SERVER_DIR, 'temp', 'tts'),
       cacheEnabled: true,
       cleanupInterval: 3600000, // 1 hour in milliseconds
     },
     stt: {
-      tempDir: './temp/stt',  
+      tempDir: path.join(SERVER_DIR, 'temp', 'stt'),
       format: 'webm',
       whisper: {
         model: 'whisper-1',
@@ -198,12 +205,12 @@ const config = {
 
 // Create temp directories if they don't exist
 try {
-  fs.mkdirSync(path.resolve(config.audio.tts.tempDir), { recursive: true });
-  fs.mkdirSync(path.resolve(config.audio.stt.tempDir), { recursive: true });
-  
+  fs.mkdirSync(config.audio.tts.tempDir, { recursive: true });
+  fs.mkdirSync(config.audio.stt.tempDir, { recursive: true });
+
   // Create experiment data directory if enabled
   if (config.experiment.enabled) {
-    fs.mkdirSync(path.resolve(config.experiment.outputDir), { recursive: true });
+    fs.mkdirSync(config.experiment.outputDir, { recursive: true });
   }
 } catch (err) {
   if (err.code !== 'EEXIST') {

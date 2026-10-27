@@ -1,5 +1,3 @@
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
 import config from './config.js';
 import { writeQuestionPrompt, writeOutputPrompt } from './prompts/writePrompts.js';
 import { editQuestionPrompt, editOutputPrompt } from './prompts/editPrompts.js';
@@ -10,13 +8,7 @@ import { logger } from './config.js';
 import { toneClassificationPrompt } from './prompts/toneClassificationPrompt.js';
 import memoryManager from './memory/memoryManager.js';
 import { dependencyAnalysisPrompt } from './prompts/dependencyAnalysisPrompt.js';
-
-dotenv.config();
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: config.openai.timeout,
-});
+import { openai } from './lib/openaiClient.js';
 
 function updateFollowupStatus(conversationPlanning, followupNeeded) {
   return {

@@ -88,7 +88,6 @@ const config = {
       },
       correction: {
         model: 'o4-mini-2025-04-16',
-     
       }
     },
 
@@ -144,10 +143,12 @@ const config = {
     },
 
     // Dependency analysis settings
+    // o-series models ignore temperature, and their token cap also covers
+    // hidden reasoning tokens, so it needs headroom beyond the JSON answer.
     dependencyAnalysis: {
       model: 'o3-2025-04-16',
-      temperature: 0.3,  // low for consistency
-      maxTokens: 1000,  
+      temperature: 0.3,  // low for consistency (chat models only)
+      maxTokens: 8000,
     },
 
     //Continuous draft generation settings, if you change this, you need to change the same settings in the client config

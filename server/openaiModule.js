@@ -9,6 +9,16 @@ import { toneClassificationPrompt } from './prompts/toneClassificationPrompt.js'
 import memoryManager from './memory/memoryManager.js';
 import { dependencyAnalysisPrompt } from './prompts/dependencyAnalysisPrompt.js';
 import { openai } from './lib/openaiClient.js';
+import { buildCompletionParams } from './lib/completionParams.js';
+
+// Run a single-prompt chat completion with the given { model, temperature, maxTokens } config.
+async function complete(modelConfig, prompt) {
+  const completion = await openai.chat.completions.create(
+    buildCompletionParams(modelConfig, [{ role: 'system', content: prompt }])
+  );
+  // Reasoning models can return null content when they exhaust the token budget.
+  return (completion.choices[0].message.content ?? '').trim();
+}
 
 function updateFollowupStatus(conversationPlanning, followupNeeded) {
   return {
@@ -32,14 +42,7 @@ async function generateWriteQuestion(conversationPlanning) {
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.write.question.model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.write.question.maxTokens,
-      temperature: config.openai.write.question.temperature,
-    });
-
-    const responseText = completion.choices[0].message.content.trim();
+    const responseText = await complete(config.openai.write.question, prompt);
     logger.section('OPENAI RESPONSE (Question Generation)', {
       rawResponse: responseText
     });
@@ -121,14 +124,7 @@ async function generateWriteOutput(conversationPlanning, toneClassification) {
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.write.output.model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.write.output.maxTokens,
-      temperature: config.openai.write.output.temperature,
-    });
-
-    const output = completion.choices[0].message.content.trim();
+    const output = await complete(config.openai.write.output, prompt);
     logger.section('OPENAI RESPONSE (Output Generation)', {
       output,
       length: output.length
@@ -153,14 +149,7 @@ async function generateEditQuestion(originalText, conversationPlanning) {
   logger.info('================================================\n');
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.edit.question.model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.edit.question.maxTokens,
-      temperature: config.openai.edit.question.temperature,
-    });
-
-    const responseText = completion.choices[0].message.content.trim();
+    const responseText = await complete(config.openai.edit.question, prompt);
     logger.info('Raw OpenAI response:', responseText);
 
     const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
@@ -227,14 +216,7 @@ async function generateEditOutput(originalText, conversationPlanning) {
   logger.info('=============================================\n');
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.edit.output.model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.edit.output.maxTokens,
-      temperature: config.openai.edit.output.temperature,
-    });
-
-    const output = completion.choices[0].message.content.trim();
+    const output = await complete(config.openai.edit.output, prompt);
     logger.info('Generated edit output:', output);
     return output;
   } catch (error) {
@@ -254,14 +236,7 @@ async function classifyTextType(text) {
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.textTypeClassification.model,
-      messages: [{ role: 'system', content: prompt }],
-      temperature: config.openai.textTypeClassification.temperature,
-      max_tokens: config.openai.textTypeClassification.maxTokens,
-    });
-
-    const type = completion.choices[0].message.content.trim().toLowerCase();
+    const type = (await complete(config.openai.textTypeClassification, prompt)).toLowerCase();
     
     logger.section('TEXT TYPE CLASSIFICATION RESULT', {
       rawResponse: type,
@@ -317,14 +292,7 @@ async function generateReplyQuestion(originalText, conversationPlanning) {
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.reply.question.model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.reply.question.maxTokens,
-      temperature: config.openai.reply.question.temperature,
-    });
-
-    const responseText = completion.choices[0].message.content.trim();
+    const responseText = await complete(config.openai.reply.question, prompt);
     logger.section('OPENAI RESPONSE (Reply Question Generation)', {
       rawResponse: responseText
     });
@@ -405,14 +373,7 @@ async function generateReplyOutput(originalText, conversationPlanning, toneClass
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.reply.output.model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.reply.output.maxTokens,
-      temperature: config.openai.reply.output.temperature,
-    });
-
-    const output = completion.choices[0].message.content.trim();
+    const output = await complete(config.openai.reply.output, prompt);
     logger.section('OPENAI RESPONSE (Reply Output Generation)', {
       output,
       length: output.length,
@@ -436,13 +397,7 @@ async function performFactCheck(qaFormat, output) {
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.factChecking.check.model,
-      messages: [{ role: 'system', content: prompt }],
-  
-    });
-
-    const responseText = completion.choices[0].message.content.trim();
+    const responseText = await complete(config.openai.factChecking.check, prompt);
     
     //cleaning json response
     const cleanedResponse = responseText
@@ -489,12 +444,7 @@ async function generateCorrection(qaFormat, output, issues) {
   const prompt = factCorrectionPrompt(qaFormat, output, issues);
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.factChecking.correction.model,
-      messages: [{ role: 'system', content: prompt }],
-    });
-
-    return completion.choices[0].message.content.trim();
+    return await complete(config.openai.factChecking.correction, prompt);
   } catch (error) {
     logger.error('Failed to generate correction:', error);
     throw error;
@@ -601,14 +551,7 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
       prompt: correctionPrompt
     });
 
-    const completion = await openai.chat.completions.create({
-      model: config.openai.factChecking.correction.model,
-      messages: [{ role: 'system', content: correctionPrompt }],
-      temperature: config.openai.factChecking.correction.temperature,
-      max_tokens: config.openai.factChecking.correction.maxTokens,
-    });
-
-    output = completion.choices[0].message.content.trim();
+    output = await complete(config.openai.factChecking.correction, correctionPrompt);
     logger.section('CORRECTION RESULT', {
       correctedOutput: output
     });
@@ -646,14 +589,7 @@ async function classifyTone(qaFormat, originalText = '') {
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.toneClassification.model,
-      messages: [{ role: 'system', content: prompt }],
-      temperature: config.openai.toneClassification.temperature,
-      max_tokens: config.openai.toneClassification.maxTokens,
-    });
-
-    const responseText = completion.choices[0].message.content.trim();
+    const responseText = await complete(config.openai.toneClassification, prompt);
     const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
     
     try {
@@ -700,14 +636,7 @@ async function generateInitialReplyQuestion(originalText) {
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.initialReplyQuestion.model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.initialReplyQuestion.maxTokens,
-      temperature: config.openai.initialReplyQuestion.temperature,
-    });
-
-    const question = completion.choices[0].message.content.trim();
+    const question = await complete(config.openai.initialReplyQuestion, prompt);
     logger.section('OPENAI RESPONSE (Initial Reply Question Generation)', {
       question
     });
@@ -732,14 +661,7 @@ async function analyzeDependencies(originalAnswer, newAnswer, changedQuestionId,
   });
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: config.openai.dependencyAnalysis.model,
-      messages: [{ role: 'system', content: prompt }],
-      max_tokens: config.openai.dependencyAnalysis.maxTokens,
-      temperature: config.openai.dependencyAnalysis.temperature,
-    });
-
-    const responseText = completion.choices[0].message.content.trim();
+    const responseText = await complete(config.openai.dependencyAnalysis, prompt);
     logger.section('OPENAI RESPONSE (Dependency Analysis)', {
       rawResponse: responseText
     });

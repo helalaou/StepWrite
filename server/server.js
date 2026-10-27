@@ -18,6 +18,7 @@ import cookieParser from 'cookie-parser';
 import { cleanupOnStartup } from './utils/cleanup.js';
 import { isSafeCacheName } from './lib/tts.js';
 import { isAllowedOrigin } from './lib/origins.js';
+import { validateTurnRequest } from './lib/validation.js';
 import { openai } from './lib/openaiClient.js';
 
 const app = express();
@@ -65,6 +66,11 @@ app.use((req, res, next) => {
 
 // Run one conversation turn for the flow chosen from the request body.
 const handleConversationTurn = (selectFlow) => async (req, res) => {
+  const validationError = validateTurnRequest(req.body);
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
+  }
+
   const flow = selectFlow(req.body);
   try {
     logger.info(`Processing ${flow.name} submission:`, req.body);

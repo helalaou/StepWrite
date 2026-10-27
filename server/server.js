@@ -28,6 +28,7 @@ import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
 import { cleanupOnStartup } from './utils/cleanup.js';
 import { isSafeCacheName } from './lib/tts.js';
+import { isAllowedOrigin } from './lib/origins.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -45,8 +46,7 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // Allow all ngrok domains and localhost
-    if (origin.includes('ngrok') || origin === `http://localhost:${config.client.port}`) {
+    if (isAllowedOrigin(origin, config.client.port)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

@@ -27,6 +27,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
 import { cleanupOnStartup } from './utils/cleanup.js';
+import { isSafeCacheName } from './lib/tts.js';
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
@@ -718,8 +719,11 @@ app.post('/api/reply', async (req, res) => {
 // TTS endpoint
 app.post('/api/tts/generate', async (req, res) => {
   const { text, cache_as } = req.body;
-  if (!text) {
-    return res.status(400).json({ error: 'Text is required' });
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'Text is required and must be a string' });
+  }
+  if (cache_as !== undefined && !isSafeCacheName(cache_as)) {
+    return res.status(400).json({ error: 'cache_as must be a plain .mp3 file name' });
   }
 
   try {

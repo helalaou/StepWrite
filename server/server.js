@@ -16,7 +16,7 @@ import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
 import { cleanupOnStartup } from './utils/cleanup.js';
-import { isSafeCacheName } from './lib/tts.js';
+import { isSafeCacheName, splitForSpeech } from './lib/tts.js';
 import { isAllowedOrigin } from './lib/origins.js';
 import { validateTurnRequest } from './lib/validation.js';
 import { openai } from './lib/openaiClient.js';
@@ -219,13 +219,17 @@ app.post('/api/tts/generate', async (req, res) => {
       }
     }
 
-    const response = await openai.audio.speech.create({
-      model: config.audio.tts.model,
-      voice: config.audio.tts.voice,
-      input: text,
-    });
-
-    const buffer = Buffer.from(await response.arrayBuffer());
+    // Long texts exceed the endpoint's input limit, so synthesize them in
+    // chunks. MP3 frames are self-contained, so the parts play back as one file.
+    const audioParts = await Promise.all(splitForSpeech(text).map(async (input) => {
+      const response = await openai.audio.speech.create({
+        model: config.audio.tts.model,
+        voice: config.audio.tts.voice,
+        input,
+      });
+      return Buffer.from(await response.arrayBuffer());
+    }));
+    const buffer = Buffer.concat(audioParts);
     
     // Ensure directory exists
     if (!fs.existsSync(config.audio.tts.tempDir)) {

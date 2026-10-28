@@ -154,11 +154,11 @@ app.post('/api/classify/tone', async (req, res) => {
 
 app.post('/api/fact-check', async (req, res) => {
   try {
-    const { qaFormat, output } = req.body;
+    const { qaFormat, output, originalText } = req.body;
     if (!qaFormat || !output) {
       return res.status(400).json({ error: 'QA format and output are required' });
     }
-    const factCheckResult = await performFactCheck(qaFormat, output);
+    const factCheckResult = await performFactCheck(qaFormat, output, originalText);
     res.json(factCheckResult);
   } catch (error) {
     logger.error('Error checking facts:', error);

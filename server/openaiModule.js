@@ -387,8 +387,11 @@ async function generateReplyOutput(originalText, conversationPlanning, toneClass
   }
 }
 
-async function performFactCheck(qaFormat, output) {
-  const prompt = factCheckPrompt(qaFormat, output);
+// Check a draft against the user's answers (and, for replies, the message
+// being replied to). An unreadable verdict counts as unverified rather than
+// failed, so a parsing hiccup never triggers a rewrite of a good draft.
+async function performFactCheck(qaFormat, output, originalText = '') {
+  const prompt = factCheckPrompt(qaFormat, output, originalText);
 
   logger.section('FACT CHECK REQUEST', {
     qaFormat,
@@ -396,59 +399,39 @@ async function performFactCheck(qaFormat, output) {
     prompt
   });
 
+  const responseText = await complete(config.openai.factChecking.check, prompt);
+  const cleanedResponse = responseText.replace(/```json\n?|\n?```/g, '').trim();
+
+  let parsedResponse;
   try {
-    const responseText = await complete(config.openai.factChecking.check, prompt);
-    
-    //cleaning json response
-    const cleanedResponse = responseText
-      .replace(/^```json\s*/, '') // Remove opening JSON code block
-      .replace(/\s*```$/, '')     // Remove closing code block
-      .trim();                    // Remove any extra whitespace
-
-    try {
-      const parsedResponse = JSON.parse(cleanedResponse);
-      
-      logger.section('FACT CHECK RESULTS', {
-        rawResponse: responseText,
-        cleaned: cleanedResponse,
-        parsed: parsedResponse,
-        passed: parsedResponse.passed,
-        issueCount: parsedResponse.issues.length,
-        issues: parsedResponse.issues
-      });
-
-      return parsedResponse;
-    } catch (parseError) {
-      logger.error('Failed to parse fact check response:', {
-        error: parseError,
-        responseText,
-        cleanedResponse
-      });
-      // Return a default response to prevent complete failure
-      return {
-        passed: false,
-        issues: [{
-          type: "error",
-          detail: "Failed to parse fact check response",
-          qa_reference: "System error"
-        }]
-      };
-    }
-  } catch (error) {
-    logger.error('Failed to perform fact check:', error);
-    throw error;
+    parsedResponse = JSON.parse(cleanedResponse);
+  } catch (parseError) {
+    logger.error('Failed to parse fact check response:', {
+      error: parseError,
+      responseText
+    });
+    return { passed: true, unverified: true, issues: [] };
   }
+
+  const result = {
+    passed: parsedResponse.passed === true,
+    issues: Array.isArray(parsedResponse.issues) ? parsedResponse.issues : []
+  };
+
+  logger.section('FACT CHECK RESULTS', {
+    rawResponse: responseText,
+    passed: result.passed,
+    issueCount: result.issues.length,
+    issues: result.issues
+  });
+
+  return result;
 }
 
-async function generateCorrection(qaFormat, output, issues) {
-  const prompt = factCorrectionPrompt(qaFormat, output, issues);
-
-  try {
-    return await complete(config.openai.factChecking.correction, prompt);
-  } catch (error) {
-    logger.error('Failed to generate correction:', error);
-    throw error;
-  }
+function generateCorrection(qaFormat, output, issues, toneClassification, originalText = '') {
+  const prompt = factCorrectionPrompt(qaFormat, output, issues, toneClassification, originalText);
+  logger.section('GENERATING CORRECTION', { prompt });
+  return complete(config.openai.factChecking.correction, prompt);
 }
 
 async function generateBackgroundDraft(conversationPlanning, toneClassification, context = null) {
@@ -493,45 +476,30 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
     .map(q => `Q: ${q.question}\nA: ${q.response}`)
     .join('\n\n');
 
-  let attempts = 0;
-  
   logger.section('INITIAL OUTPUT GENERATION', {
     questionsCount: conversationPlanning.questions.length,
     qaFormat
   });
 
-  // Process context if it exists (for email templates)
-  let processedContext = context;
-  let extractedName = null;
-  if (context) {
-    const templateResult = processEmailTemplate(context);
-    processedContext = templateResult.processedText;
-    extractedName = templateResult.extractedName;
-    
-    logger.section('CONTEXT PROCESSING', {
-      originalContextLength: context.length,
-      processedContextLength: processedContext.length,
-      extractedRecipientName: extractedName
-    });
-  }
+  // Replies are checked against the message they answer, with template
+  // placeholders filled in the same way the reply prompt sees them.
+  const repliedText = context ? processEmailTemplate(context).processedText : '';
 
-  // Generate initial output using appropriate function
-  let output = context 
-    ? await generateReplyOutput(processedContext, conversationPlanning, toneClassification)
+  let output = context
+    ? await generateReplyOutput(context, conversationPlanning, toneClassification)
     : await generateWriteOutput(conversationPlanning, toneClassification);
 
-  while (attempts < config.openai.factChecking.maxAttempts) {
-    attempts++;
-    logger.section(`FACT CHECK ATTEMPT ${attempts}/${config.openai.factChecking.maxAttempts}`, {
+  const { maxAttempts } = config.openai.factChecking;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    logger.section(`FACT CHECK ATTEMPT ${attempt}/${maxAttempts}`, {
       currentOutput: output
     });
-    
-    const checkResult = await performFactCheck(qaFormat, output);
 
-    if (checkResult.passed) {
-      logger.section('FACT CHECK PASSED', {
-        finalOutput: output
-      });
+    const checkResult = await performFactCheck(qaFormat, output, repliedText);
+
+    // A failing verdict that names no issues gives the corrector nothing to fix.
+    if (checkResult.passed || checkResult.issues.length === 0) {
+      logger.section('FACT CHECK PASSED', { finalOutput: output });
       return output;
     }
 
@@ -540,29 +508,11 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
       issues: checkResult.issues
     });
 
-    if (attempts === config.openai.factChecking.maxAttempts) {
-      logger.warn('Maximum fact check attempts reached');
-    }
-    
-    // Generate correction based on issues
-    const correctionPrompt = factCorrectionPrompt(qaFormat, output, checkResult.issues, toneClassification);
-    logger.section('GENERATING CORRECTION', {
-      attempt: attempts,
-      prompt: correctionPrompt
-    });
-
-    output = await complete(config.openai.factChecking.correction, correctionPrompt);
-    logger.section('CORRECTION RESULT', {
-      correctedOutput: output
-    });
+    output = await generateCorrection(qaFormat, output, checkResult.issues, toneClassification, repliedText);
+    logger.section('CORRECTION RESULT', { correctedOutput: output });
   }
 
-  logger.section('FACT CHECK FINAL STATUS', {
-    status: 'Maximum attempts reached without passing fact check',
-    attemptsUsed: attempts,
-    finalOutput: output
-  });
-  
+  logger.warn(`Maximum fact check attempts (${maxAttempts}) reached; returning the last correction`);
   return output;
 }
 

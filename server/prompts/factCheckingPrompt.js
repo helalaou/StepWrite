@@ -1,7 +1,7 @@
 import memoryManager from '../memory/memoryManager.js';
 import config from '../config.js';
 
-export const factCheckPrompt = (qaFormat, generatedOutput) => {
+export const factCheckPrompt = (qaFormat, generatedOutput, originalText = '') => {
   const hasMemory = memoryManager.isEnabled() && memoryManager.getMemoriesPrompt().length > 0;
 
   return `
@@ -17,7 +17,12 @@ ${qaFormat}
 === GENERATED OUTPUT ===
 ${generatedOutput}
 
-=== GUIDELINES ===
+${originalText ? `=== MESSAGE BEING REPLIED TO ===
+${originalText}
+
+The output is a reply to this message. Greetings, names and references to this message's content are supported by it and must not be flagged as unsupported.
+
+` : ''}=== GUIDELINES ===
 1. Compare the user's responses in the Q&A with how they are represented in the generated output.
 2. Your job is ONLY to verify that the output accurately reflects what the user said - NOT to judge if their answers were correct or appropriate for each question.
 3. Be highly attentive to casual or brief mentions by the user that should be included in the output.
@@ -112,7 +117,7 @@ Return ONLY valid JSON (no extra text or backticks):
 }`;
 };
 
-export const factCorrectionPrompt = (qaFormat, generatedOutput, issues, toneClassification) => {
+export const factCorrectionPrompt = (qaFormat, generatedOutput, issues, toneClassification, originalText = '') => {
   const hasTone = config.openai.toneClassification.enabled && toneClassification;
 
   return `
@@ -124,7 +129,12 @@ ${qaFormat}
 === CURRENT OUTPUT ===
 ${generatedOutput}
 
-=== IDENTIFIED ISSUES ===
+${originalText ? `=== MESSAGE BEING REPLIED TO ===
+${originalText}
+
+The output is a reply to this message. Greetings, names and references to this message's content are supported by it and must not be flagged as unsupported.
+
+` : ''}=== IDENTIFIED ISSUES ===
 ${JSON.stringify(issues, null, 2)}
 
 ${hasTone ? `=== TONE GUIDANCE ===

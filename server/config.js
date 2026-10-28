@@ -156,30 +156,9 @@ const config = {
       enabled: true,
       generateAfterEachAnswer: true,
       generateAfterModifications: true,
-      storeInConversationPlanning: true,
       factCheckContinuousDrafts: false, // we disable fact-checking for background drafts for speed!
       minimumQuestionsForDraft: 3, // the minimum number of answered questions required before generating a background drafts
     },
-  },
-
-  // logging settings
-  
-  logging: {
-    level: 'debug',
-    file: {
-      maxSize: 5242880, // 5MB
-      maxFiles: 5,
-      format: {
-        timestamp: 'YYYY-MM-DD HH:mm:ss',
-        breakLength: 120
-      }
-    },
-    console: {
-      format: {
-        timestamp: 'YYYY-MM-DD HH:mm:ss',
-        breakLength: 120
-      }
-    }
   },
 
   // Audio storage settings

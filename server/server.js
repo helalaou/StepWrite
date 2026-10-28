@@ -13,7 +13,7 @@ import path from 'path';
 import { logger } from './config.js';
 import multer from 'multer';
 import crypto from 'crypto';
-import { cleanupOnStartup } from './utils/cleanup.js';
+import { purgeAudioFiles } from './utils/cleanup.js';
 import { isSafeCacheName, splitForSpeech } from './lib/tts.js';
 import { isAllowedOrigin } from './lib/origins.js';
 import { validateTurnRequest } from './lib/validation.js';
@@ -176,6 +176,9 @@ app.post('/api/tts/generate', async (req, res) => {
     if (config.audio.tts.cacheEnabled && fs.existsSync(audioPath)) {
       const stats = fs.statSync(audioPath);
       if (stats.size > 0) {
+        // Mark the file as recently used so the periodic purge keeps it.
+        const now = new Date();
+        fs.utimesSync(audioPath, now, now);
         return res.json({ audioUrl: `/tts/${audioFilename}` });
       }
     }
@@ -250,44 +253,20 @@ app.post('/api/transcribe', receiveAudio, async (req, res) => {
 // Serve static files
 app.use('/tts', express.static(config.audio.tts.tempDir));
 
-// Cleanup function
-const cleanupAudioFiles = () => {
-  try {
-    // Clean up TTS files
-    if (fs.existsSync(config.audio.tts.tempDir)) {
-      const ttsFiles = fs.readdirSync(config.audio.tts.tempDir);
-      ttsFiles.forEach(file => {
-        const filePath = path.join(config.audio.tts.tempDir, file);
-        try {
-          fs.unlinkSync(filePath);
-        } catch (error) {
-          logger.error(`Failed to delete TTS file ${filePath}:`, error);
-        }
-      });
-    }
+// Purge audio nobody has used for a full interval. A blanket wipe could
+// delete a file whose URL was just handed to a client that has not fetched it.
+const { cleanupInterval } = config.audio.tts;
+setInterval(() => purgeAudioFiles(cleanupInterval), cleanupInterval);
 
-  } catch (error) {
-    logger.error('Audio cleanup error:', error);
-  }
+// No client can hold a URL from a previous run, so start empty.
+purgeAudioFiles();
+
+const shutdown = () => {
+  purgeAudioFiles();
+  process.exit(0);
 };
-
-// Run cleanup periodically
-setInterval(cleanupAudioFiles, config.audio.tts.cleanupInterval);
-
-// Run cleanup on server start
-cleanupOnStartup();
-
-// Update the existing SIGINT handler
-process.on('SIGINT', () => {
-  cleanupAudioFiles();
-  process.exit(0);
-});
-
-// Also handle SIGTERM
-process.on('SIGTERM', () => {
-  cleanupAudioFiles();
-  process.exit(0);
-});
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 // Manual control endpoint
 app.post('/api/control/followup', async (req, res) => {

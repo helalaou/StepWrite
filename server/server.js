@@ -20,6 +20,7 @@ import { isSafeCacheName } from './lib/tts.js';
 import { isAllowedOrigin } from './lib/origins.js';
 import { validateTurnRequest } from './lib/validation.js';
 import { openai } from './lib/openaiClient.js';
+import { toFile } from 'openai';
 
 const app = express();
 
@@ -43,7 +44,10 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Configure multer for memory storage
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: config.audio.stt.maxUploadBytes }
+});
 
 // Track active sessions and their audio files
 const sessions = new Map();
@@ -251,31 +255,37 @@ app.post('/api/tts/generate', async (req, res) => {
   }
 });
 
-// Update STT endpoint
-app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
+// Reject oversized or malformed uploads with a JSON error instead of
+// Express's default HTML error page.
+const receiveAudio = (req, res, next) => upload.single('audio')(req, res, (error) => {
+  if (error) {
+    const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return res.status(status).json({ error: error.message });
+  }
+  next();
+});
+
+// Transcribe in memory. The upload's own file name tells Whisper its format
+// (the clients send WAV or WebM), so no temp file is needed.
+app.post('/api/transcribe', receiveAudio, async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No audio file provided' });
   }
 
   try {
-    const tempFilePath = path.join(config.audio.stt.tempDir, `${Date.now()}.${config.audio.stt.format}`);
-    fs.writeFileSync(tempFilePath, req.file.buffer);
-
-    const file = fs.createReadStream(tempFilePath);
     const transcription = await openai.audio.transcriptions.create({
-      file: file,
+      file: await toFile(req.file.buffer, req.file.originalname || 'audio.wav', { type: req.file.mimetype }),
       model: config.audio.stt.whisper.model,
       language: config.audio.stt.whisper.language,
       response_format: config.audio.stt.whisper.response_format
     });
 
-    fs.unlinkSync(tempFilePath);
     res.json({ text: transcription });
   } catch (error) {
     logger.error('STT error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to transcribe audio',
-      details: error.message 
+      details: error.message
     });
   }
 });
@@ -295,19 +305,6 @@ const cleanupAudioFiles = () => {
           fs.unlinkSync(filePath);
         } catch (error) {
           logger.error(`Failed to delete TTS file ${filePath}:`, error);
-        }
-      });
-    }
-
-    // Clean up STT files
-    if (fs.existsSync(config.audio.stt.tempDir)) {
-      const sttFiles = fs.readdirSync(config.audio.stt.tempDir);
-      sttFiles.forEach(file => {
-        const filePath = path.join(config.audio.stt.tempDir, file);
-        try {
-          fs.unlinkSync(filePath);
-        } catch (error) {
-          logger.error(`Failed to delete STT file ${filePath}:`, error);
         }
       });
     }

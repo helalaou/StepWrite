@@ -193,11 +193,10 @@ const config = {
       cleanupInterval: 3600000, // 1 hour in milliseconds
     },
     stt: {
-      tempDir: path.join(SERVER_DIR, 'temp', 'stt'),
-      format: 'webm',
+      maxUploadBytes: 25 * 1024 * 1024, // Whisper's upload limit
       whisper: {
         model: 'whisper-1',
-        language: 'en',   
+        language: 'en',
         response_format: 'text'
       }
     }
@@ -207,7 +206,6 @@ const config = {
 // Create temp directories if they don't exist
 try {
   fs.mkdirSync(config.audio.tts.tempDir, { recursive: true });
-  fs.mkdirSync(config.audio.stt.tempDir, { recursive: true });
 
   // Create experiment data directory if enabled
   if (config.experiment.enabled) {

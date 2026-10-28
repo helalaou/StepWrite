@@ -101,10 +101,7 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
         throw new Error('No audio URL in response');
       }
 
-      // Fix for ngrok - check if the audioUrl is already a full URL
-      const audioUrl = data.audioUrl.startsWith('http') 
-        ? data.audioUrl 
-        : `${config.core.apiUrl}${data.audioUrl}`;
+      const audioUrl = `${config.core.apiUrl}${data.audioUrl}`;
       
       console.log('Playing audio from URL:', audioUrl);
       

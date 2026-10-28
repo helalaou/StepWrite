@@ -206,16 +206,7 @@ app.post('/api/tts/generate', async (req, res) => {
     if (config.audio.tts.cacheEnabled && fs.existsSync(audioPath)) {
       const stats = fs.statSync(audioPath);
       if (stats.size > 0) {
-        // Return absolute URL if request is coming from ngrok
-        const isNgrok = req.headers.origin && req.headers.origin.includes('ngrok');
-        if (isNgrok) {
-          const protocol = req.headers['x-forwarded-proto'] || 'http';
-          const host = req.headers.host;
-          return res.json({ 
-            audioUrl: `${protocol}://${host}/tts/${audioFilename}` 
-          });
-        }
-        return res.json({ audioUrl: `/tts/${audioFilename}` });  
+        return res.json({ audioUrl: `/tts/${audioFilename}` });
       }
     }
 
@@ -239,16 +230,8 @@ app.post('/api/tts/generate', async (req, res) => {
     // Write the file
     fs.writeFileSync(audioPath, buffer);
     
-    // Return absolute URL if request is coming from ngrok
-    const isNgrok = req.headers.origin && req.headers.origin.includes('ngrok');
-    if (isNgrok) {
-      const protocol = req.headers['x-forwarded-proto'] || 'http';
-      const host = req.headers.host;
-      return res.json({ 
-        audioUrl: `${protocol}://${host}/tts/${audioFilename}` 
-      });
-    }
-    
+    // Always relative: every client prefixes its configured API URL, which
+    // already points at the ngrok tunnel in ngrok mode.
     return res.json({ audioUrl: `/tts/${audioFilename}` });
   } catch (error) {
     logger.error('TTS generation error:', error);

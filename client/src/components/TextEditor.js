@@ -527,10 +527,7 @@ function TextEditor({
         throw new Error('No audio URL in response');
       }
 
-      // Fix for ngrok - check if the audioUrl is already a full URL
-      const audioUrl = data.audioUrl.startsWith('http') 
-        ? data.audioUrl 
-        : `${config.core.apiUrl}${data.audioUrl}`;
+      const audioUrl = `${config.core.apiUrl}${data.audioUrl}`;
         
       setAudioUrl(audioUrl);
     } catch (error) {

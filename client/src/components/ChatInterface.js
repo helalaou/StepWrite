@@ -441,29 +441,6 @@ function ChatInterface({
     }
   };
 
-  useEffect(() => {
-    // Function to clean up audio files
-    const cleanupAudio = async () => {
-      try {
-        await fetch(`${config.core.apiUrl}/api/tts/cleanup`, {
-          method: 'POST',
-          credentials: 'include'
-        });
-      } catch (error) {
-        console.error('Failed to cleanup audio files:', error);
-      }
-    };
-
-    // Add window unload event listener
-    window.addEventListener('beforeunload', cleanupAudio);
-
-    // Cleanup on component unmount
-    return () => {
-      window.removeEventListener('beforeunload', cleanupAudio);
-      cleanupAudio();
-    };
-  }, []);
-
   // Add a handler for the clear button to play sound
   const handleClearText = () => {
     playClickSound();

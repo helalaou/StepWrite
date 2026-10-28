@@ -13,8 +13,6 @@ import path from 'path';
 import { logger } from './config.js';
 import multer from 'multer';
 import crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
-import cookieParser from 'cookie-parser';
 import { cleanupOnStartup } from './utils/cleanup.js';
 import { isSafeCacheName, splitForSpeech } from './lib/tts.js';
 import { isAllowedOrigin } from './lib/origins.js';
@@ -37,35 +35,14 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
-app.use(cookieParser());
 
 // Configure multer for memory storage
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: config.audio.stt.maxUploadBytes }
-});
-
-// Track active sessions and their audio files
-const sessions = new Map();
-
-// Add session middleware
-app.use((req, res, next) => {
-  // Get or create session ID from cookie
-  let sessionId = req.cookies?.sessionId;
-  if (!sessionId) {
-    sessionId = uuidv4();
-    res.cookie('sessionId', sessionId, { 
-      httpOnly: true,
-      sameSite: 'strict'
-    });
-    sessions.set(sessionId, new Set()); // Track files for this session
-  }
-  req.sessionId = sessionId;
-  next();
 });
 
 // Run one conversation turn for the flow chosen from the request body.
@@ -195,13 +172,6 @@ app.post('/api/tts/generate', async (req, res) => {
     
     const audioPath = path.join(config.audio.tts.tempDir, audioFilename);
 
-    // only track regular TTS files in sessions, not feedback files (they should persist)
-    if (!cache_as) {
-      const sessionFiles = sessions.get(req.sessionId) || new Set();
-      sessionFiles.add(audioPath);
-      sessions.set(req.sessionId, sessionFiles);
-    }
-
     // Check if audio file is already cached
     if (config.audio.tts.cacheEnabled && fs.existsSync(audioPath)) {
       const stats = fs.statSync(audioPath);
@@ -295,8 +265,7 @@ const cleanupAudioFiles = () => {
         }
       });
     }
-    
-    sessions.clear();
+
   } catch (error) {
     logger.error('Audio cleanup error:', error);
   }

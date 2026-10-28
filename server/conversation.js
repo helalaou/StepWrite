@@ -194,6 +194,17 @@ export async function runConversationTurn(flow, { conversationPlanning, changedI
     return finish(flow, planning);
   }
 
+  // An earlier answer changed but the question the user had not answered yet
+  // survived dependency analysis: ask it again rather than adding another.
+  const lastQuestion = planning.questions[planning.questions.length - 1];
+  if (typeof changedIndex === 'number' && !lastQuestion.response) {
+    return {
+      question: lastQuestion.question,
+      conversationPlanning: planning,
+      followup_needed: true
+    };
+  }
+
   const { question, conversationPlanning: nextPlanning } = await flow.nextQuestion(planning);
 
   if (!nextPlanning.followup_needed) {

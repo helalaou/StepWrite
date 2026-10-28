@@ -94,41 +94,42 @@ async function applyAnswerChange(conversationPlanning, changedIndex, newAnswer, 
   return { ...conversationPlanning, questions: remaining };
 }
 
-// Attach a draft of the text so far, once enough questions have real answers.
-async function attachBackgroundDraft(conversationPlanning, context) {
+// Draft of the text so far, once enough questions have real answers. Returns
+// null when there is nothing to draft yet or drafting fails: a missing draft
+// only means the editor keeps showing the previous one.
+async function buildBackgroundDraft(flow, conversationPlanning) {
   const answeredQuestions = conversationPlanning.questions.filter(q =>
     q.response && q.response.trim() && q.response !== SKIPPED_ANSWER
   );
 
   if (answeredQuestions.length < drafts.minimumQuestionsForDraft) {
     logger.info(`Only ${answeredQuestions.length} questions answered, need at least ${drafts.minimumQuestionsForDraft} for background draft generation`);
-    return conversationPlanning;
+    return null;
   }
 
   try {
-    const toneClassification = await classifyToneIfEnabled(conversationPlanning, context);
-    const draft = await generateBackgroundDraft(conversationPlanning, toneClassification, context);
+    const content = await flow.draft(conversationPlanning);
 
     logger.section('BACKGROUND DRAFT STORED', {
       questionsCount: conversationPlanning.questions.length,
       answeredCount: answeredQuestions.length,
-      draftLength: draft.length
+      draftLength: content.length
     });
 
     return {
-      ...conversationPlanning,
-      backgroundDraft: {
-        content: draft,
-        generatedAt: new Date().toISOString(),
-        questionsCount: conversationPlanning.questions.length,
-        answeredCount: answeredQuestions.length
-      }
+      content,
+      generatedAt: new Date().toISOString(),
+      questionsCount: conversationPlanning.questions.length,
+      answeredCount: answeredQuestions.length
     };
   } catch (error) {
-    // A missing draft only means the editor shows the last one, so keep going.
     logger.error('Error generating background draft:', error);
-    return conversationPlanning;
+    return null;
   }
+}
+
+function withDraft(conversationPlanning, backgroundDraft) {
+  return backgroundDraft ? { ...conversationPlanning, backgroundDraft } : conversationPlanning;
 }
 
 // Write and reply differ only in the question prompt; reply passes the
@@ -136,7 +137,6 @@ async function attachBackgroundDraft(conversationPlanning, context) {
 export function writeFlow(context) {
   return {
     name: context ? 'reply' : 'write',
-    draftContext: context,
     outputKey: 'output',
     nextQuestion: planning => (context
       ? generateReplyQuestion(context, planning)
@@ -144,6 +144,10 @@ export function writeFlow(context) {
     finalOutput: async planning => {
       const toneClassification = await classifyToneIfEnabled(planning, context);
       return generateOutputWithFactCheck(planning, toneClassification, context);
+    },
+    draft: async planning => {
+      const toneClassification = await classifyToneIfEnabled(planning, context);
+      return generateBackgroundDraft(planning, toneClassification, context);
     }
   };
 }
@@ -151,10 +155,10 @@ export function writeFlow(context) {
 export function editFlow(originalText) {
   return {
     name: 'edit',
-    draftContext: originalText,
     outputKey: 'editedText',
     nextQuestion: planning => generateEditQuestion(originalText, planning),
-    finalOutput: planning => generateEditOutput(originalText, planning)
+    finalOutput: planning => generateEditOutput(originalText, planning),
+    draft: planning => generateEditOutput(originalText, planning)
   };
 }
 
@@ -177,16 +181,14 @@ async function finish(flow, conversationPlanning) {
 // One conversation turn: apply an edited answer if there is one, then either
 // ask the next question or produce the final text.
 export async function runConversationTurn(flow, { conversationPlanning, changedIndex, answer, previousAnswer, isFinishCommand }) {
+  const isModification = typeof changedIndex === 'number';
   let planning = { ...conversationPlanning };
 
-  if (typeof changedIndex === 'number') {
+  if (isModification) {
     planning = await applyAnswerChange(planning, changedIndex, answer || '', previousAnswer);
 
     if (!isFinishCommand) {
       planning = setFollowup(planning, true);
-    }
-    if (drafts.enabled && drafts.generateAfterModifications) {
-      planning = await attachBackgroundDraft(planning, flow.draftContext);
     }
   }
 
@@ -194,13 +196,19 @@ export async function runConversationTurn(flow, { conversationPlanning, changedI
     return finish(flow, planning);
   }
 
+  // The draft depends only on the answers so far, so build it once per turn
+  // while the next question is being generated rather than after it.
+  const shouldDraft = drafts.enabled
+    && (isModification ? drafts.generateAfterModifications : drafts.generateAfterEachAnswer);
+  const draftPromise = shouldDraft ? buildBackgroundDraft(flow, planning) : Promise.resolve(null);
+
   // An earlier answer changed but the question the user had not answered yet
   // survived dependency analysis: ask it again rather than adding another.
   const lastQuestion = planning.questions[planning.questions.length - 1];
-  if (typeof changedIndex === 'number' && !lastQuestion.response) {
+  if (isModification && !lastQuestion.response) {
     return {
       question: lastQuestion.question,
-      conversationPlanning: planning,
+      conversationPlanning: withDraft(planning, await draftPromise),
       followup_needed: true
     };
   }
@@ -211,13 +219,9 @@ export async function runConversationTurn(flow, { conversationPlanning, changedI
     return finish(flow, nextPlanning);
   }
 
-  const planningWithDraft = drafts.enabled && drafts.generateAfterEachAnswer
-    ? await attachBackgroundDraft(nextPlanning, flow.draftContext)
-    : nextPlanning;
-
   return {
     question,
-    conversationPlanning: planningWithDraft,
+    conversationPlanning: withDraft(nextPlanning, await draftPromise),
     followup_needed: true
   };
 }

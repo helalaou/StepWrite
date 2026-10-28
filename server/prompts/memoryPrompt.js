@@ -8,7 +8,7 @@ export const memoryPrompt = (memories) => {
     const indentStr = ' '.repeat(indent);
     return Object.entries(obj)
       .map(([key, value]) => {
-        if (typeof value === 'object' && !Array.isArray(value)) {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
           return `${indentStr}${key}:\n${formatMemoryObject(value, indent + 2)}`;
         } else if (Array.isArray(value)) {
           return `${indentStr}${key}: ${value.join(', ')}`;
@@ -23,7 +23,9 @@ export const memoryPrompt = (memories) => {
 === USER CONTEXT ===
 Consider the following information about the user when generating content:
 ${Object.entries(memories)
-  .map(([category, data]) => `${category}:\n${formatMemoryObject(data, 2)}`)
+  .map(([category, data]) => (data && typeof data === 'object'
+    ? `${category}:\n${formatMemoryObject(data, 2)}`
+    : `${category}: ${data}`))
   .join('\n\n')}
 
 Additional Guidelines:
@@ -49,7 +51,7 @@ export const memoryFactCheckPrompt = (memories) => {
     const indentStr = ' '.repeat(indent);
     return Object.entries(obj)
       .map(([key, value]) => {
-        if (typeof value === 'object' && !Array.isArray(value)) {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
           return `${indentStr}${key}:\n${formatMemoryObject(value, indent + 2)}`;
         } else if (Array.isArray(value)) {
           return `${indentStr}${key}: ${value.join(', ')}`;
@@ -64,7 +66,9 @@ export const memoryFactCheckPrompt = (memories) => {
 === MEMORY-AWARE FACT CHECKING ===
 The following information exists in the user's memory context and should NOT be flagged as inconsistencies or unsupported claims:
 ${Object.entries(memories)
-  .map(([category, data]) => `${category}:\n${formatMemoryObject(data, 2)}`)
+  .map(([category, data]) => (data && typeof data === 'object'
+    ? `${category}:\n${formatMemoryObject(data, 2)}`
+    : `${category}: ${data}`))
   .join('\n\n')}
 
 Important:

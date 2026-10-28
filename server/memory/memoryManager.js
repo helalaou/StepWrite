@@ -1,20 +1,11 @@
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import config from '../config.js';
 import { logger } from '../config.js';
 import { memoryPrompt, memoryFactCheckPrompt } from '../prompts/memoryPrompt.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 class MemoryManager {
   constructor() {
-    const dataDir = path.join(__dirname, '..', 'data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir);
-    }
-    this.memoriesPath = path.join(dataDir, 'user_memories.json');
+    this.memoriesPath = config.openai.memory.filePath;
     this.memories = this.loadMemories();
   }
 
@@ -55,8 +46,9 @@ class MemoryManager {
       return null;
     }
     
-    // Return the user's name from memories if available
-    return this.memories.name || this.memories.fullName || null;
+    // Names live under personalInfo in user_memories.json; templates greet by first name.
+    const info = this.memories.personalInfo || {};
+    return info.firstName || info.fullName || null;
   }
 }
 

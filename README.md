@@ -236,7 +236,7 @@ The prototype includes logging for running user studies. It is off by default.
 4. In the editor, an end button (or saying "end writing" or "save and finish", detected with the
    browser's Web Speech API where available, e.g. in Chrome) saves the session.
 
-Each session is saved on the server as `server/temp/experiment_data/<participantId>_<write|reply>_experiment.txt`
+Each session is saved on the server as `server/temp/experiment_data/<participantId>_<write|reply>_<timestamp>_experiment.txt`
 and contains the participant ID, skip and modify counts, writing and revision time, every
 question and answer, the generated text, and the participant's revised text. The `server/temp/`
 directory is git-ignored.

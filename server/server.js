@@ -338,15 +338,15 @@ app.post('/api/save-experiment-data', async (req, res) => {
       conversationPlanning
     } = req.body;
 
-    if (!participantId) {
+    if (typeof participantId !== 'string' || !participantId.trim()) {
       return res.status(400).json({ error: 'Participant ID is required' });
     }
 
-    if (!finalOutput) {
+    if (typeof finalOutput !== 'string' || !finalOutput) {
       return res.status(400).json({ error: 'Final output is required' });
     }
 
-    if (!textOutput) {
+    if (typeof textOutput !== 'string' || !textOutput) {
       return res.status(400).json({ error: 'Text output is required' });
     }
 
@@ -354,9 +354,11 @@ app.post('/api/save-experiment-data', async (req, res) => {
       return res.status(400).json({ error: 'Invalid mode. Must be "write" or "reply"' });
     }
 
-    // Create a sanitized filename to prevent directory traversal
+    // Sanitize the ID to prevent directory traversal, and timestamp the file so
+    // a repeated session never overwrites an earlier one.
     const sanitizedId = participantId.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const filename = `${sanitizedId}_${mode}_experiment.txt`;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `${sanitizedId}_${mode}_${timestamp}_experiment.txt`;
     const filepath = path.join(config.experiment.outputDir, filename);
 
     // Format time values
@@ -384,8 +386,8 @@ ${textOutput}
 ############### REVISED OUTPUT ###############
 ${finalOutput}`;
 
-    // Write the file
-    fs.writeFileSync(filepath, content);
+    // 'wx' fails instead of overwriting if the name somehow already exists.
+    fs.writeFileSync(filepath, content, { flag: 'wx' });
 
     logger.info(`Saved experiment data for participant ${participantId} in ${mode} mode.`);
     res.json({ 

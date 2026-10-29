@@ -202,7 +202,19 @@ function ChatInterface({
 
     // Only send to backend if answer changed
     if (hasChanged) {
-      sendMessage(currentQuestionIndex, updatedConversationPlanning)
+      // Changing an answer the server already has must name its index, so the
+      // server can drop later questions that depended on the old answer.
+      const isEdit = Boolean(currentQuestion.questions[currentQuestionIndex]?.response);
+      const request = isEdit
+        ? submitAnswer(
+          currentQuestion.questions[currentQuestionIndex].id,
+          input,
+          currentQuestionIndex,
+          updatedConversationPlanning
+        )
+        : sendMessage(currentQuestionIndex, updatedConversationPlanning);
+
+      request
         .then((newLength) => {
           if (newLength) {
             setQuestionStatus({

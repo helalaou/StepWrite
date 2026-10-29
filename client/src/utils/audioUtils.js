@@ -202,7 +202,7 @@ export function encodeWav(samples, sampleRate) {
 /**
  * Filter and clean audio using noise reduction and gating.
  * @param {Float32Array} rawData - The raw audio data (single channel)
- * @param {Object} noiseConfig - Noise reduction config (floorMultiplier, maxNoisePercent, minSignificantPercent, sampleSize, volumeThreshold)
+ * @param {Object} noiseConfig - Noise reduction config (floorMultiplier, maxNoisePercent, minSignificantPercent, volumeThreshold)
  * @returns {Float32Array|null} Cleaned audio data, or null if rejected as noise
  */
 export function filterAndCleanAudio(rawData, noiseConfig) {
@@ -213,7 +213,6 @@ export function filterAndCleanAudio(rawData, noiseConfig) {
   // Noise floor (lowest 20%)
   const noiseFloorIndex = Math.floor(sortedAmplitudes.length * 0.2);
   const noiseFloor = sortedAmplitudes[noiseFloorIndex];
-  const medianAmplitude = sortedAmplitudes[Math.floor(sortedAmplitudes.length * 0.5)];
 
   // Percent of samples likely noise
   const percentNoise = (amplitudes.filter(a => a <= noiseFloor * 2).length / amplitudes.length) * 100;
@@ -225,8 +224,9 @@ export function filterAndCleanAudio(rawData, noiseConfig) {
   // Clean the audio
   const cleanedData = rawData.map(sample => {
     const amplitude = Math.abs(sample);
-    // Noise gate
-    if (amplitude < noiseFloor * noiseConfig.floorMultiplier) {
+    // Noise gate. Exact silence is gated explicitly: with a zero noise floor
+    // the scaling below would compute 0 * (1 - 0 / 0) = NaN.
+    if (amplitude === 0 || amplitude < noiseFloor * noiseConfig.floorMultiplier) {
       return 0;
     }
     // Noise reduction

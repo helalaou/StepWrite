@@ -400,8 +400,7 @@ function ChatInterface({
         currentQuestion.questions[currentQuestionIndex].id,
         skipMessage,
         currentQuestionIndex,
-        updatedConversationPlanning,
-        updatedQuestionStatus
+        updatedConversationPlanning
       )
         .then((newLength) => {
           if (newLength) {

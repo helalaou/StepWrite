@@ -6,7 +6,14 @@ import axios from 'axios';
 import config from '../config';
 import { keyframes } from '@mui/system';
 import { playClickSound } from '../utils/soundUtils';
-import { initializeAudio, isMobileDevice, checkAudioRecordingSupport } from '../utils/audioUtils';
+import {
+  initializeAudio,
+  isMobileDevice,
+  checkAudioRecordingSupport,
+  getAudioContext,
+  filterAndCleanAudio,
+  encodeWav
+} from '../utils/audioUtils';
 
 function VoiceInput({ 
   onTranscriptionComplete, 
@@ -55,114 +62,22 @@ function VoiceInput({
   const handleAudioTranscription = useCallback(async (audioBlob) => {
     setIsProcessing(true);
     try {
-      console.log('Beginning audio processing, blob size:', audioBlob.size, 'bytes');
-      
-      if (!audioBlob || audioBlob.size === 0) {
-        console.error('Empty audio blob received, aborting transcription');
-        setIsProcessing(false);
-        return;
-      }
-      
-      const audioContext = new AudioContext();
-      console.log('Audio context created');
-      
-      const audioBuffer = await audioContext.decodeAudioData(await audioBlob.arrayBuffer());
-      console.log('Audio successfully decoded, length:', audioBuffer.duration.toFixed(2), 'seconds');
-      
-      const rawData = audioBuffer.getChannelData(0);
-      
-      //1. calculate noise statistics from the entire recording
-      const amplitudes = rawData.map(Math.abs);
-      const sortedAmplitudes = [...amplitudes].sort((a, b) => a - b);
-      
-      // get noise floor (using lowest 20% of samples)
-      const noiseFloorIndex = Math.floor(sortedAmplitudes.length * 0.2);
-      const noiseFloor = sortedAmplitudes[noiseFloorIndex];
-      
-      //get median amplitude
-      const medianAmplitude = sortedAmplitudes[Math.floor(sortedAmplitudes.length * 0.5)];
-      
-      // Calculate percentage of samples that are likely noise
-      const percentNoise = (amplitudes.filter(a => a <= noiseFloor * 2).length / amplitudes.length) * 100;
-      
-      console.log(`Audio stats:
-        Noise floor: ${noiseFloor.toFixed(4)}
-        Median amplitude: ${medianAmplitude.toFixed(4)}
-        Noise percentage: ${percentNoise.toFixed(1)}%`);
-
-      // if most of the recording is at noise level, reject it
-      if (percentNoise > config.voiceInput.noiseReduction.maxNoisePercent) {
-        console.log('Recording is mostly noise, skipping transcription');
-        setIsProcessing(false);
-        return;
-      }
-
-      // (2°). Clean the audio
-      const cleanedData = rawData.map(sample => {
-        const amplitude = Math.abs(sample);
-        
-        // Strong noise gate
-        if (amplitude < noiseFloor * config.voiceInput.noiseReduction.floorMultiplier) {
-          return 0;
-        }
-        
-        // Apply noise reduction
-        const scaledSample = sample * (1 - (noiseFloor / amplitude));
-        return scaledSample;
-      });
-
-      // 3. Check if we have enough significant sound after cleaning
-      const significantSamples = cleanedData.filter(sample => 
-        Math.abs(sample) > config.voiceInput.recording.volumeThreshold
-      ).length;
-      
-      const percentSignificant = (significantSamples / cleanedData.length) * 100;
-      
-      console.log(`After cleaning:
-        Significant samples: ${percentSignificant.toFixed(1)}% (threshold: ${config.voiceInput.noiseReduction.minSignificantPercent}%)`);
-
-      if (percentSignificant < config.voiceInput.noiseReduction.minSignificantPercent) {
-        console.log('Not enough significant audio detected - less than 15% of samples contain speech');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Create a new audio buffer with cleaned data
-      const cleanedBuffer = audioContext.createBuffer(
-        audioBuffer.numberOfChannels,
-        audioBuffer.length,
-        audioBuffer.sampleRate
+      // Decode on the page's shared AudioContext rather than opening (and
+      // leaking) a new one per recording.
+      const audioBuffer = await getAudioContext().decodeAudioData(await audioBlob.arrayBuffer());
+      const cleanedData = filterAndCleanAudio(
+        audioBuffer.getChannelData(0),
+        config.voiceInput.noiseReduction
       );
-      cleanedBuffer.getChannelData(0).set(cleanedData);
 
-      // Convert cleaned buffer back to blob
-      const cleanedBlob = await new Promise(resolve => {
-        const mediaStreamDestination = audioContext.createMediaStreamDestination();
-        const source = audioContext.createBufferSource();
-        source.buffer = cleanedBuffer;
-        source.connect(mediaStreamDestination);
-        source.start();
-
-        const mediaRecorder = new MediaRecorder(mediaStreamDestination.stream);
-        const chunks = [];
-
-        mediaRecorder.ondataavailable = e => chunks.push(e.data);
-        mediaRecorder.onstop = () => resolve(new Blob(chunks, { type: 'audio/webm' }));
-
-        mediaRecorder.start();
-        source.addEventListener('ended', () => mediaRecorder.stop());
-      });
-
-      // we create file object with cleaned audio
-      const audioFile = new File([cleanedBlob], 'recording.webm', {
-        type: 'audio/webm',
-        lastModified: Date.now()
-      });
+      if (!cleanedData) {
+        console.log('Recording is mostly noise or silence, skipping transcription');
+        return;
+      }
 
       const formData = new FormData();
-      formData.append('audio', audioFile);
+      formData.append('audio', encodeWav(cleanedData, audioBuffer.sampleRate), 'recording.wav');
 
-      //we send cleaned audio to server
       const response = await axios.post(
         `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
         formData,
@@ -177,9 +92,7 @@ function VoiceInput({
         onTranscriptionComplete(response.data.text);
       }
     } catch (error) {
-      if (!(error instanceof RangeError)) {
-        console.error('Error processing audio:', error);
-      }
+      console.error('Error processing audio:', error);
     } finally {
       setIsProcessing(false);
     }

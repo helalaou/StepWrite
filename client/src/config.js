@@ -473,7 +473,6 @@ Professor Williams`
   voiceInput: {
     // Audio recording settings
     recording: {
-      volumeThreshold: 0.02,          // Range: 0.01-1.0, Lower = more sensitive
       fftSize: 1024,                  // Size of FFT window (values: 256, 512, 1024, 2048, 4096)
       audioBitsPerSecond: 128000,     // Audio quality in bits/sec (range: 64000-256000)
       chunkSize: 3000,                // Milliseconds per audio chunk (range: 1000-10000)
@@ -485,6 +484,7 @@ Professor Williams`
       floorMultiplier: 1.2,           // Range: 1.0-3.0, Lower = keep more quiet sounds
       maxNoisePercent: 80,            // Range: 50-95, Higher = more tolerant of noise
       minSignificantPercent: 15,      // Range: 1-50, Lower = accept shorter speech
+      volumeThreshold: 0.02,          // Range: 0.01-1.0, Lower = more sensitive
       sampleSize: 2000                // Range: 500-5000, Higher = more accurate noise detection
     }
   },

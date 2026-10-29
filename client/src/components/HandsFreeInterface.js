@@ -956,50 +956,6 @@ function HandsFreeInterface({
           console.log('Submitting MODIFIED answer');
         }
         await handleModifySubmit(finalAnswer);
-      } else if (currentQuestionIndex === 0) {
-        // Special handling for the first question
-        const updatedQuestions = [...currentQuestion.questions];
-        updatedQuestions[currentQuestionIndex] = {
-          ...updatedQuestions[currentQuestionIndex],
-          response: finalAnswer
-        };
-        const updatedConversationPlanning = {
-          ...currentQuestion,
-          questions: updatedQuestions
-        };
-
-        const result = await submitAnswer(
-          updatedQuestions[0].id,
-          finalAnswer,
-          0,
-          updatedConversationPlanning
-        );
-
-        // If no followup needed, track writing time and start revision time
-        if (result === null) {
-          // Calculate writing time
-          const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
-          const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
-          
-          if (writingStartTime > 0) {
-            const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
-            sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
-            sessionStorage.removeItem('writingStartTime');
-            
-            // Start tracking revision time
-            sessionStorage.setItem('revisionStartTime', Date.now().toString());
-          }
-        }
-
-        // Reset state and move to the next question
-        segmentsRef.current = [];
-        setMergedSpeech('');
-        setIsSpeechActive(false);
-        setIsRecording(false);
-        if (setInput) setInput('');
-
-        playClickSound();
-        setCurrentQuestionIndex(1);
       } else if (!questionStatus[currentQuestionIndex]?.answer) {
         const result = await handleSubmitAnswer(finalAnswer);
 

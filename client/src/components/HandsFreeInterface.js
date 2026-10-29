@@ -13,6 +13,7 @@ import axios from 'axios';
 import { keyframes } from '@emotion/react';
 import { playClickSound } from '../utils/soundUtils';
 import { incrementCount } from '../utils/experimentTracking';
+import { matchesAnyPhrase } from '../utils/voiceCommands';
 import { encodeWav, filterAndCleanAudio, VAD_SAMPLE_RATE } from '../utils/audioUtils';
 
 // Animations
@@ -460,62 +461,10 @@ function HandsFreeInterface({
       console.log(`Checking for commands in: ${transcription}`);
     }
 
-    // Get command matching settings from config
-    const commandSettings = config.handsFree.commands.behavior;
-    const matchingMode = commandSettings.matching.mode;
-    const minConfidence = commandSettings.matching.minConfidence;
-    const ignoreArticles = commandSettings.matching.ignoreArticles;
-
-    // Prepare transcription for matching (always case insensitive, always ignore punctuation)
-    let processedTranscription = transcription.toLowerCase().replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
-
-    if (ignoreArticles) {
-      processedTranscription = processedTranscription.replace(/\b(a|an|the)\b/g, '').replace(/\s+/g, ' ').trim();
-    }
-
-    const doesMatch = (phrase, transcription) => {
-      let processedPhrase = phrase.toLowerCase();
-
-      // remove articles if configured
-      if (ignoreArticles) {
-        processedPhrase = processedPhrase.replace(/\b(a|an|the)\b/g, '').replace(/\s+/g, ' ').trim();
-      }
-
-      switch (matchingMode) {
-        case 'EXACT_MATCH':
-          //  entire transcription must exactly match the command phrase
-          return transcription === processedPhrase;
-
-        case 'CONTAINS':
-          //command phrase must be contained in the transcription
-          return transcription.includes(processedPhrase);
-
-        case 'FUZZY': {
-          //word-by-word matching for fuzzy mode
-          const words1 = transcription.split(' ');
-          const words2 = processedPhrase.split(' ');
-          let matches = 0;
-
-          for (const word2 of words2) {
-            if (words1.includes(word2)) {
-              matches++;
-            }
-          }
-
-          // Calculate match percentage and compare to threshold
-          return matches / words2.length >= minConfidence;
-        }
-
-        default:
-          // Default to exact match if mode is not recognized
-          return transcription === processedPhrase;
-      }
-    };
-
     // Check for continue command when paused (highest priority)
     if (isPaused || isPausedRef.current) {
       const continuePhrases = config.handsFree.commands.handsFree.continue.phrases;
-      const isContinueCommand = continuePhrases.some(phrase => doesMatch(phrase, processedTranscription));
+      const isContinueCommand = matchesAnyPhrase(transcription, continuePhrases);
 
       if (isContinueCommand) {
         if (process.env.NODE_ENV !== 'production') {
@@ -534,7 +483,7 @@ function HandsFreeInterface({
 
     // Check for pause command
     const pausePhrases = config.handsFree.commands.handsFree.pause.phrases;
-    const isPauseCommand = pausePhrases.some(phrase => doesMatch(phrase, processedTranscription));
+    const isPauseCommand = matchesAnyPhrase(transcription, pausePhrases);
 
     if (isPauseCommand) {
       if (process.env.NODE_ENV !== 'production') {
@@ -549,7 +498,7 @@ function HandsFreeInterface({
 
     // Check for finish command
     const finishPhrases = config.handsFree.commands.handsFree.finish.phrases;
-    const isFinishCommand = finishPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+    const isFinishCommand = matchesAnyPhrase(transcription, finishPhrases);
 
     if (isFinishCommand) {
       if (process.env.NODE_ENV !== 'production') {
@@ -567,7 +516,7 @@ function HandsFreeInterface({
     // 1. Modify command (highest priority)
     if (config.handsFree.commands.handsFree.modify) {
       const modifyPhrases = config.handsFree.commands.handsFree.modify.phrases;
-      const isModifyCommand = modifyPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+      const isModifyCommand = matchesAnyPhrase(transcription, modifyPhrases);
 
       if (isModifyCommand) {
         if (process.env.NODE_ENV !== 'production') {
@@ -585,7 +534,7 @@ function HandsFreeInterface({
     if (currentQuestionIndex === currentQuestion.questions.length - 1 &&
       !hasChanges && cameFromEditor && onBackToEditor) {
       const editorPhrases = config.handsFree.commands.handsFree.toEditor.phrases;
-      const isEditorCommand = editorPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+      const isEditorCommand = matchesAnyPhrase(transcription, editorPhrases);
 
       if (isEditorCommand) {
         if (process.env.NODE_ENV !== 'production') {
@@ -602,7 +551,7 @@ function HandsFreeInterface({
     // 3. Check for specific "return to home" commands when on first question
     if (currentQuestionIndex === 0) {
       const homeReturnPhrases = config.handsFree.commands.handsFree.toHome.phrases;
-      const isHomeReturnCommand = homeReturnPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+      const isHomeReturnCommand = matchesAnyPhrase(transcription, homeReturnPhrases);
 
       if (isHomeReturnCommand) {
         if (process.env.NODE_ENV !== 'production') {
@@ -620,7 +569,7 @@ function HandsFreeInterface({
 
     // First check for "next" command
     const nextPhrases = config.handsFree.commands.handsFree.next.phrases;
-    const isNextCommand = nextPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+    const isNextCommand = matchesAnyPhrase(transcription, nextPhrases);
 
     if (isNextCommand) {
       if (process.env.NODE_ENV !== 'production') {
@@ -635,7 +584,7 @@ function HandsFreeInterface({
 
     // Check for "previous" command
     const prevPhrases = config.handsFree.commands.handsFree.previous.phrases;
-    const isPrevCommand = prevPhrases.some(phrase => doesMatch(phrase, processedTranscription));
+    const isPrevCommand = matchesAnyPhrase(transcription, prevPhrases);
 
     if (isPrevCommand) {
       if (process.env.NODE_ENV !== 'production') {
@@ -653,7 +602,7 @@ function HandsFreeInterface({
       // Skip commands we've already checked
       if (['modify', 'next', 'previous', 'pause', 'continue'].includes(commandType)) continue;
 
-      const isCommand = commandConfig.phrases.some(phrase => doesMatch(phrase, processedTranscription));
+      const isCommand = matchesAnyPhrase(transcription, commandConfig.phrases);
 
       if (isCommand) {
         if (process.env.NODE_ENV !== 'production') {
@@ -1254,60 +1203,10 @@ function HandsFreeInterface({
 
               // SPECIAL CASE: Direct modify command detection for questions with existing answers
               if (questionStatus[currentQuestionIndex]?.answer && !isModifying && !isModifyingRef.current) {
-                const modifyPhrases = config.handsFree.commands.handsFree.modify.phrases;
-                const commandSettings = config.handsFree.commands.behavior;
-                const matchingMode = commandSettings.matching.mode;
-                const ignoreArticles = commandSettings.matching.ignoreArticles;
-                const minConfidence = commandSettings.matching.minConfidence;
-
-                // Prepare transcription (always case insensitive, always ignore punctuation)
-                let processedTranscription = transcription.toLowerCase();
-                if (ignoreArticles) {
-                  processedTranscription = processedTranscription.replace(/\b(a|an|the)\b/g, '').replace(/\s+/g, ' ').trim();
-                }
-
-                let isModifyCommand = false;
-
-                switch (matchingMode) {
-                  case 'EXACT_MATCH':
-                    // Entire transcription must exactly match the command phrase
-                    isModifyCommand = modifyPhrases.some(phrase => {
-                      const processedPhrase = phrase.toLowerCase();
-                      return processedTranscription === processedPhrase;
-                    });
-                    break;
-
-                  case 'CONTAINS':
-                    // Command phrase must be contained in the transcription
-                    isModifyCommand = modifyPhrases.some(phrase =>
-                      processedTranscription.includes(phrase.toLowerCase())
-                    );
-                    break;
-
-                  case 'FUZZY':
-                    // Word-by-word matching
-                    isModifyCommand = modifyPhrases.some(phrase => {
-                      const processedPhrase = phrase.toLowerCase();
-                      const words1 = processedTranscription.split(' ');
-                      const words2 = processedPhrase.split(' ');
-                      let matches = 0;
-
-                      for (const word2 of words2) {
-                        if (words1.includes(word2)) {
-                          matches++;
-                        }
-                      }
-
-                      return matches / words2.length >= minConfidence;
-                    });
-                    break;
-
-                  default:
-                    // Default to exact match
-                    isModifyCommand = modifyPhrases.some(phrase =>
-                      processedTranscription === phrase.toLowerCase()
-                    );
-                }
+                const isModifyCommand = matchesAnyPhrase(
+                  transcription,
+                  config.handsFree.commands.handsFree.modify.phrases
+                );
 
                 if (isModifyCommand) {
                   if (process.env.NODE_ENV !== 'production') {

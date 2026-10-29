@@ -16,6 +16,7 @@ import { keyframes } from '@mui/system';
 import { playClickSound } from '../utils/soundUtils';
 import { enterRevision } from '../utils/experimentTracking';
 import { encodeWav, VAD_SAMPLE_RATE } from '../utils/audioUtils';
+import { matchesAnyPhrase } from '../utils/voiceCommands';
 import ExperimentEndButton from './ExperimentEndButton';
 
 // Add the pulse animation
@@ -292,8 +293,9 @@ function TextEditor({
                 console.log('Transcription received:', transcription);
                 
                 // Check for navigation command
-                const toQuestionsCommand = config.handsFree.commands.textEditor.toQuestions.phrases.some(
-                  phrase => transcription.includes(phrase.toLowerCase())
+                const toQuestionsCommand = matchesAnyPhrase(
+                  transcription,
+                  config.handsFree.commands.textEditor.toQuestions.phrases
                 );
 
                 if (toQuestionsCommand) {
@@ -303,12 +305,14 @@ function TextEditor({
                 }
 
                 // Check for play or stop TTS commands
-                const playTTSCommand = config.handsFree.commands.textEditor.play.phrases.some(
-                  phrase => transcription.includes(phrase.toLowerCase())
+                const playTTSCommand = matchesAnyPhrase(
+                  transcription,
+                  config.handsFree.commands.textEditor.play.phrases
                 );
                 
-                const stopTTSCommand = config.handsFree.commands.textEditor.stop.phrases.some(
-                  phrase => transcription.includes(phrase.toLowerCase())
+                const stopTTSCommand = matchesAnyPhrase(
+                  transcription,
+                  config.handsFree.commands.textEditor.stop.phrases
                 );
                 
                 // Only execute play command if not already playing
@@ -562,10 +566,9 @@ function TextEditor({
         const transcript = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
         console.log('Voice command detected:', transcript);
         
-        // Check if the transcript contains any of the endExperiment phrases
-        const endExperimentPhrases = config.handsFree.commands.textEditor.endExperiment.phrases;
-        const matchesEndExperiment = endExperimentPhrases.some(phrase => 
-          transcript.includes(phrase.toLowerCase())
+        const matchesEndExperiment = matchesAnyPhrase(
+          transcript,
+          config.handsFree.commands.textEditor.endExperiment.phrases
         );
         
         if (matchesEndExperiment && endExperimentButtonRef.current) {

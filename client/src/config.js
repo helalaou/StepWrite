@@ -138,7 +138,7 @@ Professor Williams`
       // Command behavior settings
       behavior: {
         matching: {
-          mode: getEnvVar('REACT_APP_COMMAND_MATCHING_MODE', 'FUZZY'), // EXACT (entire phrase is an exact match) | CONTAINS (speech must contain the command) | FUZZY (word by word match with confidence trheshold)
+          mode: getEnvVar('REACT_APP_COMMAND_MATCHING_MODE', 'FUZZY'), // EXACT_MATCH (speech is exactly the command) | CONTAINS (speech contains the command) | FUZZY (enough of the command's words occur in the speech, see minConfidence)
           minConfidence: 0.85,   // Only used in FUZZY mode - higher = more strict
           ignoreArticles: true //whether to ignore articles when matching 
         }

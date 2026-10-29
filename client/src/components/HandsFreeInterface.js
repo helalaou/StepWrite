@@ -1127,15 +1127,10 @@ function HandsFreeInterface({
           sessionStorage.setItem('revisionStartTime', Date.now().toString());
         }
         
-        // LLM decided to end conversation
+        // The server finished the text and submitAnswer has already opened the
+        // editor with it. Going through onBackToEditor here as well would
+        // replace that text with the older background draft.
         displayFeedback("Moving to editor view...", 'success');
-
-        currentQuestion.followup_needed = false;
-
-        setTimeout(() => {
-          playClickSound();
-          onBackToEditor();
-        }, 1500);
       }
       else if (newLength && newLength > currentQuestionIndex + 1) {
         setTimeout(() => {

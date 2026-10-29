@@ -156,6 +156,49 @@ export const checkAudioRecordingSupport = async () => {
   }
 }; 
 
+// MicVAD always delivers 16 kHz mono Float32 audio, whatever the device rate.
+export const VAD_SAMPLE_RATE = 16000;
+
+/**
+ * Encode mono Float32 samples as a 16-bit PCM WAV file.
+ * @param {Float32Array} samples - Samples in [-1, 1]; values outside are clipped
+ * @param {number} sampleRate - Sample rate of `samples` in Hz
+ * @returns {Blob} An audio/wav blob
+ */
+export function encodeWav(samples, sampleRate) {
+  const bytesPerSample = 2;
+  const dataSize = samples.length * bytesPerSample;
+  const view = new DataView(new ArrayBuffer(44 + dataSize));
+
+  const writeString = (offset, text) => {
+    for (let i = 0; i < text.length; i++) {
+      view.setUint8(offset + i, text.charCodeAt(i));
+    }
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);                            // fmt chunk size
+  view.setUint16(20, 1, true);                             // PCM
+  view.setUint16(22, 1, true);                             // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * bytesPerSample, true);   // byte rate
+  view.setUint16(32, bytesPerSample, true);                // block align
+  view.setUint16(34, 8 * bytesPerSample, true);            // bits per sample
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  for (let i = 0; i < samples.length; i++) {
+    // Clip first: setInt16 wraps out-of-range values into loud clicks
+    const sample = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(44 + i * bytesPerSample, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+  }
+
+  return new Blob([view], { type: 'audio/wav' });
+}
+
 /**
  * Filter and clean audio using noise reduction and gating.
  * @param {Float32Array} rawData - The raw audio data (single channel)

@@ -13,7 +13,7 @@ import axios from 'axios';
 import { keyframes } from '@emotion/react';
 import { playClickSound } from '../utils/soundUtils';
 import { incrementCount } from '../utils/experimentTracking';
-import { filterAndCleanAudio } from '../utils/audioUtils';
+import { encodeWav, filterAndCleanAudio, VAD_SAMPLE_RATE } from '../utils/audioUtils';
 
 // Animations
 const pulseAnimation = keyframes`
@@ -415,36 +415,6 @@ function HandsFreeInterface({
       });
     }
     return isSilent;
-  };
-
-  // Convert audio data to WAV format for transcription
-  const float32ArrayToWav = (audio) => {
-    const wavBuffer = new ArrayBuffer(44 + audio.length * 2);
-    const view = new DataView(wavBuffer);
-    const writeString = (v, offset, s) => {
-      for (let i = 0; i < s.length; i++) {
-        v.setUint8(offset + i, s.charCodeAt(i));
-      }
-    };
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + audio.length * 2, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint16(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, config.handsFree.vad.channels, true);
-    view.setUint32(24, config.handsFree.vad.sampleRate, true);
-    view.setUint32(28, config.handsFree.vad.sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, audio.length * 2, true);
-    let index = 44;
-    for (let i = 0; i < audio.length; i++) {
-      view.setInt16(index, audio[i] * 0x7FFF, true);
-      index += 2;
-    }
-    return new Blob([wavBuffer], { type: 'audio/wav' });
   };
 
   // Schedule periodic TTS replays when no user speech is detected
@@ -1137,9 +1107,7 @@ function HandsFreeInterface({
             return;
           }
 
-          // Convert cleaned audio to WAV format
-          const wavBuffer = float32ArrayToWav(cleanedAudio);
-          const wavBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+          const wavBlob = encodeWav(cleanedAudio, VAD_SAMPLE_RATE);
 
           // Create form data for API request
           const formData = new FormData();
@@ -1266,7 +1234,7 @@ function HandsFreeInterface({
 
           try {
             const formData = new FormData();
-            const wavBlob = float32ArrayToWav(cleanedAudio);
+            const wavBlob = encodeWav(cleanedAudio, VAD_SAMPLE_RATE);
             formData.append('audio', wavBlob, 'recording.wav');
             const response = await axios.post(
               `${config.core.apiUrl}${config.core.endpoints.transcribe}`,

@@ -15,6 +15,7 @@ import axios from 'axios';
 import { keyframes } from '@mui/system';
 import { playClickSound } from '../utils/soundUtils';
 import { enterRevision } from '../utils/experimentTracking';
+import { encodeWav, VAD_SAMPLE_RATE } from '../utils/audioUtils';
 import ExperimentEndButton from './ExperimentEndButton';
 
 // Add the pulse animation
@@ -262,15 +263,8 @@ function TextEditor({
             }
 
             try {
-              // Log the audio data for debugging
-              console.log('Audio data:', {
-                length: audio.length,
-                sampleRate: 16000,
-                energy: avgEnergy
-              });
-
               const formData = new FormData();
-              const wavBlob = float32ArrayToWav(audio);
+              const wavBlob = encodeWav(audio, VAD_SAMPLE_RATE);
               
               // Log the blob for debugging
               console.log('WAV blob:', {
@@ -425,42 +419,6 @@ function TextEditor({
       }
     };
   }, []);
-
-  // Helper function to convert Float32Array to WAV
-  const float32ArrayToWav = (audio) => {
-    const sampleRate = 16000;
-    
-    const wavBuffer = new ArrayBuffer(44 + audio.length * 2);
-    const view = new DataView(wavBuffer);
-    
-    const writeString = (v, offset, s) => {
-      for (let i = 0; i < s.length; i++) {
-        v.setUint8(offset + i, s.charCodeAt(i));
-      }
-    };
-
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + audio.length * 2, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, audio.length * 2, true);
-
-    let offset = 44;
-    for (let i = 0; i < audio.length; i++) {
-      view.setInt16(offset, audio[i] * 0x7FFF, true);
-      offset += 2;
-    }
-
-    return new Blob([wavBuffer], { type: 'audio/wav' });
-  };
 
   // Add a handler for the back button to play sound
   const handleBackClick = () => {

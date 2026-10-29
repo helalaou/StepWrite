@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { IconButton, CircularProgress } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { keyframes } from '@mui/system';
@@ -38,6 +38,14 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
+  // Bumped whenever playback starts or stops, so a request that resolves
+  // after the text changed or the button unmounted is dropped.
+  const playbackIdRef = useRef(0);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
   
   // Initialize audio on component mount for mobile browsers
   useEffect(() => {
@@ -62,23 +70,32 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
     };
   }, []);
 
-  useEffect(() => {
-    if (autoPlay && text && !isLoading && !isPlaying) {
-      generateAndPlayAudio();
+  const stopAudio = useCallback(() => {
+    playbackIdRef.current += 1;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
     }
-  }, [autoPlay, text]);
+    setIsPlaying(false);
+    setIsLoading(false);
+  }, []);
 
-  const generateAndPlayAudio = async () => {
-    if (isLoading || isPlaying || !text) return;
+  const generateAndPlayAudio = useCallback(async (textToSpeak) => {
+    stopAudio();
+    const playbackId = playbackIdRef.current;
+    const isCurrent = () => playbackId === playbackIdRef.current;
+
+    // Only the current playback may report completion; a stopped one was
+    // interrupted on purpose.
+    const handleFinished = () => {
+      if (!isCurrent()) return;
+      audioRef.current = null;
+      setIsPlaying(false);
+      if (onCompleteRef.current) onCompleteRef.current();
+    };
 
     try {
       setIsLoading(true);
-
-      // Stop any previous audio
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
 
       // Initialize audio context (important for mobile)
       await initializeAudio();
@@ -89,7 +106,7 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text: textToSpeak })
       });
 
       if (!response.ok) {
@@ -100,43 +117,57 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
       if (!data.audioUrl) {
         throw new Error('No audio URL in response');
       }
+      if (!isCurrent()) return;
 
-      const audioUrl = `${config.core.apiUrl}${data.audioUrl}`;
-      
-      console.log('Playing audio from URL:', audioUrl);
-      
-      // Use our utility to play audio
       const audio = await playAudio(
-        audioUrl,
-        // On ended callback
-        () => {
-          setIsPlaying(false);
-          if (onComplete) onComplete();
-        },
-        // On error callback
+        `${config.core.apiUrl}${data.audioUrl}`,
+        handleFinished,
         (error) => {
           console.error('Audio playback error:', error);
-          setIsPlaying(false);
-          if (onComplete) onComplete();
+          handleFinished();
         }
       );
-      
+
+      if (!isCurrent()) {
+        if (audio) audio.pause();
+        return;
+      }
       if (audio) {
         audioRef.current = audio;
         setIsPlaying(true);
       }
     } catch (error) {
       console.error('Speech generation error:', error);
-      setIsPlaying(false);
-      if (onComplete) onComplete();
+      handleFinished();
     } finally {
-      setIsLoading(false);
+      if (isCurrent()) setIsLoading(false);
     }
+  }, [stopAudio]);
+
+  // Auto-play follows the text: a new text replaces whatever is playing, and
+  // turning autoPlay off (e.g. because the user started speaking) or changing
+  // the text without it stops the old audio.
+  useEffect(() => {
+    if (autoPlay && text) {
+      generateAndPlayAudio(text);
+    } else {
+      stopAudio();
+    }
+  }, [autoPlay, text, generateAndPlayAudio, stopAudio]);
+
+  useEffect(() => () => {
+    playbackIdRef.current += 1;
+    if (audioRef.current) audioRef.current.pause();
+  }, []);
+
+  const handleClick = () => {
+    if (isLoading || isPlaying || !text) return;
+    generateAndPlayAudio(text);
   };
 
   return (
     <IconButton
-      onClick={generateAndPlayAudio}
+      onClick={handleClick}
       disabled={disabled || isLoading}
       size="small"
       sx={{

@@ -819,10 +819,6 @@ function HandsFreeInterface({
           return updated;
         });
 
-        if (window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-        }
-
         setTimeout(() => {
           startRecording();
         }, 500);
@@ -1226,10 +1222,7 @@ function HandsFreeInterface({
           setIsRecording(true);
           clearFinalizeTimeout();
 
-          // Cancel TTS when user starts speaking
-          if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-          }
+          // Turning auto-play off makes SpeakButton stop the question audio
           setIsTTSPlaying(false);
 
           clearReplayTimeout();
@@ -1368,11 +1361,6 @@ function HandsFreeInterface({
                     return updated;
                   });
 
-                  // Stop any ongoing TTS playback
-                  if (window.speechSynthesis) {
-                    window.speechSynthesis.cancel();
-                  }
-
                   setTimeout(() => {
                     startRecording();
                   }, 500);
@@ -1496,11 +1484,6 @@ function HandsFreeInterface({
       // Reset pause state
       setIsPaused(false);
       isPausedRef.current = false;
-
-      // Cancel any ongoing TTS
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
     };
   }, []);
 

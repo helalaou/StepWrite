@@ -14,6 +14,7 @@ import config from '../config';
 import axios from 'axios';
 import { keyframes } from '@mui/system';
 import { playClickSound } from '../utils/soundUtils';
+import { enterRevision } from '../utils/experimentTracking';
 import ExperimentEndButton from './ExperimentEndButton';
 
 // Add the pulse animation
@@ -79,24 +80,9 @@ function TextEditor({
   const [isListeningForCommands, setIsListeningForCommands] = useState(false);
   const speechRecognitionRef = useRef(null);
   
-  // Start revision time when the editor loads
+  // Time in the editor counts as revision
   useEffect(() => {
-    // If experiment is enabled and we're not already tracking revision time
-    if (config.experiment.enabled && !sessionStorage.getItem('revisionStartTime')) {
-      // First check if we already have revision time from a previous session
-      const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
-      
-      // If we were in writing mode, calculate and save that time first
-      if (writingStartTime > 0) {
-        const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
-        const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
-        sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
-        sessionStorage.removeItem('writingStartTime');
-      }
-      
-      // Start tracking revision time
-      sessionStorage.setItem('revisionStartTime', Date.now().toString());
-    }
+    enterRevision();
   }, []);
 
   useEffect(() => {
@@ -616,17 +602,7 @@ function TextEditor({
         
         if (matchesEndExperiment && endExperimentButtonRef.current) {
           console.log('End experiment command detected');
-          
-          // Calculate final revision time
-          const revisionStartTime = parseInt(sessionStorage.getItem('revisionStartTime') || '0', 10);
-          const revisionTimeTotal = parseInt(sessionStorage.getItem('revisionTimeTotal') || '0', 10);
-          
-          if (revisionStartTime > 0) {
-            const additionalRevisionTime = Math.floor((Date.now() - revisionStartTime) / 1000);
-            sessionStorage.setItem('revisionTimeTotal', (revisionTimeTotal + additionalRevisionTime).toString());
-            sessionStorage.removeItem('revisionStartTime');
-          }
-          
+
           // Simulate a click on the end experiment button
           endExperimentButtonRef.current.click();
         }

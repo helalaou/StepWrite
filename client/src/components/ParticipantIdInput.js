@@ -3,6 +3,7 @@ import { Box, TextField, Button, Typography, CircularProgress } from '@mui/mater
 import { useNavigate } from 'react-router-dom';
 import config from '../config';
 import { playClickSound } from '../utils/soundUtils';
+import { startExperiment } from '../utils/experimentTracking';
 
 function ParticipantIdInput({ onSubmit, mode }) {
   const [participantId, setParticipantId] = useState('');
@@ -20,18 +21,7 @@ function ParticipantIdInput({ onSubmit, mode }) {
     
     setIsLoading(true);
     
-    // Store participant ID in session storage
-    sessionStorage.setItem('participantId', participantId);
-    sessionStorage.setItem('experimentMode', mode);
-    
-    // Initialize experiment tracking counters
-    sessionStorage.setItem('modifyCount', '0');
-    sessionStorage.setItem('skipCount', '0');
-    
-    // Initialize time tracking variables
-    sessionStorage.setItem('writingStartTime', Date.now().toString());
-    sessionStorage.setItem('writingTimeTotal', '0');
-    sessionStorage.setItem('revisionTimeTotal', '0');
+    startExperiment(participantId, mode);
     
     setTimeout(() => {
       setIsLoading(false);

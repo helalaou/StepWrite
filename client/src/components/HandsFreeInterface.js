@@ -12,6 +12,7 @@ import config from '../config';
 import axios from 'axios';
 import { keyframes } from '@emotion/react';
 import { playClickSound } from '../utils/soundUtils';
+import { incrementCount } from '../utils/experimentTracking';
 import { filterAndCleanAudio } from '../utils/audioUtils';
 
 // Animations
@@ -793,58 +794,8 @@ function HandsFreeInterface({
         );
         break;
 
-      case 'endExperiment':
-        displayFeedback(config.handsFree.commands.handsFree.endExperiment.response, 'command');
-        
-        // Calculate final writing/revision time
-        // If we're in writing mode (not in the editor), update writing time
-        const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
-        const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
-        
-        if (writingStartTime > 0) {
-          const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
-          sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
-          sessionStorage.removeItem('writingStartTime');
-        }
-        
-        // If we're in revision mode (in the editor), update revision time
-        const revisionStartTime = parseInt(sessionStorage.getItem('revisionStartTime') || '0', 10);
-        const revisionTimeTotal = parseInt(sessionStorage.getItem('revisionTimeTotal') || '0', 10);
-        
-        if (revisionStartTime > 0) {
-          const additionalRevisionTime = Math.floor((Date.now() - revisionStartTime) / 1000);
-          sessionStorage.setItem('revisionTimeTotal', (revisionTimeTotal + additionalRevisionTime).toString());
-          sessionStorage.removeItem('revisionStartTime');
-        }
-        
-        // Stop recording and clean up
-        if (vadRef.current) {
-          await vadRef.current.destroy();
-          vadRef.current = null;
-        }
-        clearReplayTimeout();
-        clearFinalizeTimeout();
-        replayAttemptsRef.current = 0;
-        setIsRecording(false);
-        setIsSpeechActive(false);
-        
-        // If we're not in editor view yet, transition to editor
-        if (cameFromEditor && onBackToEditor) {
-          displayFeedback("Moving to editor view to save experiment...", 'command');
-          onBackToEditor();
-        } else {
-          // If we're already in editor view, we'd need access to end experiment button
-          // This part would need to be handled in TextEditor component
-         }
-        break;
-
       case 'skip':
-        // Track skip counter for experiment if enabled
-        if (config.experiment && config.experiment.enabled) {
-          const currentCount = parseInt(sessionStorage.getItem('skipCount') || '0', 10);
-          sessionStorage.setItem('skipCount', (currentCount + 1).toString());
-          console.log('Incremented skip count:', currentCount + 1);
-        }
+        incrementCount('skipCount');
 
         segmentsRef.current = [commandCheck.response];
         const merged = segmentsRef.current.join(' ');
@@ -854,12 +805,7 @@ function HandsFreeInterface({
         break;
 
       case 'modify':
-        // Track modify counter for experiment if enabled
-        if (config.experiment && config.experiment.enabled) {
-          const currentCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
-          sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
-          console.log('Incremented modify count:', currentCount + 1);
-        }
+        incrementCount('modifyCount');
 
         setIsModifying(true);
         isModifyingRef.current = true;
@@ -957,23 +903,7 @@ function HandsFreeInterface({
         }
         await handleModifySubmit(finalAnswer);
       } else if (!questionStatus[currentQuestionIndex]?.answer) {
-        const result = await handleSubmitAnswer(finalAnswer);
-
-        // If no followup needed, track writing time and start revision time
-        if (result === null) {
-          // Calculate writing time
-          const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
-          const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
-          
-          if (writingStartTime > 0) {
-            const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
-            sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
-            sessionStorage.removeItem('writingStartTime');
-            
-            // Start tracking revision time
-            sessionStorage.setItem('revisionStartTime', Date.now().toString());
-          }
-        }
+        await handleSubmitAnswer(finalAnswer);
 
         segmentsRef.current = [];
         setMergedSpeech('');
@@ -1112,21 +1042,7 @@ function HandsFreeInterface({
       newQuestionStatus[currentQuestionIndex] = { type: 'answered', answer: text };
       
       setQuestionStatus(newQuestionStatus); 
-      // If no followup needed (transitioning to editor), update time tracking
       if (newLength === null) {
-        // Calculate writing time
-        const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
-        const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
-        
-        if (writingStartTime > 0) {
-          const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
-          sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
-          sessionStorage.removeItem('writingStartTime');
-          
-          // Start tracking revision time
-          sessionStorage.setItem('revisionStartTime', Date.now().toString());
-        }
-        
         // The server finished the text and submitAnswer has already opened the
         // editor with it. Going through onBackToEditor here as well would
         // replace that text with the older background draft.
@@ -1437,12 +1353,7 @@ function HandsFreeInterface({
                     console.log("MODIFY command directly detected");
                   }
 
-                  // Track modify counter for direct detection, just like in handleCommandExecution
-                  if (config.experiment && config.experiment.enabled) {
-                    const currentCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
-                    sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
-                    console.log('Incremented modify count (direct detection):', currentCount + 1);
-                  }
+                  incrementCount('modifyCount');
 
                   setIsModifying(true);
                   isModifyingRef.current = true; // Immediate update

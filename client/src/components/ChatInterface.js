@@ -9,6 +9,7 @@ import config from '../config';
 import SpeakButton from './SpeakButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import { playClickSound } from '../utils/soundUtils';
+import { incrementCount } from '../utils/experimentTracking';
 
 function ChatInterface({
   currentQuestion,
@@ -314,11 +315,8 @@ function ChatInterface({
 
     const currentIndex = currentQuestionIndex;
 
-    // Track modifications for experiment if enabled
-    if (config.experiment.enabled && questionStatus[currentIndex]?.type === 'answered') {
-      const currentCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
-      sessionStorage.setItem('modifyCount', (currentCount + 1).toString());
-      console.log('Incremented modify count:', currentCount + 1);
+    if (questionStatus[currentIndex]?.type === 'answered') {
+      incrementCount('modifyCount');
     }
 
     // If skipped, immediately switch to answering mode with empty input
@@ -373,12 +371,7 @@ function ChatInterface({
         newStatus: 'skipped'
       });
 
-      // Increment skip counter for experiment if enabled
-      if (config.experiment.enabled) {
-        const currentCount = parseInt(sessionStorage.getItem('skipCount') || '0', 10);
-        sessionStorage.setItem('skipCount', (currentCount + 1).toString());
-        console.log('Incremented skip count:', currentCount + 1);
-      }
+      incrementCount('skipCount');
 
       const skipMessage = "user has skipped this question";
 

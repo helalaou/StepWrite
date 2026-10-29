@@ -3,6 +3,7 @@ import { Button, CircularProgress } from '@mui/material';
 import axios from 'axios';
 import config from '../config';
 import { playClickSound } from '../utils/soundUtils';
+import { readExperimentData } from '../utils/experimentTracking';
 
 const ExperimentEndButton = forwardRef(({ content, textOutput, conversationPlanning }, ref) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,40 +17,19 @@ const ExperimentEndButton = forwardRef(({ content, textOutput, conversationPlann
 
     playClickSound();
     
-    const participantId = sessionStorage.getItem('participantId');
-    if (!participantId) {
+    const experimentData = readExperimentData();
+    if (!experimentData.participantId) {
       alert('No participant ID found. Cannot save experiment data.');
       return;
     }
 
-    const experimentMode = sessionStorage.getItem('experimentMode') || 'write';
-    const modifyCount = parseInt(sessionStorage.getItem('modifyCount') || '0', 10);
-    const skipCount = parseInt(sessionStorage.getItem('skipCount') || '0', 10);
-    
-    // calcfinal revision time before saving
-    const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
-    const revisionTimeTotal = parseInt(sessionStorage.getItem('revisionTimeTotal') || '0', 10);
-    const revisionStartTime = parseInt(sessionStorage.getItem('revisionStartTime') || '0', 10);
-    
-    // if we(re in revision mode, add the current session time to the total
-    let finalRevisionTime = revisionTimeTotal;
-    if (revisionStartTime > 0) {
-      const additionalRevisionTime = Math.floor((Date.now() - revisionStartTime) / 1000);
-      finalRevisionTime += additionalRevisionTime;
-    }
-    
     try {
       setIsLoading(true);
       
       const response = await axios.post(`${config.core.apiUrl}${config.core.endpoints.saveExperimentData}`, {
-        participantId,
-        mode: experimentMode,
-        modifyCount,
-        skipCount,
+        ...experimentData,
         textOutput: textOutput || content,
         finalOutput: content,
-        writingTime: writingTimeTotal,
-        revisionTime: finalRevisionTime,
         conversationPlanning: conversationPlanning
       });
       

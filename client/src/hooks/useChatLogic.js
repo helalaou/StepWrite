@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import config from '../config.js';
+import { enterRevision, enterWriting } from '../utils/experimentTracking';
 
 export function useChatLogic(mode = 'write') {
   const [context, setContext] = useState('');
@@ -123,22 +124,9 @@ export function useChatLogic(mode = 'write') {
 
       const response = await axios.post(`${config.core.apiUrl}${endpoint}`, payload);
 
-      //iff this is a finish command or no followup needed, calculate writing time
+      // The conversation is over and the editor opens next
       if (isFinishCommand || !response.data.followup_needed) {
-        // Calculate writing time
-        const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
-        const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
-        
-        if (writingStartTime > 0) {
-          const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
-          sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
-          //reset writing start time
-          sessionStorage.removeItem('writingStartTime');
-          
-          //start tracking revision time
-          sessionStorage.setItem('revisionStartTime', Date.now().toString());
-          console.log('Starting revision time tracking');
-        }
+        enterRevision();
       }
 
       // If this is a finish command, always transition to editor regardless of response
@@ -220,22 +208,8 @@ export function useChatLogic(mode = 'write') {
     setShowEditor(false);
     setHasChanges(false);
     setCameFromEditor(true);
-    
-    // Calculate revision time and save it
-    const revisionStartTime = parseInt(sessionStorage.getItem('revisionStartTime') || '0', 10);
-    const revisionTimeTotal = parseInt(sessionStorage.getItem('revisionTimeTotal') || '0', 10);
-    
-    if (revisionStartTime > 0) {
-      const currentRevisionTime = Math.floor((Date.now() - revisionStartTime) / 1000);
-      sessionStorage.setItem('revisionTimeTotal', (revisionTimeTotal + currentRevisionTime).toString());
-      // Reset revision start time
-      sessionStorage.removeItem('revisionStartTime');
-      
-      // Start tracking writing time again
-      sessionStorage.setItem('writingStartTime', Date.now().toString());
-      console.log('Starting writing time tracking again');
-    }
-    
+    enterWriting();
+
     if (conversationHistory) {
       setConversationPlanning({
         ...conversationHistory.conversationPlanning,
@@ -261,22 +235,8 @@ export function useChatLogic(mode = 'write') {
 
   const handleBackToEditor = () => {
     setShowEditor(true);
-    
-    // Stop writing time tracking and start revision time tracking
-    const writingStartTime = parseInt(sessionStorage.getItem('writingStartTime') || '0', 10);
-    const writingTimeTotal = parseInt(sessionStorage.getItem('writingTimeTotal') || '0', 10);
-    
-    if (writingStartTime > 0) {
-      const currentWritingTime = Math.floor((Date.now() - writingStartTime) / 1000);
-      sessionStorage.setItem('writingTimeTotal', (writingTimeTotal + currentWritingTime).toString());
-      // Reset writing start time
-      sessionStorage.removeItem('writingStartTime');
-      
-      // Start tracking revision time
-      sessionStorage.setItem('revisionStartTime', Date.now().toString());
-      console.log('Starting revision time tracking again');
-    }
-    
+    enterRevision();
+
     // Check if there's a background draft available and we have minimum questions answered
     const answeredQuestions = conversationPlanning.questions?.filter(q => 
       q.response && q.response.trim() && q.response !== "user has skipped this question"

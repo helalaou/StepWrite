@@ -57,7 +57,8 @@ export const initializeAudio = async () => {
  * @param {string} url The URL of the audio to play
  * @param {Function} onEnded Callback when audio playback ends
  * @param {Function} onError Callback when error occurs
- * @returns {HTMLAudioElement} The audio element
+ * @returns {HTMLAudioElement|null} The playing audio element, or null if playback
+ *   could not start (onError has been called in that case)
  */
 export const playAudio = async (url, onEnded = () => {}, onError = () => {}) => {
   try {
@@ -84,10 +85,12 @@ export const playAudio = async (url, onEnded = () => {}, onError = () => {}) => 
       console.log('Audio playback started successfully');
     } catch (error) {
       console.warn('Auto-play prevented:', error);
-      // For mobile, we might want to show a play button to the user
+      // Callers treat a returned element as playing, so report the failure
+      // only through onError.
       onError(error);
+      return null;
     }
-    
+
     return audio;
   } catch (error) {
     console.error('Error in playAudio:', error);

@@ -84,10 +84,11 @@ Professor Williams`
   },
 
   // ====== TEXT-TO-SPEECH SETTINGS ======
-  // Used in: SpeakButton.js
+  // Used in: SpeakButton.js, TextEditor.js
   tts: {
     mode: getEnvVar('REACT_APP_TTS_MODE', 'ENABLED'),  // 'ENABLED' | 'DISABLED'
     outputPrefix: getEnvVar('REACT_APP_TEXT_EDITOR_TTS_PREFIX', 'The final output is:'), // Prefix text before playing the output to the user
+    editorDebounceMs: 1000, // Pause in typing before the editor re-synthesizes its text
   },
 
   // ====== VOICE INPUT MODES ======

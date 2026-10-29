@@ -59,6 +59,8 @@ function TextEditor({
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
   const audioRef = useRef(null);
   const ttsButtonRef = useRef(null);
+  const ttsRequestIdRef = useRef(0);
+  const hasSynthesizedRef = useRef(false);
   
   const vadRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -480,18 +482,26 @@ function TextEditor({
     }
   }, [audioUrl]);
 
-  // TTS generation function - generates audio when content changes
+  // Synthesize the text once the user pauses typing rather than on every
+  // keystroke. Each change bumps the request id so a response for text that
+  // has changed since is dropped, and the play button stays disabled until
+  // the audio matches the text.
   useEffect(() => {
-    if (content.trim() && config.tts.mode === 'ENABLED') {
-      generateTTSAudio(content);
+    const requestId = ++ttsRequestIdRef.current;
+    if (config.tts.mode !== 'ENABLED' || !content.trim()) {
+      setIsTTSLoading(false);
+      return undefined;
     }
+
+    setIsTTSLoading(true);
+    const delay = hasSynthesizedRef.current ? config.tts.editorDebounceMs : 0;
+    const timer = setTimeout(() => generateTTSAudio(content, requestId), delay);
+    return () => clearTimeout(timer);
   }, [content]);
 
   // Function to generate TTS audio
-  const generateTTSAudio = async (text) => {
+  const generateTTSAudio = async (text, requestId) => {
     try {
-      setIsTTSLoading(true);
-      
       // Add the prefix to the text
       const textWithPrefix = `${config.tts.outputPrefix} ${text}`;
       
@@ -513,13 +523,13 @@ function TextEditor({
         throw new Error('No audio URL in response');
       }
 
-      const audioUrl = `${config.core.apiUrl}${data.audioUrl}`;
-        
-      setAudioUrl(audioUrl);
+      if (requestId !== ttsRequestIdRef.current) return;
+      hasSynthesizedRef.current = true;
+      setAudioUrl(`${config.core.apiUrl}${data.audioUrl}`);
     } catch (error) {
       console.error('TTS generation error:', error);
     } finally {
-      setIsTTSLoading(false);
+      if (requestId === ttsRequestIdRef.current) setIsTTSLoading(false);
     }
   };
 
@@ -934,7 +944,7 @@ function TextEditor({
               <IconButton
                 ref={ttsButtonRef}
                 onClick={isTTSPlaying ? stopTTS : playTTS}
-                disabled={isTTSLoading || !content.trim()}
+                disabled={!isTTSPlaying && (isTTSLoading || !content.trim())}
                 size="small"
                 sx={{
                   padding: { xs: '4px', sm: '4px' },

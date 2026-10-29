@@ -89,7 +89,7 @@ const fileFormat = winston.format.combine(
 );
 
 const logger = winston.createLogger({
-  level: defaultConfig.logging.level,
+  level: process.env.LOG_LEVEL || defaultConfig.logging.level,
   transports: [
     new winston.transports.Console({
       format: consoleFormat

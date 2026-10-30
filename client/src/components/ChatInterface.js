@@ -10,6 +10,7 @@ import SpeakButton from './SpeakButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import { playClickSound } from '../utils/soundUtils';
 import { incrementCount } from '../utils/experimentTracking';
+import { buildQuestionStatus, hasDraftReady, SKIPPED_ANSWER } from '../utils/conversation';
 
 function ChatInterface({
   currentQuestion,
@@ -136,21 +137,7 @@ function ChatInterface({
   useEffect(() => {
     if (!currentQuestion?.questions) return;
 
-    const questions = currentQuestion.questions;
-    const newStatus = {};
-
-    // Build statuses based on existing question responses
-    questions.forEach((question, index) => {
-      if (question.response && question.response.trim() !== '') {
-        newStatus[index] = {
-          type: question.response === "user has skipped this question"
-            ? 'skipped'
-            : 'answered',
-          answer: question.response
-        };
-      }
-    });
-
+    const newStatus = buildQuestionStatus(currentQuestion.questions);
     setQuestionStatus(newStatus);
 
     // If the current question has a status, restore that to the input; else clear the input
@@ -373,7 +360,7 @@ function ChatInterface({
 
       incrementCount('skipCount');
 
-      const skipMessage = "user has skipped this question";
+      const skipMessage = SKIPPED_ANSWER;
 
       const updatedQuestions = [...currentQuestion.questions];
       updatedQuestions[currentQuestionIndex] = {
@@ -483,14 +470,7 @@ function ChatInterface({
       {/* Draft indicator */}
       {config.continuousDrafts.enabled && 
        config.continuousDrafts.showDraftIndicator && 
-       currentQuestion.backgroundDraft && 
-       (() => {
-         // check if we have min questions answered
-         const answeredQuestions = currentQuestion.questions?.filter(q => 
-           q.response && q.response.trim() && q.response !== "user has skipped this question"
-         ) || [];
-         return answeredQuestions.length >= config.continuousDrafts.minimumQuestionsForDraft;
-       })() && (
+       hasDraftReady(currentQuestion) && (
         <Box
           sx={{
             position: 'absolute',

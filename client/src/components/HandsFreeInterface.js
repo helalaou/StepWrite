@@ -13,6 +13,7 @@ import axios from 'axios';
 import { keyframes } from '@emotion/react';
 import { playClickSound } from '../utils/soundUtils';
 import { incrementCount } from '../utils/experimentTracking';
+import { buildQuestionStatus, hasDraftReady, SKIPPED_ANSWER } from '../utils/conversation';
 import { matchesAnyPhrase } from '../utils/voiceCommands';
 import { encodeWav, filterAndCleanAudio, VAD_SAMPLE_RATE } from '../utils/audioUtils';
 
@@ -331,17 +332,7 @@ function HandsFreeInterface({
     clearFinalizeTimeout();
     clearReplayTimeout();
 
-    // Update question status based on existing responses
-    const newStatus = {};
-    currentQuestion.questions.forEach((q, index) => {
-      if (q.response && q.response.trim() !== '') {
-        newStatus[index] = {
-          type: q.response === "user has skipped this question" ? 'skipped' : 'answered',
-          answer: q.response
-        };
-      }
-    });
-    setQuestionStatus(newStatus);
+    setQuestionStatus(buildQuestionStatus(currentQuestion.questions));
 
     startReplayTimeout();
 
@@ -373,23 +364,17 @@ function HandsFreeInterface({
     }
   }, [currentQuestionIndex, currentQuestion]);
 
-  // Monitor draft availability and provide audio feedback (only once)
+  // Announce the first draft once
+  const isDraftReady = hasDraftReady(currentQuestion);
   useEffect(() => {
-    if (!currentQuestion?.backgroundDraft || hasAnnouncedDraft) return;
-    
-    // Check if we have minimum questions answered for draft
-    const answeredQuestions = currentQuestion.questions?.filter(q => 
-      q.response && q.response.trim() && q.response !== "user has skipped this question"
-    ) || [];
-    
-    if (answeredQuestions.length >= config.continuousDrafts.minimumQuestionsForDraft) {
-      // Provide audio feedback that draft is ready (only once)
-      setTimeout(() => {
-        playAudioFeedback("Draft ready!");
-        setHasAnnouncedDraft(true);
-      }, 1000); // Delay to avoid conflicts with other audio
-    }
-  }, [currentQuestion?.backgroundDraft, hasAnnouncedDraft]);
+    if (!isDraftReady || hasAnnouncedDraft) return undefined;
+
+    const timer = setTimeout(() => {
+      playAudioFeedback("Draft ready!");
+      setHasAnnouncedDraft(true);
+    }, 1000); // Delay to avoid conflicts with other audio
+    return () => clearTimeout(timer);
+  }, [isDraftReady, hasAnnouncedDraft]);
 
   // Detect silent audio to avoid processing background noise
   const checkAudioSilence = (audio) => {
@@ -716,7 +701,7 @@ function HandsFreeInterface({
       case 'skip':
         incrementCount('skipCount');
 
-        segmentsRef.current = [commandCheck.response];
+        segmentsRef.current = [SKIPPED_ANSWER];
         const merged = segmentsRef.current.join(' ');
         setMergedSpeech(merged);
         displayFeedback("Skipping this question...", 'command');
@@ -1485,14 +1470,7 @@ function HandsFreeInterface({
       {/* Draft indicator */}
       {config.continuousDrafts.enabled && 
        config.continuousDrafts.showDraftIndicator && 
-       currentQuestion.backgroundDraft && 
-       (() => {
-         // Check if we have min questions answered
-         const answeredQuestions = currentQuestion.questions?.filter(q => 
-           q.response && q.response.trim() && q.response !== "user has skipped this question"
-         ) || [];
-         return answeredQuestions.length >= config.continuousDrafts.minimumQuestionsForDraft;
-       })() && (
+       isDraftReady && (
         <Box
           sx={{
             position: 'absolute',

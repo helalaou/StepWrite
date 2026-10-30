@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import config from '../config.js';
 import { enterRevision, enterWriting } from '../utils/experimentTracking';
+import { buildQuestionStatus, hasDraftReady } from '../utils/conversation';
 
 export function useChatLogic(mode = 'write') {
   const [context, setContext] = useState('');
@@ -182,17 +183,7 @@ export function useChatLogic(mode = 'write') {
         followup_needed: true
       });
       
-      const restoredStatus = {};
-      conversationHistory.conversationPlanning.questions.forEach((question, index) => {
-        if (question.response) {
-          restoredStatus[index] = {
-            type: question.response === "user has skipped this question" ? 'skipped' : 'answered',
-            answer: question.response
-          };
-        }
-      });
-      
-      setQuestionStatus(restoredStatus);
+      setQuestionStatus(buildQuestionStatus(conversationHistory.conversationPlanning.questions));
       const lastQuestionIndex = conversationHistory.conversationPlanning.questions.length - 1;
       setCurrentQuestionIndex(lastQuestionIndex);
       setInput(conversationHistory.conversationPlanning.questions[lastQuestionIndex]?.response || '');
@@ -203,13 +194,7 @@ export function useChatLogic(mode = 'write') {
     setShowEditor(true);
     enterRevision();
 
-    // Check if there's a background draft available and we have minimum questions answered
-    const answeredQuestions = conversationPlanning.questions?.filter(q => 
-      q.response && q.response.trim() && q.response !== "user has skipped this question"
-    ) || [];
-    const hasMinimumQuestions = answeredQuestions.length >= config.continuousDrafts.minimumQuestionsForDraft;
-    
-    if (conversationPlanning.backgroundDraft && conversationPlanning.backgroundDraft.content && hasMinimumQuestions) {
+    if (hasDraftReady(conversationPlanning)) {
       setFinalOutput(conversationPlanning.backgroundDraft.content);
       if (!editorHistory) {
         setEditorHistory([conversationPlanning.backgroundDraft.content]);

@@ -466,9 +466,10 @@ function HandsFreeInterface({
     // Play TTS if no speech and sufficient quiet time has passed
     if (segmentsRef.current.length === 0 && !isSpeechActive && !isProcessing) {
       const timeSinceLastSpeech = Date.now() - lastSpeechDetectionTimeRef.current;
-      const minimumQuietPeriod = config.handsFree.speech.replay.minimumQuietPeriod;
+      const { minimumQuietPeriod, maxAttempts } = config.handsFree.speech.replay;
+      const quietLongEnough = lastSpeechDetectionTimeRef.current === 0 || timeSinceLastSpeech >= minimumQuietPeriod;
 
-      if (lastSpeechDetectionTimeRef.current === 0 || timeSinceLastSpeech >= minimumQuietPeriod) {
+      if (quietLongEnough && replayAttemptsRef.current < maxAttempts) {
         if (process.env.NODE_ENV !== 'production') {
           console.log('No speech detected, replaying question TTS...');
         }

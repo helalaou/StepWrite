@@ -118,7 +118,7 @@ Professor Williams`
       finalizeDelay: 1000,            // ms of silence after the last speech segment before the answer is submitted
       // Controls question replay behavior when no speech is detected
       replay: {
-        maxAttempts: Infinity,        // Number of replay attempts before giving up
+        maxAttempts: Infinity,        // Times a question is played before replays stop (counts the first play; reset by speech or commands)
         minimumQuietPeriod: 12000,    // Range: 5000-20000ms, Minimum silence required after speech detection before TTS can play again / prevents TTS from interrupting during natural pauses in speech
         nonFirstQuestionDelay: 1500,  // Range: 500-3000ms, delay before playing TTS for non-first questions to ensure the audio clips are generated
       },

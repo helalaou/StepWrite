@@ -26,12 +26,20 @@ export function useEditLogic() {
     setIsLoading(true);
     try {
       // send the full conversation planning to backend for intelligent dependency analysis
-      const response = await axios.post(`${config.core.apiUrl}/submit-edit-answer`, {
+      const payload = {
         originalText,
         conversationPlanning: updatedConversationPlanning,
         changedIndex,
         answer
-      });
+      };
+
+      // The submitted planning already holds the new answer, so send the one the
+      // server last saw (still in hook state) for dependency analysis.
+      if (typeof changedIndex === 'number') {
+        payload.previousAnswer = conversationPlanning.questions[changedIndex]?.response || '';
+      }
+
+      const response = await axios.post(`${config.core.apiUrl}${config.core.endpoints.edit}`, payload);
 
       if (response.data.editedText) {
         setEditedText(response.data.editedText);
@@ -41,7 +49,7 @@ export function useEditLogic() {
       const needsFollowup = !!response.data.followup_needed;
 
       if (!needsFollowup) {
-        setFinalOutput(response.data.output);
+        setFinalOutput(response.data.editedText);
         setShowEditor(true);
         return null;
       }

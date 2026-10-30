@@ -32,40 +32,6 @@ export function useChatLogic(mode = 'write') {
   });
   const [editorHistory, setEditorHistory] = useState(null);
 
-  // Add a question and its response to the conversationPlanning JSON
-  const addQuestion = (question, response = '') => {
-    if (!question) {
-      console.error('Cannot add an empty question.');
-      return;
-    }
-    setConversationPlanning((prev) => ({
-      ...prev,
-      questions: [
-        ...prev.questions,
-        {
-          id: prev.questions.length + 1,
-          question,
-          response,
-        },
-      ],
-    }));
-  };
-
-  // Edit a specific question's response and truncate any questions after it
-  const editQuestion = (id, newResponse) => {
-    setConversationPlanning((prev) => {
-      const updatedQuestions = prev.questions.map((q) =>
-        q.id === id ? { ...q, response: newResponse } : q
-      );
-      const truncatedQuestions = updatedQuestions.filter((q) => q.id <= id);
-      return {
-        ...prev,
-        questions: truncatedQuestions,
-        followup_needed: true,
-      };
-    });
-  };
-
   const submitAnswer = async (questionId, answer, changedIndex, updatedConversationPlanning, isFinishCommand = false) => {
     setIsLoading(true);
     try {
@@ -285,8 +251,6 @@ export function useChatLogic(mode = 'write') {
     setQuestionStatus,
     submitAnswer,
     handleBackToQuestions,
-    addQuestion,
-    editQuestion,
     currentQuestionIndex,
     setCurrentQuestionIndex,
     hasChanges,

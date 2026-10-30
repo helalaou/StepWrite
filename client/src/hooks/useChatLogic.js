@@ -190,24 +190,21 @@ export function useChatLogic(mode = 'write') {
     }
   };
 
+  // finalOutput is the model's text: the editor starts from it (the user's own
+  // edits come back separately as currentEditorContent) and the experiment
+  // records it as the original output. While the answers are unchanged that
+  // is still the last final output; the background draft predates the last
+  // answers and skipped fact-checking, so it only stands in once they changed.
   const handleBackToEditor = () => {
     setShowEditor(true);
     enterRevision();
 
-    if (hasDraftReady(conversationPlanning)) {
-      setFinalOutput(conversationPlanning.backgroundDraft.content);
+    const draft = hasDraftReady(conversationPlanning) ? conversationPlanning.backgroundDraft.content : '';
+    const modelText = hasChanges ? draft : (lastValidOutput || draft);
+    if (modelText) {
+      setFinalOutput(modelText);
       if (!editorHistory) {
-        setEditorHistory([conversationPlanning.backgroundDraft.content]);
-      }
-    } else if (!hasChanges && currentEditorContent) {
-      setFinalOutput(currentEditorContent);
-      if (!editorHistory) {
-        setEditorHistory([currentEditorContent]);
-      }
-    } else if (!hasChanges && lastValidOutput) {
-      setFinalOutput(lastValidOutput);
-      if (!editorHistory) {
-        setEditorHistory([lastValidOutput]);
+        setEditorHistory([modelText]);
       }
     }
     if (hasChanges) {

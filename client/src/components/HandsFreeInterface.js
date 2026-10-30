@@ -1070,10 +1070,8 @@ function HandsFreeInterface({
               { headers: { 'Content-Type': 'multipart/form-data' } }
             );
 
-            if (response.data.text) {
-              let transcription = response.data.text.trim().toLowerCase();
-              transcription = transcription.replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
-
+            const transcription = (response.data.text || '').trim();
+            if (transcription) {
               if (process.env.NODE_ENV !== 'production') {
                 console.log(`Paused mode transcription: "${transcription}"`);
               }
@@ -1191,10 +1189,10 @@ function HandsFreeInterface({
               { headers: { 'Content-Type': 'multipart/form-data' } }
             );
 
-            if (response.data.text) {
-              let transcription = response.data.text.trim().toLowerCase();
-              transcription = transcription.replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, '');
-
+            // Keep the transcription as spoken: it becomes the answer, and
+            // command matching normalizes its own copy.
+            const transcription = (response.data.text || '').trim();
+            if (transcription) {
               if (process.env.NODE_ENV !== 'production') {
                 console.log(`Segment transcription: "${transcription}"`);
               }

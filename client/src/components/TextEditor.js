@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Box, TextField, Button, Typography, IconButton, Tooltip, Divider, CircularProgress, TextareaAutosize } from '@mui/material';
+import { Box, TextField, Button, Typography, IconButton, Tooltip } from '@mui/material';
 import WestIcon from '@mui/icons-material/West';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
-import FormatLineSpacingIcon from '@mui/icons-material/FormatLineSpacing';
+// import FormatLineSpacingIcon from '@mui/icons-material/FormatLineSpacing'; // one sentence per line, temporarily disabled
 import TextIncreaseIcon from '@mui/icons-material/TextIncrease';
 import TextDecreaseIcon from '@mui/icons-material/TextDecrease';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
@@ -50,9 +50,8 @@ function TextEditor({
   const [currentIndex, setCurrentIndex] = useState(savedHistory ? savedHistory.length - 1 : 0);
   const [content, setContent] = useState(savedContent || initialContent);
   const [fontSize, setFontSize] = useState(editorPreferences.fontSize || 1.1);
-  const [defaultFormat] = useState(savedContent || initialContent);
+  // const [defaultFormat] = useState(savedContent || initialContent); // one sentence per line, temporarily disabled
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const [isSpeechActive, setIsSpeechActive] = useState(false);
   const [isTTSPlaying, setIsTTSPlaying] = useState(false);
@@ -65,8 +64,6 @@ function TextEditor({
   const hasSynthesizedRef = useRef(false);
   
   const vadRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const streamRef = useRef(null);
 
   // Add isHandsFree check
   const isHandsFree = config.input.mode === 'HANDS_FREE';
@@ -81,7 +78,6 @@ function TextEditor({
   const endExperimentButtonRef = useRef(null);
 
   // Add state and refs for voice command detection
-  const [isListeningForCommands, setIsListeningForCommands] = useState(false);
   const speechRecognitionRef = useRef(null);
   
   // Time in the editor counts as revision
@@ -106,10 +102,6 @@ function TextEditor({
 
     return () => window.removeEventListener('resize', handleResize);
   }, [editorPreferences, onPreferencesChange, fontSize]);
-
-  const getWordCount = useCallback((text) => {
-    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
-  }, []);
 
   // Commented out one sentence per line formatting functions
   /*
@@ -233,7 +225,6 @@ function TextEditor({
       await safeDestroyVAD();
       
       setIsSpeechActive(false);
-      setIsListening(false);
 
       if (isMountedRef.current && isEnabled) {
         vadRef.current = await window.vad.MicVAD.new({
@@ -249,12 +240,10 @@ function TextEditor({
           onSpeechStart: () => {
             console.log('Speech segment started...');
             setIsSpeechActive(true);
-            setIsListening(true);
           },
           onSpeechEnd: async (audio) => {
             console.log('Speech segment ended, transcribing...');
             setIsSpeechActive(false);
-            setIsListening(false);
 
             // Check if audio is silent
             const avgEnergy = audio.reduce((sum, sample) => sum + Math.abs(sample), 0) / audio.length;
@@ -356,14 +345,12 @@ function TextEditor({
           onVADMisfire: () => {
             console.log('VAD misfire – restarting...');
             setIsSpeechActive(false);
-            setIsListening(false);
             startListening();
           }
         });
 
         if (isMountedRef.current) {
           await vadRef.current.start();
-          setIsListening(true);
         }
       }
     } catch (error) {
@@ -375,7 +362,6 @@ function TextEditor({
   const toggleMic = useCallback(() => {
     if (isEnabled) {
       setIsEnabled(false);
-      setIsListening(false);
       setIsSpeechActive(false);
       safeDestroyVAD();
     } else {
@@ -588,7 +574,6 @@ function TextEditor({
       // Start listening for commands
       try {
         recognition.start();
-        setIsListeningForCommands(true);
         console.log('Started listening for voice commands');
       } catch (error) {
         console.error('Error starting speech recognition:', error);

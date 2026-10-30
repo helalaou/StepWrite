@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Box, TextField, Button, Typography, CircularProgress } from '@mui/material';
-import KeyboardIcon from '@mui/icons-material/Keyboard';
+import { Box, TextField, Button, Typography } from '@mui/material';
 import WestIcon from '@mui/icons-material/West';
 import { useNavigate } from 'react-router-dom';
 import VoiceInput from './VoiceInput';
@@ -10,7 +9,6 @@ import { playClickSound } from '../utils/soundUtils';
 function EditTextInput({ onSubmit }) {
   const [text, setText] = useState('');
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = () => {
     if (!text.trim()) {
@@ -129,7 +127,7 @@ function EditTextInput({ onSubmit }) {
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={isLoading || !text.trim()}
+            disabled={!text.trim()}
             sx={{
               height: { xs: '12px', sm: '16px' },
               fontSize: { xs: '0.325rem', sm: '0.375rem' },
@@ -137,13 +135,12 @@ function EditTextInput({ onSubmit }) {
               minWidth: { xs: '25px', sm: '35px' }
             }}
           >
-            {isLoading ? <CircularProgress size={6} /> : 'Submit'}
+            Submit
           </Button>
 
           {(config.input.mode === 'HANDS_FREE' || config.input.mode === 'TEXT_AND_VOICE') && (
             <VoiceInput
               onTranscriptionComplete={handleVoiceTranscriptionComplete}
-              disabled={isLoading}
               sx={{ 
                 '& .MuiIconButton-root': {
                   width: { xs: '12px', sm: '16px' },

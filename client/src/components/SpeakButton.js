@@ -21,19 +21,6 @@ const pulseAnimation = keyframes`
   }
 `;
 
-// annimation for playing state
-const waveAnimation = keyframes`
-  0% {
-    box-shadow: 0 0 0 0 rgba(161, 38, 20, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(161, 38, 20, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(161, 38, 20, 0);
-  }
-`;
-
 function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = null, showAnimation = true }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);

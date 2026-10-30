@@ -57,11 +57,12 @@ function TextEditor({
   const [isTTSPlaying, setIsTTSPlaying] = useState(false);
   const [isTTSLoading, setIsTTSLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState(null);
-  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
   const audioRef = useRef(null);
   const ttsButtonRef = useRef(null);
   const ttsRequestIdRef = useRef(0);
   const hasSynthesizedRef = useRef(false);
+  const hasAutoPlayedRef = useRef(false);
+  const autoPlayTimerRef = useRef(null);
   
   const vadRef = useRef(null);
 
@@ -409,20 +410,6 @@ function TextEditor({
     if (onBack) onBack();
   };
 
-  // Auto-play TTS when audio is ready and component has just mounted
-  useEffect(() => {
-    // Only auto-play if we have an audio URL and we haven't auto-played before
-    if (audioUrl && !hasInitiallyLoaded && !isTTSPlaying && config.tts.mode === 'ENABLED') {
-      // Set a small delay to ensure everything is rendered properly
-      const timer = setTimeout(() => {
-        playTTS();
-        setHasInitiallyLoaded(true);
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [audioUrl]);
-
   // Synthesize the text once the user pauses typing rather than on every
   // keystroke. Each change bumps the request id so a response for text that
   // has changed since is dropped, and the play button stays disabled until
@@ -434,49 +421,54 @@ function TextEditor({
       return undefined;
     }
 
+    const isCurrent = () => requestId === ttsRequestIdRef.current;
+
+    const synthesize = async () => {
+      try {
+        const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ text: `${config.tts.outputPrefix} ${content}` })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.audioUrl) {
+          throw new Error('No audio URL in response');
+        }
+        if (!isCurrent()) return;
+
+        hasSynthesizedRef.current = true;
+        const url = `${config.core.apiUrl}${data.audioUrl}`;
+        setAudioUrl(url);
+
+        // Read the text aloud once, when the editor opens. The short delay
+        // lets the editor finish rendering first.
+        if (!hasAutoPlayedRef.current) {
+          hasAutoPlayedRef.current = true;
+          autoPlayTimerRef.current = setTimeout(() => playTTSRef.current(url), 500);
+        }
+      } catch (error) {
+        console.error('TTS generation error:', error);
+      } finally {
+        if (isCurrent()) setIsTTSLoading(false);
+      }
+    };
+
     setIsTTSLoading(true);
-    const delay = hasSynthesizedRef.current ? config.tts.editorDebounceMs : 0;
-    const timer = setTimeout(() => generateTTSAudio(content, requestId), delay);
+    const timer = setTimeout(synthesize, hasSynthesizedRef.current ? config.tts.editorDebounceMs : 0);
     return () => clearTimeout(timer);
   }, [content]);
 
-  // Function to generate TTS audio
-  const generateTTSAudio = async (text, requestId) => {
-    try {
-      // Add the prefix to the text
-      const textWithPrefix = `${config.tts.outputPrefix} ${text}`;
-      
-      const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ text: textWithPrefix })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.audioUrl) {
-        throw new Error('No audio URL in response');
-      }
-
-      if (requestId !== ttsRequestIdRef.current) return;
-      hasSynthesizedRef.current = true;
-      setAudioUrl(`${config.core.apiUrl}${data.audioUrl}`);
-    } catch (error) {
-      console.error('TTS generation error:', error);
-    } finally {
-      if (requestId === ttsRequestIdRef.current) setIsTTSLoading(false);
-    }
-  };
-
   // Function to play TTS audio
-  const playTTS = async () => {
-    if (isTTSPlaying || !audioUrl) return;
+  const playTTS = async (url = audioUrl) => {
+    if (isTTSPlaying || !url) return;
     
     try {
       // If we have an existing audio element playing, stop it
@@ -486,7 +478,7 @@ function TextEditor({
       }
 
       // Create new audio element
-      const audio = new Audio(audioUrl);
+      const audio = new Audio(url);
       audioRef.current = audio;
       
       // Play sound on button click
@@ -511,6 +503,13 @@ function TextEditor({
     }
   };
 
+  // The auto-play timer outlives the render that started it, so it calls the
+  // latest playTTS through a ref.
+  const playTTSRef = useRef(playTTS);
+  useEffect(() => {
+    playTTSRef.current = playTTS;
+  });
+
   // Function to stop TTS playback
   const stopTTS = () => {
     if (audioRef.current) {
@@ -523,6 +522,7 @@ function TextEditor({
   // Stop TTS when component unmounts
   useEffect(() => {
     return () => {
+      clearTimeout(autoPlayTimerRef.current);
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
@@ -882,7 +882,7 @@ function TextEditor({
             <Tooltip title={isTTSPlaying ? "Stop playback" : "Play text aloud"}>
               <IconButton
                 ref={ttsButtonRef}
-                onClick={isTTSPlaying ? stopTTS : playTTS}
+                onClick={isTTSPlaying ? stopTTS : () => playTTS()}
                 disabled={!isTTSPlaying && (isTTSLoading || !content.trim())}
                 size="small"
                 sx={{

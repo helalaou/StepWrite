@@ -1,6 +1,6 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "StepWrite",
+  "short_name": "StepWrite",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",

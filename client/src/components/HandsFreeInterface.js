@@ -141,6 +141,9 @@ function HandsFreeInterface({
   const segmentsRef = useRef([]);
   const [mergedSpeech, setMergedSpeech] = useState('');
   const vadRef = useRef(null);
+  // Bumped whenever the VAD is stopped or replaced, so a MicVAD that finishes
+  // initializing afterwards is destroyed instead of being left listening.
+  const vadGenerationRef = useRef(0);
   const replayTimeoutRef = useRef(null);
   const finalizeTimeoutRef = useRef(null);
   const replayAttemptsRef = useRef(0);
@@ -189,6 +192,32 @@ function HandsFreeInterface({
       clearTimeout(replayTimeoutRef.current);
       replayTimeoutRef.current = null;
     }
+  };
+
+  // Stop listening, and abandon any MicVAD that is still initializing
+  const stopVad = async () => {
+    vadGenerationRef.current += 1;
+    const vad = vadRef.current;
+    vadRef.current = null;
+    if (!vad) return;
+    try {
+      await vad.destroy();
+    } catch (err) {
+      console.error('Error destroying VAD:', err);
+    }
+  };
+
+  // MicVAD.new asks for the microphone and loads the model, which takes a
+  // while; if the VAD was stopped or replaced meanwhile, drop the new one.
+  const startVad = async (callbacks) => {
+    const generation = ++vadGenerationRef.current;
+    const vad = await window.vad.MicVAD.new({ ...VAD_OPTIONS, ...callbacks });
+    if (generation !== vadGenerationRef.current) {
+      vad.destroy();
+      return;
+    }
+    vadRef.current = vad;
+    await vad.start();
   };
 
   const updateSpeechDetectionTime = () => {
@@ -376,10 +405,7 @@ function HandsFreeInterface({
     }
 
     // Clean up Voice Activity Detection
-    if (vadRef.current) {
-      vadRef.current.destroy();
-      vadRef.current = null;
-    }
+    stopVad();
   }, [currentQuestionIndex, currentQuestion, setQuestionStatus]);
 
   // Announce the first draft once
@@ -648,10 +674,7 @@ function HandsFreeInterface({
         displayFeedback(config.handsFree.ui.messages.paused, 'command'); 
 
         // Stop VAD/speech recognition
-        if (vadRef.current) {
-          await vadRef.current.destroy();
-          vadRef.current = null;
-        }
+        await stopVad();
 
         // Keep a minimal recording active just to listen for the continue command
         setTimeout(() => latestRef.current.startPausedRecording(), 500);
@@ -663,10 +686,7 @@ function HandsFreeInterface({
         displayFeedback("Writing resumed.", 'command'); 
 
         // Restart normal recording
-        if (vadRef.current) {
-          await vadRef.current.destroy();
-          vadRef.current = null;
-        }
+        await stopVad();
 
         setTimeout(() => latestRef.current.startRecording(), 500);
         break;
@@ -695,10 +715,7 @@ function HandsFreeInterface({
         });
 
         // stop recording and clean up BEFORE submitting the answer
-        if (vadRef.current) {
-          await vadRef.current.destroy();
-          vadRef.current = null;
-        }
+        await stopVad();
         clearReplayTimeout();
         clearFinalizeTimeout();
         replayAttemptsRef.current = 0;
@@ -770,10 +787,7 @@ function HandsFreeInterface({
 
       case 'returnToHome':
         displayFeedback("Returning to home page...", 'command');
-        if (vadRef.current) {
-          await vadRef.current.destroy();
-          vadRef.current = null;
-        }
+        await stopVad();
         clearReplayTimeout();
         clearFinalizeTimeout();
         replayAttemptsRef.current = 0;
@@ -1248,10 +1262,7 @@ function HandsFreeInterface({
   // A simplified recording mode that only listens for the continue command (pop-up overlay)
   const startPausedRecording = async () => {
     try {
-      if (vadRef.current) {
-        await vadRef.current.destroy();
-        vadRef.current = null;
-      }
+      await stopVad();
 
       setIsSpeechActive(false);
       setIsRecording(false);
@@ -1260,13 +1271,10 @@ function HandsFreeInterface({
 
       clearFinalizeTimeout();
 
-      vadRef.current = await window.vad.MicVAD.new({
-        ...VAD_OPTIONS,
+      await startVad({
         onSpeechStart: () => latestRef.current.handlePausedSpeechStart(),
         onSpeechEnd: (audio) => latestRef.current.handlePausedSpeechEnd(audio),
       });
-
-      await vadRef.current.start();
 
     } catch (error) {
       console.error('Error starting paused recording:', error);
@@ -1282,10 +1290,7 @@ function HandsFreeInterface({
     }
 
     try {
-      if (vadRef.current) {
-        await vadRef.current.destroy();
-        vadRef.current = null;
-      }
+      await stopVad();
 
       if (!isModifying || segmentsRef.current.length === 0) {
         setIsSpeechActive(false);
@@ -1296,17 +1301,14 @@ function HandsFreeInterface({
 
       clearFinalizeTimeout();
 
-      vadRef.current = await window.vad.MicVAD.new({
-        ...VAD_OPTIONS,
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Starting VAD...');
+      }
+      await startVad({
         onSpeechStart: () => latestRef.current.handleSpeechStart(),
         onSpeechEnd: (audio) => latestRef.current.handleSpeechEnd(audio),
         onVADMisfire: () => latestRef.current.handleVADMisfire(),
       });
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Starting VAD...');
-      }
-      await vadRef.current.start();
     } catch (err) {
       console.error('Error starting VAD:', err);
     }
@@ -1338,20 +1340,7 @@ function HandsFreeInterface({
       clearFinalizeTimeout();
       clearReplayTimeout();
 
-      if (vadRef.current) {
-        try {
-          const destroyPromise = vadRef.current.destroy();
-          // Only call catch if destroy returns a promise
-          if (destroyPromise && typeof destroyPromise.catch === 'function') {
-            destroyPromise.catch(err => {
-              console.error('Error destroying VAD on unmount:', err);
-            });
-          }
-        } catch (err) {
-          console.error('Error calling destroy on VAD:', err);
-        }
-        vadRef.current = null;
-      }
+      stopVad();
 
       // Reset pause state
       setIsPaused(false);

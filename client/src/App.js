@@ -13,17 +13,22 @@ import config from './config';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-function WriteFlow() {
+// Write and reply share one flow. Reply additionally starts from the message
+// being replied to (config.core.reply_email) and asks the server for the
+// first question, since it depends on that message.
+function ConversationFlow({ mode }) {
   const [showIdInput, setShowIdInput] = useState(
     config.experiment.enabled && config.experiment.participantIdRequired
   );
   
-  const chatLogic = useChatLogic('write');
   const {
+    setContext,
     conversationPlanning,
+    setConversationPlanning,
     input,
     setInput,
     isLoading,
+    setIsLoading,
     showEditor,
     finalOutput,
     submitAnswer,
@@ -41,30 +46,62 @@ function WriteFlow() {
     setEditorPreferences,
     editorHistory,
     setEditorHistory
-  } = chatLogic;
+  } = useChatLogic(mode);
 
-  // Add voice-only mode check
   const isHandsFree = config.input.mode === 'HANDS_FREE';
 
-  const handleSendMessage = async (currentQuestionIndex, updatedConversationPlanning, isFinishCommand = false) => {
-    try {
-      const result = await submitAnswer(
-        updatedConversationPlanning.questions[currentQuestionIndex].id, 
-        input,
-        undefined, // changedIndex should be undefined for first-time answers
-        updatedConversationPlanning,
-        isFinishCommand
-      );
-      return result;
-    } catch (error) {
-      console.error('Error in handleSendMessage:', error);
-      throw error;
-    }
+  // Reply mode: set the message being replied to as context and fetch the first question
+  useEffect(() => {
+    if (mode !== 'reply' || showIdInput) return;
+    
+    const setupReplyFlow = async () => {
+      const emailTemplate = config.core.reply_email;
+      setContext(emailTemplate);
+      
+      let initialQuestion = "How would you like to respond to this text?";
+      try {
+        setIsLoading(true);
+        const response = await axios.post(`${config.core.apiUrl}${config.core.endpoints.initialReplyQuestion}`, {
+          originalText: emailTemplate
+        });
+        initialQuestion = response.data.question || "How would you like to respond to this message?";
+      } catch (error) {
+        console.error('Failed to fetch initial question:', error);
+      } finally {
+        setIsLoading(false);
+      }
+
+      setConversationPlanning(prev => ({
+        ...prev,
+        questions: [
+          {
+            id: 1,
+            question: initialQuestion,
+            response: ''
+          }
+        ]
+      }));
+    };
+    
+    setupReplyFlow();
+  }, [mode, setContext, setConversationPlanning, setIsLoading, showIdInput]);
+
+  // Submit a first-time answer to the question at questionIndex. There is no
+  // changedIndex, so the server treats it as new rather than as an edit.
+  const handleSendMessage = (questionIndex, updatedConversationPlanning, isFinishCommand = false) => {
+    const question = updatedConversationPlanning.questions[questionIndex];
+    return submitAnswer(
+      question.id,
+      question.response,
+      undefined,
+      updatedConversationPlanning,
+      isFinishCommand
+    );
   };
 
   // If participant ID input is shown, don't show the rest of the interface
   if (showIdInput) {
-    return <ParticipantIdInput onSubmit={() => setShowIdInput(false)} mode="write" />;
+    return <ParticipantIdInput onSubmit={() => setShowIdInput(false)} mode={mode} />;
   }
 
   return showEditor ? (
@@ -81,7 +118,7 @@ function WriteFlow() {
     />
   ) : isHandsFree ? (
     <HandsFreeInterface
-      mode="write"
+      mode={mode}
       currentQuestion={conversationPlanning}
       setInput={setInput}
       submitAnswer={submitAnswer}
@@ -96,7 +133,7 @@ function WriteFlow() {
     />
   ) : (
     <ChatInterface
-      mode="write"
+      mode={mode}
       currentQuestion={conversationPlanning}
       input={input}
       setInput={setInput}
@@ -171,168 +208,13 @@ function EditFlow() {
 }
 */
 
-function ReplyFlow() {
-  const [showIdInput, setShowIdInput] = useState(
-    config.experiment.enabled && config.experiment.participantIdRequired
-  );
-  
-  const chatLogic = useChatLogic('reply');
-  const { 
-    setContext,
-    conversationPlanning,
-    setConversationPlanning,
-    input,
-    setInput,
-    isLoading,
-    setIsLoading,
-    showEditor,
-    finalOutput,
-    handleBackToQuestions,
-    questionStatus,
-    setQuestionStatus,
-    currentQuestionIndex,
-    setCurrentQuestionIndex,
-    hasChanges,
-    handleBackToEditor,
-    cameFromEditor,
-    currentEditorContent,
-    setCurrentEditorContent,
-    editorPreferences,
-    setEditorPreferences,
-    editorHistory,
-    setEditorHistory
-  } = chatLogic;
-
-  // Add voice-only mode check
-  const isHandsFree = config.input.mode === 'HANDS_FREE';
-
-  // Set the static email as context when component mounts and fetch initial question
-  useEffect(() => {
-    // Skip initialization if we're showing ID input
-    if (showIdInput) return;
-    
-    const setupReplyFlow = async () => {
-      // Get the email template with placeholders
-      const emailTemplate = config.core.reply_email;
-      
-      // Set raw template as context
-      setContext(emailTemplate);
-      
-      try {
-        setIsLoading(true);
-        const response = await axios.post(`${config.core.apiUrl}${config.core.endpoints.initialReplyQuestion}`, {
-          originalText: emailTemplate
-        });
-        
-        // Set the initial question from the API response
-        const initialQuestion = response.data.question || "How would you like to respond to this message?";
-        
-        setConversationPlanning(prev => ({
-          ...prev,
-          questions: [
-            {
-              id: 1,
-              question: initialQuestion,
-              response: ''
-            }
-          ]
-        }));
-      } catch (error) {
-        console.error('Failed to fetch initial question:', error);
-        // Fallback to a default question if API call fails
-        setConversationPlanning(prev => ({
-          ...prev,
-          questions: [
-            {
-              id: 1,
-              question: "How would you like to respond to this text?",
-              response: ''
-            }
-          ]
-        }));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    setupReplyFlow();
-  }, [setContext, setConversationPlanning, setIsLoading, showIdInput]);
-
-  const handleSendMessage = async (currentQuestionIndex, updatedConversationPlanning, isFinishCommand = false) => {
-    try {
-      const result = await chatLogic.submitAnswer(
-        updatedConversationPlanning.questions[currentQuestionIndex].id, 
-        input,
-        undefined, // changedIndex should be undefined for first-time answers
-        updatedConversationPlanning,
-        isFinishCommand
-      );
-      return result;
-    } catch (error) {
-      console.error('Error in handleSendMessage:', error);
-      throw error;
-    }
-  };
-
-  // If participant ID input is shown, don't show the rest of the interface
-  if (showIdInput) {
-    return <ParticipantIdInput onSubmit={() => setShowIdInput(false)} mode="reply" />;
-  }
-
-  return showEditor ? (
-    <TextEditor 
-      initialContent={finalOutput}
-      onBack={handleBackToQuestions}
-      onContentChange={setCurrentEditorContent}
-      savedContent={currentEditorContent}
-      editorPreferences={editorPreferences}
-      onPreferencesChange={setEditorPreferences}
-      savedHistory={editorHistory}
-      onHistoryChange={setEditorHistory}
-      conversationPlanning={conversationPlanning}
-    />
-  ) : isHandsFree ? (
-    <HandsFreeInterface
-      mode="reply"
-      currentQuestion={conversationPlanning}
-      setInput={setInput}
-      submitAnswer={chatLogic.submitAnswer}
-      sendMessage={handleSendMessage}
-      questionStatus={questionStatus}
-      setQuestionStatus={setQuestionStatus}
-      currentQuestionIndex={currentQuestionIndex}
-      setCurrentQuestionIndex={setCurrentQuestionIndex}
-      hasChanges={hasChanges}
-      onBackToEditor={handleBackToEditor}
-      cameFromEditor={cameFromEditor}
-    />
-  ) : (
-    <ChatInterface
-      mode="reply"
-      currentQuestion={conversationPlanning}
-      input={input}
-      setInput={setInput}
-      isLoading={isLoading}
-      sendMessage={handleSendMessage}
-      submitAnswer={chatLogic.submitAnswer}
-      questionStatus={questionStatus}
-      setQuestionStatus={setQuestionStatus}
-      currentQuestionIndex={currentQuestionIndex}
-      setCurrentQuestionIndex={setCurrentQuestionIndex}
-      hasChanges={hasChanges}
-      onBackToEditor={handleBackToEditor}
-      cameFromEditor={cameFromEditor}
-    />
-  );
-}
-
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/write" element={<WriteFlow />} />
-        <Route path="/reply" element={<ReplyFlow />} />
+        <Route path="/write" element={<ConversationFlow key="write" mode="write" />} />
+        <Route path="/reply" element={<ConversationFlow key="reply" mode="reply" />} />
         {/* Temporarily disabled edit route
         <Route path="/edit" element={<EditFlow />} />
         */}

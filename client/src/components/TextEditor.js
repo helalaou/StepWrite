@@ -304,30 +304,23 @@ function TextEditor({
                   config.handsFree.commands.textEditor.stop.phrases
                 );
                 
-                // Only execute play command if not already playing
-                if (playTTSCommand && config.tts.mode === 'ENABLED' && !isTTSPlaying) {
-                  const audioIsPlaying = audioRef.current && !audioRef.current.paused;
-                  
-                  if (!audioIsPlaying) {
-                    if (ttsButtonRef.current && !ttsButtonRef.current.disabled) {
-                      ttsButtonRef.current.click();
-                    }
+                // This callback outlives renders, so ask the audio element
+                // whether it is playing rather than reading isTTSPlaying.
+                const audioIsPlaying = Boolean(audioRef.current && !audioRef.current.paused);
+
+                if (playTTSCommand && config.tts.mode === 'ENABLED') {
+                  if (!audioIsPlaying && ttsButtonRef.current && !ttsButtonRef.current.disabled) {
+                    ttsButtonRef.current.click();
                   }
                   return;
                 }
-                 
-                if (stopTTSCommand && config.tts.mode === 'ENABLED') { 
-                  const audioIsPlaying = audioRef.current && !audioRef.current.paused;
-                  
-                  if (audioIsPlaying || isTTSPlaying) {
-                    // direct control of audio element for reliability
-                    if (audioRef.current) {
-                      audioRef.current.pause();
-                      audioRef.current.currentTime = 0;
-                    }
-                     
-                    setIsTTSPlaying(false);
+
+                if (stopTTSCommand && config.tts.mode === 'ENABLED') {
+                  if (audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current.currentTime = 0;
                   }
+                  setIsTTSPlaying(false);
                   return;
                 }
               }

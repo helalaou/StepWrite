@@ -65,6 +65,9 @@ function TextEditor({
   const autoPlayTimerRef = useRef(null);
   
   const vadRef = useRef(null);
+  // Bumped whenever the VAD is stopped or replaced, so a MicVAD that finishes
+  // initializing afterwards is destroyed instead of keeping the mic open.
+  const vadGenerationRef = useRef(0);
 
   // Add isHandsFree check
   const isHandsFree = config.input.mode === 'HANDS_FREE';
@@ -206,6 +209,7 @@ function TextEditor({
   };
 
   const safeDestroyVAD = useCallback(async () => {
+    vadGenerationRef.current += 1;
     if (!vadRef.current || isCleaningUpRef.current) return;
     
     isCleaningUpRef.current = true;
@@ -228,7 +232,8 @@ function TextEditor({
       setIsSpeechActive(false);
 
       if (isMountedRef.current && isEnabled) {
-        vadRef.current = await window.vad.MicVAD.new({
+        const generation = ++vadGenerationRef.current;
+        const vad = await window.vad.MicVAD.new({
           minSpeechFrames: config.handsFree.vad.minSpeechFrames,
           positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
           negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
@@ -343,9 +348,14 @@ function TextEditor({
           }
         });
 
-        if (isMountedRef.current) {
-          await vadRef.current.start();
+        // MicVAD.new opens the microphone; drop the VAD if the editor was
+        // closed or the VAD restarted while it was initializing.
+        if (generation !== vadGenerationRef.current || !isMountedRef.current) {
+          vad.destroy();
+          return;
         }
+        vadRef.current = vad;
+        await vad.start();
       }
     } catch (error) {
       console.error('Error starting VAD:', error);
@@ -373,36 +383,18 @@ function TextEditor({
 
     return () => {
       mounted = false;
-      // Safe cleanup
-      if (vadRef.current) {
-        // Wrap in try/catch and don't chain catch
-        try {
-          vadRef.current.destroy();
-        } catch (err) {
-          console.log('VAD cleanup error (safe to ignore):', err);
-        }
-        vadRef.current = null;
-      }
+      safeDestroyVAD();
     };
-  }, [isHandsFree, isEnabled, startListening]);
+  }, [isHandsFree, isEnabled, startListening, safeDestroyVAD]);
 
   // Component mount/unmount tracking
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      // Safe cleanup
-      if (vadRef.current) {
-        // Wrap in try/catch and don't chain catch
-        try {
-          vadRef.current.destroy();
-        } catch (err) {
-          console.log('VAD cleanup error (safe to ignore):', err);
-        }
-        vadRef.current = null;
-      }
+      safeDestroyVAD();
     };
-  }, []);
+  }, [safeDestroyVAD]);
 
   // Add a handler for the back button to play sound
   const handleBackClick = () => {

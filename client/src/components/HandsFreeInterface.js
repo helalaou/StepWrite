@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Box, Typography, IconButton, Paper, useMediaQuery } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
@@ -90,6 +90,21 @@ const replaceAnimation = keyframes`
   }
 `;
 
+// MicVAD settings shared by normal and paused listening
+const VAD_OPTIONS = {
+  minSpeechFrames: config.handsFree.vad.minSpeechFrames,
+  preSpeechPadFrames: config.handsFree.vad.preSpeechPadFrames,
+  positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
+  negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
+  redemptionFrames: config.handsFree.vad.redemptionFrames,
+  vadMode: config.handsFree.vad.mode,
+  // ONNX runtime logging: errors only
+  logLevel: 3,
+  groupedLogLevel: 3,
+  runtimeLogLevel: 3,
+  runtimeVerboseLevel: 0,
+};
+
 function HandsFreeInterface({
   currentQuestion,
   sendMessage,
@@ -131,6 +146,9 @@ function HandsFreeInterface({
   const replayAttemptsRef = useRef(0);
   const lastSpeechDetectionTimeRef = useRef(0);
   const isModifyingRef = useRef(false);
+  // Handlers for code that outlives a render (VAD callbacks, timers, effects);
+  // calling through this ref means they always see current state and props.
+  const latestRef = useRef(null);
   const [modifiedQuestions, setModifiedQuestions] = useState(new Set());
   const [hasAnnouncedDraft, setHasAnnouncedDraft] = useState(false);
 
@@ -334,7 +352,7 @@ function HandsFreeInterface({
 
     setQuestionStatus(buildQuestionStatus(currentQuestion.questions));
 
-    startReplayTimeout();
+    latestRef.current.startReplayTimeout();
 
     // Clean up modified questions tracking
     setModifiedQuestions(prev => {
@@ -362,7 +380,7 @@ function HandsFreeInterface({
       vadRef.current.destroy();
       vadRef.current = null;
     }
-  }, [currentQuestionIndex, currentQuestion]);
+  }, [currentQuestionIndex, currentQuestion, setQuestionStatus]);
 
   // Announce the first draft once
   const isDraftReady = hasDraftReady(currentQuestion);
@@ -435,9 +453,10 @@ function HandsFreeInterface({
     }
 
     // Schedule next replay check
-    replayTimeoutRef.current = setTimeout(() => {
-      startReplayTimeout();
-    }, config.handsFree.speech.replay.minimumQuietPeriod);
+    replayTimeoutRef.current = setTimeout(
+      () => latestRef.current.startReplayTimeout(),
+      config.handsFree.speech.replay.minimumQuietPeriod
+    );
   };
 
   // Detect voice commands in transcribed speech
@@ -635,9 +654,7 @@ function HandsFreeInterface({
         }
 
         // Keep a minimal recording active just to listen for the continue command
-        setTimeout(() => {
-          startPausedRecording();
-        }, 500);
+        setTimeout(() => latestRef.current.startPausedRecording(), 500);
         break;
 
       case 'continue':
@@ -651,9 +668,7 @@ function HandsFreeInterface({
           vadRef.current = null;
         }
 
-        setTimeout(() => {
-          startRecording();
-        }, 500);
+        setTimeout(() => latestRef.current.startRecording(), 500);
         break;
 
       case 'finish':
@@ -723,9 +738,7 @@ function HandsFreeInterface({
           return updated;
         });
 
-        setTimeout(() => {
-          startRecording();
-        }, 500);
+        setTimeout(() => latestRef.current.startRecording(), 500);
         break;
 
       case 'next':
@@ -977,6 +990,261 @@ function HandsFreeInterface({
     }
   };
 
+  // VAD callbacks while paused: only the continue command is listened for
+  const handlePausedSpeechStart = () => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Speech segment started in paused mode...');
+    }
+    setIsSpeechActive(true);
+
+    //   mark tts as interrupted
+    setIsTTSPlaying(false);
+
+    updateSpeechDetectionTime();
+  };
+
+  const handlePausedSpeechEnd = async (audio) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Speech segment ended in paused mode...');
+    }
+    setIsSpeechActive(false);
+
+    // === Pre-VAD noise filtering (paused mode) ===
+    const cleanedAudio = filterAndCleanAudio(audio, config.handsFree.noiseReduction);
+    if (!cleanedAudio) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Filtered out as noise by pre-VAD filter (paused mode).');
+      }
+      displayFeedback('Too much noise detected, please try again.', 'error');
+      return;
+    }
+
+    // Only process if we're still in paused mode
+    if (!isPaused && !isPausedRef.current) return;
+
+    // Check if audio is silent or too short (after cleaning)
+    if (checkAudioSilence(cleanedAudio)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Audio segment was silent or too short after cleaning, ignoring');
+      }
+      return;
+    }
+
+    const wavBlob = encodeWav(cleanedAudio, VAD_SAMPLE_RATE);
+
+    // Create form data for API request
+    const formData = new FormData();
+    formData.append('audio', wavBlob, 'speech.wav');
+
+    try {
+      // Send audio for transcription
+      const response = await axios.post(
+        `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      const transcription = (response.data.text || '').trim();
+      if (transcription) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Paused mode transcription: "${transcription}"`);
+        }
+
+        // Check specifically for continue command
+        const commandCheck = checkForCommands(transcription);
+        if (commandCheck.isCommand) {
+          await handleCommandExecution(commandCheck);
+        }
+      }
+    } catch (error) {
+      console.error('Error transcribing audio in paused mode:', error);
+    }
+  };
+
+  // VAD callbacks while listening for answers and commands
+  const handleSpeechStart = () => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Speech segment started...');
+    }
+    setIsSpeechActive(true);
+    setIsRecording(true);
+    clearFinalizeTimeout();
+
+    // Turning auto-play off makes SpeakButton stop the question audio
+    setIsTTSPlaying(false);
+
+    clearReplayTimeout();
+    replayAttemptsRef.current = 0;
+    updateSpeechDetectionTime();
+  };
+
+  const handleSpeechEnd = async (audio) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Speech segment ended, transcribing...');
+    }
+    setIsSpeechActive(false);
+    setIsRecording(false);
+    setIsProcessing(true);
+
+    // === Pre-VAD noise filtering ===
+    const cleanedAudio = filterAndCleanAudio(audio, config.handsFree.noiseReduction);
+    if (!cleanedAudio) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Filtered out as noise by pre-VAD filter.');
+      }
+      displayFeedback('Too much noise detected, please try again.', 'error'); 
+      setIsProcessing(false);
+      if (!isModifying && !isModifyingRef.current) {
+        startReplayTimeout();
+      }
+      return;
+    }
+
+    // Use cleaned audio for silence check and transcription
+    if (checkAudioSilence(cleanedAudio)) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Silent segment detected after cleaning – ignoring and waiting for new input');
+      }
+      setIsProcessing(false);
+      if (!isModifying && !isModifyingRef.current) {
+        startReplayTimeout();
+      }
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      const wavBlob = encodeWav(cleanedAudio, VAD_SAMPLE_RATE);
+      formData.append('audio', wavBlob, 'recording.wav');
+      const response = await axios.post(
+        `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      // Keep the transcription as spoken: it becomes the answer, and
+      // command matching normalizes its own copy.
+      const transcription = (response.data.text || '').trim();
+      if (transcription) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`Segment transcription: "${transcription}"`);
+        }
+
+        replayAttemptsRef.current = 0;
+
+        // SPECIAL CASE: Direct modify command detection for questions with existing answers
+        if (questionStatus[currentQuestionIndex]?.answer && !isModifying && !isModifyingRef.current) {
+          const isModifyCommand = matchesAnyPhrase(
+            transcription,
+            config.handsFree.commands.handsFree.modify.phrases
+          );
+
+          if (isModifyCommand) {
+            if (process.env.NODE_ENV !== 'production') {
+              console.log("MODIFY command directly detected");
+            }
+
+            incrementCount('modifyCount');
+
+            setIsModifying(true);
+            isModifyingRef.current = true; // Immediate update
+            segmentsRef.current = [];
+            setMergedSpeech('');
+            displayFeedback("Now modifying. Speak your new answer.", 'command');
+
+            // Mark this question as modified to prevent TTS replay
+            setModifiedQuestions(prev => {
+              const updated = new Set(prev);
+              updated.add(currentQuestionIndex);
+              return updated;
+            });
+
+            setTimeout(() => latestRef.current.startRecording(), 500);
+
+            setIsProcessing(false);
+            return;
+          }
+        }
+
+        // CASE 1: We're in modify mode - collect speech for the modified answer
+        if (isModifying || isModifyingRef.current) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.log("Processing speech in modify mode");
+          }
+          // Regular transcription handling for modifying
+          segmentsRef.current.push(transcription);
+          const merged = segmentsRef.current.join(' ');
+          setMergedSpeech(merged);
+
+          displayFeedback(`"${transcription}"`, 'transcription');
+
+          clearFinalizeTimeout();
+
+          finalizeTimeoutRef.current = setTimeout(
+            () => latestRef.current.finalizeAndSubmit(),
+            config.handsFree.speech.finalizeDelay
+          );
+
+          setIsProcessing(false);
+          return;
+        }
+
+        // CASE 2: Question already has an answer but we're not in modify mode - only accept commands
+        if (questionStatus[currentQuestionIndex]?.answer) {
+          const commandCheck = checkForCommands(transcription);
+          if (commandCheck.isCommand) {
+            await handleCommandExecution(commandCheck);
+          } else {
+            displayFeedback("Say 'modify question' to change your answer, or use navigation commands.", 'command');
+          }
+          setIsProcessing(false);
+          return;
+        }
+
+        // CASE 3: New question with no answer yet - check for commands first then speech
+        const commandCheck = checkForCommands(transcription);
+        if (commandCheck.isCommand) {
+          await handleCommandExecution(commandCheck);
+          setIsProcessing(false);
+          return;
+        }
+
+        // CASE 4: Regular speech for a new answer - collect and prepare to submit
+        segmentsRef.current.push(transcription);
+        const merged = segmentsRef.current.join(' ');
+        setMergedSpeech(merged);
+
+        // Display the recognized speech in the floating feedback
+        displayFeedback(`"${transcription}"`, 'transcription');
+
+        clearFinalizeTimeout();
+
+        // Set up timeout to finalize the answer
+        finalizeTimeoutRef.current = setTimeout(
+          () => latestRef.current.finalizeAndSubmit(),
+          config.handsFree.speech.finalizeDelay
+        );
+      }
+    } catch (err) {
+      console.error('Transcription error:', err);
+      displayFeedback('Speech recognition failed, please try again.', 'error'); 
+      if (!isModifying && !isModifyingRef.current) {
+        startReplayTimeout();
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleVADMisfire = () => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('VAD misfire – restarting recording...');
+    }
+    setIsSpeechActive(false);
+    setIsRecording(false);
+    startRecording();
+  };
+
   // A simplified recording mode that only listens for the continue command (pop-up overlay)
   const startPausedRecording = async () => {
     try {
@@ -993,84 +1261,9 @@ function HandsFreeInterface({
       clearFinalizeTimeout();
 
       vadRef.current = await window.vad.MicVAD.new({
-        minSpeechFrames: config.handsFree.vad.minSpeechFrames,
-        preSpeechPadFrames: config.handsFree.vad.preSpeechPadFrames,
-        positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
-        negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
-        redemptionFrames: config.handsFree.vad.redemptionFrames,
-        vadMode: config.handsFree.vad.mode,
-        logLevel: 3,
-        groupedLogLevel: 3,
-        runtimeLogLevel: 3,
-        runtimeVerboseLevel: 0,
-        onSpeechStart: () => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('Speech segment started in paused mode...');
-          }
-          setIsSpeechActive(true);
-
-          //   mark tts as interrupted
-          setIsTTSPlaying(false);
-
-          updateSpeechDetectionTime();
-        },
-        onSpeechEnd: async (audio) => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('Speech segment ended in paused mode...');
-          }
-          setIsSpeechActive(false);
-
-          // === Pre-VAD noise filtering (paused mode) ===
-          const cleanedAudio = filterAndCleanAudio(audio, config.handsFree.noiseReduction);
-          if (!cleanedAudio) {
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('Filtered out as noise by pre-VAD filter (paused mode).');
-            }
-            displayFeedback('Too much noise detected, please try again.', 'error');
-            return;
-          }
-
-          // Only process if we're still in paused mode
-          if (!isPaused && !isPausedRef.current) return;
-
-          // Check if audio is silent or too short (after cleaning)
-          if (checkAudioSilence(cleanedAudio)) {
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('Audio segment was silent or too short after cleaning, ignoring');
-            }
-            return;
-          }
-
-          const wavBlob = encodeWav(cleanedAudio, VAD_SAMPLE_RATE);
-
-          // Create form data for API request
-          const formData = new FormData();
-          formData.append('audio', wavBlob, 'speech.wav');
-
-          try {
-            // Send audio for transcription
-            const response = await axios.post(
-              `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
-              formData,
-              { headers: { 'Content-Type': 'multipart/form-data' } }
-            );
-
-            const transcription = (response.data.text || '').trim();
-            if (transcription) {
-              if (process.env.NODE_ENV !== 'production') {
-                console.log(`Paused mode transcription: "${transcription}"`);
-              }
-
-              // Check specifically for continue command
-              const commandCheck = checkForCommands(transcription);
-              if (commandCheck.isCommand) {
-                await handleCommandExecution(commandCheck);
-              }
-            }
-          } catch (error) {
-            console.error('Error transcribing audio in paused mode:', error);
-          }
-        }
+        ...VAD_OPTIONS,
+        onSpeechStart: () => latestRef.current.handlePausedSpeechStart(),
+        onSpeechEnd: (audio) => latestRef.current.handlePausedSpeechEnd(audio),
       });
 
       await vadRef.current.start();
@@ -1104,197 +1297,10 @@ function HandsFreeInterface({
       clearFinalizeTimeout();
 
       vadRef.current = await window.vad.MicVAD.new({
-        minSpeechFrames: config.handsFree.vad.minSpeechFrames,
-        preSpeechPadFrames: config.handsFree.vad.preSpeechPadFrames,
-        positiveSpeechThreshold: config.handsFree.vad.positiveSpeechThreshold,
-        negativeSpeechThreshold: config.handsFree.vad.negativeSpeechThreshold,
-        redemptionFrames: config.handsFree.vad.redemptionFrames,
-        vadMode: config.handsFree.vad.mode,
-        logLevel: 3,  // Hardcoded for development
-        groupedLogLevel: 3,  // Hardcoded for development
-        runtimeLogLevel: 3,  // Hardcoded for development
-        runtimeVerboseLevel: 0,  // Hardcoded for development
-        onSpeechStart: () => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('Speech segment started...');
-          }
-          setIsSpeechActive(true);
-          setIsRecording(true);
-          clearFinalizeTimeout();
-
-          // Turning auto-play off makes SpeakButton stop the question audio
-          setIsTTSPlaying(false);
-
-          clearReplayTimeout();
-          replayAttemptsRef.current = 0;
-          updateSpeechDetectionTime();
-        },
-        // Speech end handler with transcription
-        onSpeechEnd: async (audio) => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('Speech segment ended, transcribing...');
-          }
-          setIsSpeechActive(false);
-          setIsRecording(false);
-          setIsProcessing(true);
-
-          // === Pre-VAD noise filtering ===
-          const cleanedAudio = filterAndCleanAudio(audio, config.handsFree.noiseReduction);
-          if (!cleanedAudio) {
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('Filtered out as noise by pre-VAD filter.');
-            }
-            displayFeedback('Too much noise detected, please try again.', 'error'); 
-            setIsProcessing(false);
-            if (!isModifying && !isModifyingRef.current) {
-              startReplayTimeout();
-            }
-            return;
-          }
-
-          // Use cleaned audio for silence check and transcription
-          if (checkAudioSilence(cleanedAudio)) {
-            if (process.env.NODE_ENV !== 'production') {
-              console.log('Silent segment detected after cleaning – ignoring and waiting for new input');
-            }
-            setIsProcessing(false);
-            if (!isModifying && !isModifyingRef.current) {
-              startReplayTimeout();
-            }
-            return;
-          }
-
-          try {
-            const formData = new FormData();
-            const wavBlob = encodeWav(cleanedAudio, VAD_SAMPLE_RATE);
-            formData.append('audio', wavBlob, 'recording.wav');
-            const response = await axios.post(
-              `${config.core.apiUrl}${config.core.endpoints.transcribe}`,
-              formData,
-              { headers: { 'Content-Type': 'multipart/form-data' } }
-            );
-
-            // Keep the transcription as spoken: it becomes the answer, and
-            // command matching normalizes its own copy.
-            const transcription = (response.data.text || '').trim();
-            if (transcription) {
-              if (process.env.NODE_ENV !== 'production') {
-                console.log(`Segment transcription: "${transcription}"`);
-              }
-
-              replayAttemptsRef.current = 0;
-
-              // SPECIAL CASE: Direct modify command detection for questions with existing answers
-              if (questionStatus[currentQuestionIndex]?.answer && !isModifying && !isModifyingRef.current) {
-                const isModifyCommand = matchesAnyPhrase(
-                  transcription,
-                  config.handsFree.commands.handsFree.modify.phrases
-                );
-
-                if (isModifyCommand) {
-                  if (process.env.NODE_ENV !== 'production') {
-                    console.log("MODIFY command directly detected");
-                  }
-
-                  incrementCount('modifyCount');
-
-                  setIsModifying(true);
-                  isModifyingRef.current = true; // Immediate update
-                  segmentsRef.current = [];
-                  setMergedSpeech('');
-                  displayFeedback("Now modifying. Speak your new answer.", 'command');
-
-                  // Mark this question as modified to prevent TTS replay
-                  setModifiedQuestions(prev => {
-                    const updated = new Set(prev);
-                    updated.add(currentQuestionIndex);
-                    return updated;
-                  });
-
-                  setTimeout(() => {
-                    startRecording();
-                  }, 500);
-
-                  setIsProcessing(false);
-                  return;
-                }
-              }
-
-              // CASE 1: We're in modify mode - collect speech for the modified answer
-              if (isModifying || isModifyingRef.current) {
-                if (process.env.NODE_ENV !== 'production') {
-                  console.log("Processing speech in modify mode");
-                }
-                // Regular transcription handling for modifying
-                segmentsRef.current.push(transcription);
-                const merged = segmentsRef.current.join(' ');
-                setMergedSpeech(merged);
-
-                displayFeedback(`"${transcription}"`, 'transcription');
-
-                clearFinalizeTimeout();
-
-                finalizeTimeoutRef.current = setTimeout(async () => {
-                  await finalizeAndSubmit();
-                }, config.handsFree.speech.finalizeDelay);
-
-                setIsProcessing(false);
-                return;
-              }
-
-              // CASE 2: Question already has an answer but we're not in modify mode - only accept commands
-              if (questionStatus[currentQuestionIndex]?.answer) {
-                const commandCheck = checkForCommands(transcription);
-                if (commandCheck.isCommand) {
-                  await handleCommandExecution(commandCheck);
-                } else {
-                  displayFeedback("Say 'modify question' to change your answer, or use navigation commands.", 'command');
-                }
-                setIsProcessing(false);
-                return;
-              }
-
-              // CASE 3: New question with no answer yet - check for commands first then speech
-              const commandCheck = checkForCommands(transcription);
-              if (commandCheck.isCommand) {
-                await handleCommandExecution(commandCheck);
-                setIsProcessing(false);
-                return;
-              }
-
-              // CASE 4: Regular speech for a new answer - collect and prepare to submit
-              segmentsRef.current.push(transcription);
-              const merged = segmentsRef.current.join(' ');
-              setMergedSpeech(merged);
-
-              // Display the recognized speech in the floating feedback
-              displayFeedback(`"${transcription}"`, 'transcription');
-
-              clearFinalizeTimeout();
-
-              // Set up timeout to finalize the answer
-              finalizeTimeoutRef.current = setTimeout(async () => {
-                await finalizeAndSubmit();
-              }, config.handsFree.speech.finalizeDelay);
-            }
-          } catch (err) {
-            console.error('Transcription error:', err);
-            displayFeedback('Speech recognition failed, please try again.', 'error'); 
-            if (!isModifying && !isModifyingRef.current) {
-              startReplayTimeout();
-            }
-          } finally {
-            setIsProcessing(false);
-          }
-        },
-        onVADMisfire: () => {
-          if (process.env.NODE_ENV !== 'production') {
-            console.log('VAD misfire – restarting recording...');
-          }
-          setIsSpeechActive(false);
-          setIsRecording(false);
-          startRecording();
-        }
+        ...VAD_OPTIONS,
+        onSpeechStart: () => latestRef.current.handleSpeechStart(),
+        onSpeechEnd: (audio) => latestRef.current.handleSpeechEnd(audio),
+        onVADMisfire: () => latestRef.current.handleVADMisfire(),
       });
 
       if (process.env.NODE_ENV !== 'production') {
@@ -1305,6 +1311,22 @@ function HandsFreeInterface({
       console.error('Error starting VAD:', err);
     }
   };
+
+  // Layout effects run before every passive effect of the same commit, so the
+  // effects above already see this render's handlers.
+  useLayoutEffect(() => {
+    latestRef.current = {
+      startRecording,
+      startPausedRecording,
+      startReplayTimeout,
+      finalizeAndSubmit,
+      handleSpeechStart,
+      handleSpeechEnd,
+      handleVADMisfire,
+      handlePausedSpeechStart,
+      handlePausedSpeechEnd,
+    };
+  });
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1357,7 +1379,7 @@ function HandsFreeInterface({
   // Start VAD detection when TTS starts playing
   useEffect(() => {
     if (isTTSPlaying) {
-      startRecording();
+      latestRef.current.startRecording();
     }
   }, [isTTSPlaying]);
 

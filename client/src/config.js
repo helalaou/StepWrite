@@ -10,8 +10,6 @@ const NGROK = {  // if DEPLOY_MODE = 'ngrok'
   SERVER_URL: 'https://64908c6e5c4d.ngrok.app', // (port 3001) - server
 
   CLIENT_URL: 'https://stepwrite.ngrok.io', // (port 3000) - client
-
-  USE_CLIENT_URL: false // Whether to use client URL for redirects
 };
 
 const getEnvVar = (name, defaultValue) => {
@@ -50,11 +48,6 @@ const config = {
       saveExperimentData: '/api/save-experiment-data'
     },
 
-    // System settings
-    llm: {
-      timeout: 70000, // Range: 10000-120000ms, Maximum time to wait for LLM response
-    },
-
     // Static email for reply flow
     reply_email:
       `Subject: Question about your missing project submission
@@ -72,7 +65,6 @@ Professor Williams`
   // ====== EXPERIMENT TRACKING SETTINGS ======
   experiment: {
     enabled: false,  //enable/disable experiment tracking functionality
-    outputDir: 'experiment_data', // Directory to store experiment output files
     participantIdRequired: true, // Whether participant ID is required before starting
   },
 
@@ -118,13 +110,12 @@ Professor Williams`
       floorMultiplier: 1.15,            
       maxNoisePercent: 85,             
       minSignificantPercent: 12,      
-      sampleSize: 2000,                
       volumeThreshold: 0.012           
     },
 
     // Controls when to finalize and submit speech
     speech: {
-      finalizeDelay: 1000,            // Range: 3000-10000ms, Wait time before submitting
+      finalizeDelay: 1000,            // ms of silence after the last speech segment before the answer is submitted
       // Controls question replay behavior when no speech is detected
       replay: {
         maxAttempts: Infinity,        // Number of replay attempts before giving up
@@ -473,10 +464,7 @@ Professor Williams`
   voiceInput: {
     // Audio recording settings
     recording: {
-      fftSize: 1024,                  // Size of FFT window (values: 256, 512, 1024, 2048, 4096)
       audioBitsPerSecond: 128000,     // Audio quality in bits/sec (range: 64000-256000)
-      chunkSize: 3000,                // Milliseconds per audio chunk (range: 1000-10000)
-      logInterval: 300,               // How often to log audio levels in ms (range: 100-1000)
     },
 
     // Noise reduction settings for better voice recognition
@@ -485,7 +473,6 @@ Professor Williams`
       maxNoisePercent: 80,            // Range: 50-95, Higher = more tolerant of noise
       minSignificantPercent: 15,      // Range: 1-50, Lower = accept shorter speech
       volumeThreshold: 0.02,          // Range: 0.01-1.0, Lower = more sensitive
-      sampleSize: 2000                // Range: 500-5000, Higher = more accurate noise detection
     }
   },
 
@@ -494,7 +481,6 @@ Professor Williams`
   continuousDrafts: {
     enabled: true,
     showDraftIndicator: true, // Show indicator when draft is available
-    autoSwitchToEditor: false, //auto switch to editor when draft is ready
     minimumQuestionsForDraft: 3, // the miinimum number of answered questions required before generating background drafts
   },
 };

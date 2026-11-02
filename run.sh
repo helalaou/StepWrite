@@ -2,17 +2,19 @@
 
 clear
 
-# Function to kill processes running on specified ports
+# Stop the processes listening on the given ports. Only listeners: a plain
+# 'lsof -i:PORT' also lists every client connected to the port, such as a
+# browser tab with the app open.
 kill_ports() {
     local ports=("$@")
     for port in "${ports[@]}"; do
-        echo "Checking for processes running on port $port..."
-        pid=$(lsof -t -i:$port)
-        if [ -n "$pid" ]; then
-            echo "Killing process $pid on port $port..."
-            kill -9 $pid
+        echo "Checking for processes listening on port $port..."
+        pids=$(lsof -t -iTCP:"$port" -sTCP:LISTEN)
+        if [ -n "$pids" ]; then
+            echo "Stopping process(es) $(echo $pids) on port $port..."
+            kill $pids
         else
-            echo "No process running on port $port."
+            echo "No process listening on port $port."
         fi
     done
 }

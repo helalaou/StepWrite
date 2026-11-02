@@ -19,6 +19,12 @@ kill_ports() {
     done
 }
 
+stop_servers() {
+    echo "Stopping servers..."
+    kill_ports 3000 3001
+    echo "All components stopped."
+}
+
 # Kill processes running on ports 3000 and 3001
 kill_ports 3000 3001
 
@@ -48,12 +54,7 @@ fi
 echo "All components are running!"
 echo "Access the application at http://localhost:3000"
 
-# Wait for the user to stop the servers
+# Stop the servers when the script exits, whether through ENTER or Ctrl-C
+trap stop_servers EXIT
+
 read -p "Press [ENTER] to stop the servers..."
-
-# Stop the servers
-echo "Stopping servers..."
-pkill -f "node server/server.js"
-pkill -f "react-scripts start"
-
-echo "All components stopped."

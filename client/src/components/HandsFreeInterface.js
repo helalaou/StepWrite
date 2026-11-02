@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
-import { Box, Typography, IconButton, Paper, useMediaQuery } from '@mui/material';
+import { Box, Button, Typography, IconButton, Paper, useMediaQuery } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EditIcon from '@mui/icons-material/Edit';
 import MicIcon from '@mui/icons-material/Mic';
+import MicOffIcon from '@mui/icons-material/MicOff';
 import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
 import SpeakButton from './SpeakButton';
@@ -105,6 +106,23 @@ const VAD_OPTIONS = {
   runtimeVerboseLevel: 0,
 };
 
+// What to tell the user when MicVAD could not start listening
+const describeMicError = (error) => {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    // e.g. the Apple Watch web view, or a page not served over HTTPS
+    return "This browser can't use the microphone.";
+  }
+  switch (error?.name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'Microphone access is blocked. Allow it for this site, then try again.';
+    case 'NotFoundError':
+      return 'No microphone was found.';
+    default:
+      return "The microphone couldn't start.";
+  }
+};
+
 function HandsFreeInterface({
   currentQuestion,
   sendMessage,
@@ -136,6 +154,8 @@ function HandsFreeInterface({
   const [feedbackType, setFeedbackType] = useState('default');
   const [isPaused, setIsPaused] = useState(false);
   const isPausedRef = useRef(false);
+  // Why the microphone could not be started; null while listening works
+  const [micError, setMicError] = useState(null);
 
   // Speech processing and recognition
   const segmentsRef = useRef([]);
@@ -209,15 +229,23 @@ function HandsFreeInterface({
 
   // MicVAD.new asks for the microphone and loads the model, which takes a
   // while; if the VAD was stopped or replaced meanwhile, drop the new one.
+  // A failure is shown to the user instead of leaving them waiting to be heard.
   const startVad = async (callbacks) => {
     const generation = ++vadGenerationRef.current;
-    const vad = await window.vad.MicVAD.new({ ...VAD_OPTIONS, ...callbacks });
-    if (generation !== vadGenerationRef.current) {
-      vad.destroy();
-      return;
+    try {
+      const vad = await window.vad.MicVAD.new({ ...VAD_OPTIONS, ...callbacks });
+      if (generation !== vadGenerationRef.current) {
+        vad.destroy();
+        return;
+      }
+      vadRef.current = vad;
+      await vad.start();
+      setMicError(null);
+    } catch (error) {
+      if (generation !== vadGenerationRef.current) return;
+      console.error('Error starting VAD:', error);
+      setMicError(describeMicError(error));
     }
-    vadRef.current = vad;
-    await vad.start();
   };
 
   const updateSpeechDetectionTime = () => {
@@ -1311,8 +1339,13 @@ function HandsFreeInterface({
         onVADMisfire: () => latestRef.current.handleVADMisfire(),
       });
     } catch (err) {
-      console.error('Error starting VAD:', err);
+      console.error('Error starting recording:', err);
     }
+  };
+
+  const retryMicrophone = () => {
+    setMicError(null);
+    startRecording();
   };
 
   // Layout effects run before every passive effect of the same commit, so the
@@ -1748,33 +1781,38 @@ function HandsFreeInterface({
               gap: 1,
               padding: '4px 8px',
               borderRadius: 8,
-              backgroundColor: isPaused ? 'rgba(211, 47, 47, 0.1)' :
+              backgroundColor: micError || isPaused ? 'rgba(211, 47, 47, 0.1)' :
                 isSpeechActive ? 'rgba(46, 125, 50, 0.1)' :
                   'rgba(0, 0, 0, 0.05)',
               transition: 'all 0.3s ease',
             }}
           >
-            <MicIcon
-              sx={{
-                fontSize: 18,
-                color: isPaused ? '#d32f2f' :
-                  isSpeechActive ? '#2e7d32' :
-                    'rgba(0, 0, 0, 0.4)',
-                animation: isSpeechActive && !isPaused ? 'pulse 1.5s infinite ease-in-out' : 'none',
-              }}
-            />
+            {micError ? (
+              <MicOffIcon sx={{ fontSize: 18, color: '#d32f2f' }} />
+            ) : (
+              <MicIcon
+                sx={{
+                  fontSize: 18,
+                  color: isPaused ? '#d32f2f' :
+                    isSpeechActive ? '#2e7d32' :
+                      'rgba(0, 0, 0, 0.4)',
+                  animation: isSpeechActive && !isPaused ? 'pulse 1.5s infinite ease-in-out' : 'none',
+                }}
+              />
+            )}
             <Typography
               variant="caption"
               sx={{
-                color: isPaused ? '#d32f2f' :
+                color: micError || isPaused ? '#d32f2f' :
                   isSpeechActive ? '#2e7d32' :
                     'rgba(0, 0, 0, 0.6)',
                 fontWeight: 500,
               }}
             >
-              {isPaused ? 'Paused' :
-                isSpeechActive ? 'Listening' :
-                  'Ready'}
+              {micError ? 'Mic off' :
+                isPaused ? 'Paused' :
+                  isSpeechActive ? 'Listening' :
+                    'Ready'}
             </Typography>
           </Box>
 
@@ -1837,16 +1875,32 @@ function HandsFreeInterface({
 
         {/* Audio visualizer and status */}
         <Box sx={{ mt: isWatch ? 1.5 : 3, textAlign: 'center' }}>
-          {!isPaused && <AudioVisualizer isSpeechDetected={isSpeechActive} />}
-          <Typography sx={{ mb: 2, fontSize: isWatch ? '0.8rem' : undefined }}>
-            {isProcessing
-              ? 'Processing...'
-              : isRecording
-                ? 'Recording...'
-                : isPaused
-                  ? 'Paused'
-                  : 'Waiting for speech...'}
-          </Typography>
+          {micError ? (
+            <>
+              <Typography
+                role="alert"
+                sx={{ mb: 1, color: 'error.main', fontSize: isWatch ? '0.8rem' : undefined }}
+              >
+                {micError}
+              </Typography>
+              <Button variant="outlined" size="small" onClick={retryMicrophone}>
+                Try again
+              </Button>
+            </>
+          ) : (
+            <>
+              {!isPaused && <AudioVisualizer isSpeechDetected={isSpeechActive} />}
+              <Typography sx={{ mb: 2, fontSize: isWatch ? '0.8rem' : undefined }}>
+                {isProcessing
+                  ? 'Processing...'
+                  : isRecording
+                    ? 'Recording...'
+                    : isPaused
+                      ? 'Paused'
+                      : 'Waiting for speech...'}
+              </Typography>
+            </>
+          )}
         </Box>
       </Box>
 

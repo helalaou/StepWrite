@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Stop at the first failure so deploy.sh does not start a half-installed app
+set -e
+
 echo "Installing dependencies for the client and server..."
 
 # Install client dependencies

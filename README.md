@@ -205,9 +205,9 @@ The client reads these optional build-time variables (for example in `client/.en
 ### Server settings
 
 [`server/config.js`](server/config.js) holds the model, temperature and token limit for every
-step (all default to `chatgpt-4o-latest`), the fact-checking loop, tone classification, the
-continuous-draft policy, the TTS voice (`nova`) and the Whisper settings. Logs are written to
-`server/temp/app.log`.
+step (GPT-4o for writing, GPT-4.1 for editing, replies and tone, o3 for fact-checking and
+dependency analysis), the fact-checking loop, tone classification, the continuous-draft policy,
+the TTS voice (`nova`) and the Whisper settings. Logs are written to `server/temp/app.log`.
 
 ### Client settings
 

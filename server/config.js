@@ -31,12 +31,12 @@ const config = {
     // Write flow settings
     write: {
       question: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4o-2024-11-20',
         temperature: 0.7,
         maxTokens: 100,
       },
       output: {
-        model: 'chatgpt-4o-latest',
+        model: 'gpt-4o-2024-11-20',
         temperature: 0.7,
         maxTokens: 10000,
       }
@@ -72,7 +72,7 @@ const config = {
 
     // Classification settings
     textTypeClassification: {
-      model: 'chatgpt-4o-latest',
+      model: 'gpt-4o-2024-11-20',
       temperature: 0,
       maxTokens: 10,
       validCategories: ['email', 'letter', 'message', 'other'],
@@ -84,10 +84,10 @@ const config = {
       enabled: true,
       maxAttempts: 5,
       check: {
-        model: 'o4-mini-2025-04-16',
+        model: 'o3-2025-04-16',
       },
       correction: {
-        model: 'o4-mini-2025-04-16',
+        model: 'o3-2025-04-16',
       }
     },
 
@@ -137,7 +137,7 @@ const config = {
 
     // Initial reply question settings
     initialReplyQuestion: {
-      model: 'chatgpt-4o-latest',
+      model: 'gpt-4o-2024-11-20',
       temperature: 0.7,
       maxTokens: 100,
     },

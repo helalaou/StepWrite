@@ -26,6 +26,7 @@ prompt_card.md
 .DS_Store
 .idea/
 .vscode/
+xcuserdata/
 *.swp
 *.swo
 *~

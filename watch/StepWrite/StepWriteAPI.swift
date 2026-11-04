@@ -11,25 +11,38 @@ struct PlannedQuestion: Codable, Equatable {
     var response: String? = nil
 }
 
+/// A draft of the text so far, which the server writes once enough questions
+/// have real answers. It travels with the planning, so it is sent back as is.
+struct BackgroundDraft: Codable, Equatable {
+    let content: String
+    let generatedAt: String?
+    let questionsCount: Int?
+    let answeredCount: Int?
+}
+
 /// The conversation state the server reads and returns on every turn.
 struct ConversationPlanning: Codable {
     var questions: [PlannedQuestion]
     var followupNeeded: Bool
+    var backgroundDraft: BackgroundDraft?
 
-    init(questions: [PlannedQuestion], followupNeeded: Bool) {
+    init(questions: [PlannedQuestion], followupNeeded: Bool, backgroundDraft: BackgroundDraft? = nil) {
         self.questions = questions
         self.followupNeeded = followupNeeded
+        self.backgroundDraft = backgroundDraft
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         questions = try container.decode([PlannedQuestion].self, forKey: .questions)
         followupNeeded = try container.decodeIfPresent(Bool.self, forKey: .followupNeeded) ?? true
+        backgroundDraft = try container.decodeIfPresent(BackgroundDraft.self, forKey: .backgroundDraft)
     }
 
     enum CodingKeys: String, CodingKey {
         case questions
         case followupNeeded = "followup_needed"
+        case backgroundDraft
     }
 }
 
@@ -70,11 +83,23 @@ struct StepWriteAPI {
         return URLSession(configuration: configuration)
     }()
 
+    /// An answer given in this turn. The server compares it with the answer it
+    /// saw before and drops later questions that depended on that one.
+    struct AnswerChange {
+        let index: Int
+        let answer: String
+        /// The answer the server last saw for this question; empty if none
+        let previousAnswer: String
+    }
+
     /// Sends the answers so far and gets the next question, or the final text
     /// when the server has enough (or `finish` asks it to stop asking).
-    func submitTurn(_ planning: ConversationPlanning, finish: Bool) async throws -> TurnResult {
+    func submitTurn(_ planning: ConversationPlanning, change: AnswerChange? = nil, finish: Bool = false) async throws -> TurnResult {
         struct Request: Encodable {
             let conversationPlanning: ConversationPlanning
+            let changedIndex: Int?
+            let answer: String?
+            let previousAnswer: String?
             let isFinishCommand: Bool
         }
         struct Response: Decodable {
@@ -88,7 +113,13 @@ struct StepWriteAPI {
             }
         }
 
-        let request = try jsonRequest("api/write", body: Request(conversationPlanning: planning, isFinishCommand: finish))
+        let request = try jsonRequest("api/write", body: Request(
+            conversationPlanning: planning,
+            changedIndex: change?.index,
+            answer: change?.answer,
+            previousAnswer: change?.previousAnswer,
+            isFinishCommand: finish
+        ))
         let response: Response = try await decoded(request)
         if response.followupNeeded, let next = response.conversationPlanning {
             return .nextQuestion(next)
@@ -121,16 +152,20 @@ struct StepWriteAPI {
         return response.text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Speech for `text` in the server's voice, as MP3 data.
-    func speech(for text: String) async throws -> Data {
+    /// Speech for `text` in the server's voice, as MP3 data. `cacheName` keeps
+    /// the audio under a fixed file name on the server, as the web app does for
+    /// its spoken feedback, so both apps reuse the same clips.
+    func speech(for text: String, cacheName: String? = nil) async throws -> Data {
         struct Request: Encodable {
             let text: String
+            let cache_as: String?
         }
         struct Response: Decodable {
             let audioUrl: String
         }
 
-        let response: Response = try await decoded(try jsonRequest("api/tts/generate", body: Request(text: text)))
+        let body = Request(text: text, cache_as: cacheName)
+        let response: Response = try await decoded(try jsonRequest("api/tts/generate", body: body))
         // audioUrl is a path on the server, such as /tts/<hash>.mp3
         guard let audioURL = URL(string: response.audioUrl, relativeTo: baseURL) else {
             throw APIError.unexpectedResponse

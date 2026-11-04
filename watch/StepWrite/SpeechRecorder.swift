@@ -2,8 +2,9 @@ import AVFoundation
 
 /// Records one spoken answer from the watch microphone. Like the web app's
 /// voice activity detection, it waits for speech to start and stops once the
-/// speaker pauses. Speech is told apart from background noise by how much
-/// louder it is than the measured noise floor.
+/// speaker pauses, so nobody has to touch the watch to end an answer. Speech is
+/// told apart from background noise by how much louder it is than the measured
+/// noise floor.
 @MainActor
 final class SpeechRecorder {
     enum RecorderError: LocalizedError {
@@ -18,6 +19,13 @@ final class SpeechRecorder {
                 return "The microphone couldn't start."
             }
         }
+    }
+
+    enum Recording {
+        /// A WAV file with the speech, which the caller deletes
+        case speech(URL)
+        /// Nobody spoke before the timeout
+        case silence
     }
 
     /// How often the input level is checked
@@ -37,25 +45,25 @@ final class SpeechRecorder {
     private let sustainedSpeech: Duration = .milliseconds(100)
     /// Silence this long after speech ends the answer (the web app waits 1 s)
     private let endOfAnswerSilence: Duration = .milliseconds(1200)
-    /// While nobody speaks, the recording restarts this often to stay short
-    private let idleRestartInterval: Duration = .seconds(10)
+    /// An answer must be loud for this long in all, so a knock or a sleeve
+    /// brushing the watch isn't sent, which Whisper would turn into words such
+    /// as "Thank you for watching". A one-word command still passes.
+    private let minimumSpeech: Duration = .milliseconds(300)
     private let maximumAnswerLength: Duration = .seconds(90)
 
-    private var finishRequested = false
-
-    /// Ends the answer being recorded now, as if the speaker had paused.
-    func finishAnswer() {
-        finishRequested = true
-    }
-
-    /// Records until the speaker pauses after speaking and returns the WAV file
-    /// (the caller deletes it), or nil if `finishAnswer()` was called before any
-    /// speech. Cancelling the calling task stops the recording.
-    func recordAnswer(onSpeechStart: () -> Void) async throws -> URL? {
+    /// Records until the speaker pauses after speaking, or until `timeout`
+    /// passes without speech. `onHearing` is called with true when speech
+    /// starts, and with false if it turns out to be only a noise. `onLevel`
+    /// gets the input level, from 0 (silence) to 1, every 50 ms. Cancelling
+    /// the calling task stops the recording.
+    func record(
+        timeout: Duration,
+        onHearing: (Bool) -> Void,
+        onLevel: (Float) -> Void
+    ) async throws -> Recording {
         guard await AVAudioApplication.requestRecordPermission() else {
             throw RecorderError.microphoneDenied
         }
-        finishRequested = false
 
         let file = FileManager.default.temporaryDirectory
             .appendingPathComponent("answer-\(UUID().uuidString).wav")
@@ -69,27 +77,36 @@ final class SpeechRecorder {
             AVLinearPCMIsBigEndianKey: false,
         ])
         recorder.isMeteringEnabled = true
+        var keepFile = false
         // Stopping writes the WAV header, so the file is complete once this returns
-        defer { recorder.stop() }
+        defer {
+            recorder.stop()
+            onLevel(0)
+            if !keepFile {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
         guard recorder.record() else {
             throw RecorderError.couldNotRecord
         }
 
         let clock = ContinuousClock()
         let listeningStart = clock.now
-        var recordingStart = listeningStart
         /// Levels heard before the answer started, oldest first
         var recentLevels: [Float] = []
         let noiseWindowPolls = Int(noiseWindow / pollInterval)
         var loudSince: ContinuousClock.Instant?
         var speechStart: ContinuousClock.Instant?
         var lastSpeech = listeningStart
+        /// How long the input has been loud since the answer started
+        var speechHeard: Duration = .zero
 
         while true {
             try await Task.sleep(for: pollInterval)
             let now = clock.now
             recorder.updateMeters()
             let level = recorder.averagePower(forChannel: 0)
+            onLevel(Self.normalized(level))
 
             // The floor stops moving once the answer starts, so speech never raises it
             if speechStart == nil {
@@ -102,35 +119,34 @@ final class SpeechRecorder {
             let isLoud = level > max(noiseFloor + speechMargin, minimumSpeechLevel)
             loudSince = isLoud ? (loudSince ?? now) : nil
 
-            if let speechStart {
+            if let start = speechStart {
+                if isLoud {
+                    speechHeard += pollInterval
+                }
                 if let loudSince, now - loudSince >= sustainedSpeech {
                     lastSpeech = now
                 }
-                if finishRequested
-                    || now - lastSpeech >= endOfAnswerSilence
-                    || now - speechStart >= maximumAnswerLength {
-                    return file
+                if now - lastSpeech >= endOfAnswerSilence || now - start >= maximumAnswerLength {
+                    if speechHeard >= minimumSpeech {
+                        keepFile = true
+                        return .speech(file)
+                    }
+                    // Only a noise: start a new recording without it
+                    recorder.stop()
+                    recorder.deleteRecording()
+                    guard recorder.record() else {
+                        throw RecorderError.couldNotRecord
+                    }
+                    speechStart = nil
+                    onHearing(false)
                 }
-                continue
-            }
-
-            if finishRequested {
-                try? FileManager.default.removeItem(at: file)
-                return nil
-            }
-
-            if let loudSince, now - loudSince >= speechOnset, now - listeningStart >= warmUp {
+            } else if let loudSince, now - loudSince >= speechOnset, now - listeningStart >= warmUp {
                 speechStart = now
                 lastSpeech = now
-                onSpeechStart()
-            } else if loudSince == nil, now - recordingStart >= idleRestartInterval {
-                // Start the file over so it holds little silence before the answer
-                recorder.stop()
-                _ = recorder.deleteRecording()
-                guard recorder.record() else {
-                    throw RecorderError.couldNotRecord
-                }
-                recordingStart = now
+                speechHeard = speechOnset
+                onHearing(true)
+            } else if loudSince == nil, now - listeningStart >= timeout {
+                return .silence
             }
         }
     }

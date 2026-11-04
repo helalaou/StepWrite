@@ -7,18 +7,35 @@ final class SpeechPlayer {
     private var player: AVAudioPlayer?
     private let synthesizer = AVSpeechSynthesizer()
 
-    /// Returns once `text` has been spoken. Cancelling the calling task stops it.
-    func speak(_ text: String, using api: StepWriteAPI) async throws {
-        defer { stop() }
+    /// Returns once `text` has been spoken. `api` nil speaks in the watch's own
+    /// voice, which works without the server. `cacheName` keeps the server's
+    /// audio under that file name (see `StepWriteAPI.speech`). `onLevel` gets
+    /// the output level, from 0 to 1, while the server's voice plays.
+    /// Cancelling the calling task stops the speech.
+    func speak(
+        _ text: String,
+        using api: StepWriteAPI?,
+        cacheName: String? = nil,
+        onLevel: (Float) -> Void = { _ in }
+    ) async throws {
+        defer {
+            stop()
+            onLevel(0)
+        }
 
-        if let audio = try? await api.speech(for: text),
-           let player = try? AVAudioPlayer(data: audio),
-           player.play() {
-            self.player = player
-            while player.isPlaying {
-                try await Task.sleep(for: .milliseconds(100))
+        if let api,
+           let audio = try? await api.speech(for: text, cacheName: cacheName),
+           let player = try? AVAudioPlayer(data: audio) {
+            player.isMeteringEnabled = true
+            if player.play() {
+                self.player = player
+                while player.isPlaying {
+                    try await Task.sleep(for: .milliseconds(50))
+                    player.updateMeters()
+                    onLevel(SpeechRecorder.normalized(player.averagePower(forChannel: 0)))
+                }
+                return
             }
-            return
         }
 
         try Task.checkCancellation()

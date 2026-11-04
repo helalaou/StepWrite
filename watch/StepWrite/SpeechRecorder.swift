@@ -134,4 +134,9 @@ final class SpeechRecorder {
             }
         }
     }
+
+    /// Maps dBFS to 0...1 for drawing: -60 dB and below is 0, -10 dB is 1.
+    static func normalized(_ decibels: Float) -> Float {
+        min(max((decibels + 60) / 50, 0), 1)
+    }
 }

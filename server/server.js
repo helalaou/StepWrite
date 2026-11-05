@@ -17,6 +17,7 @@ import { purgeAudioFiles } from './utils/cleanup.js';
 import { isSafeCacheName, splitForSpeech } from './lib/tts.js';
 import { isAllowedOrigin } from './lib/origins.js';
 import { validateTurnRequest } from './lib/validation.js';
+import { spokenText } from './lib/transcription.js';
 import { openai } from './lib/openaiClient.js';
 import { toFile } from 'openai';
 
@@ -226,21 +227,27 @@ const receiveAudio = (req, res, next) => upload.single('audio')(req, res, (error
 });
 
 // Transcribe in memory. The upload's own file name tells Whisper its format
-// (the clients send WAV or WebM), so no temp file is needed.
+// (the clients send WAV or WebM), so no temp file is needed. Audio without
+// speech comes back as empty text, which the clients ignore.
 app.post('/api/transcribe', receiveAudio, async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No audio file provided' });
   }
 
   try {
+    const { whisper } = config.audio.stt;
     const transcription = await openai.audio.transcriptions.create({
       file: await toFile(req.file.buffer, req.file.originalname || 'audio.wav', { type: req.file.mimetype }),
-      model: config.audio.stt.whisper.model,
-      language: config.audio.stt.whisper.language,
-      response_format: config.audio.stt.whisper.response_format
+      model: whisper.model,
+      language: whisper.language,
+      response_format: whisper.response_format
     });
 
-    res.json({ text: transcription });
+    const text = spokenText(transcription, whisper.noSpeechThreshold);
+    if (text !== transcription.text.trim()) {
+      logger.info(`Dropped transcribed text with no speech: "${transcription.text.trim()}"`);
+    }
+    res.json({ text });
   } catch (error) {
     logger.error('STT error:', error);
     res.status(500).json({

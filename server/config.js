@@ -176,7 +176,8 @@ const config = {
       whisper: {
         model: 'whisper-1',
         language: 'en',
-        response_format: 'text'
+        response_format: 'verbose_json', // Has each segment's no_speech_prob
+        noSpeechThreshold: 0.5 // Segments more likely than this to be noise are dropped (see lib/transcription.js)
       }
     }
   },

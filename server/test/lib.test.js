@@ -4,6 +4,7 @@ import { isSafeCacheName, splitForSpeech } from '../lib/tts.js';
 import { isAllowedOrigin } from '../lib/origins.js';
 import { buildCompletionParams } from '../lib/completionParams.js';
 import { validateTurnRequest } from '../lib/validation.js';
+import { spokenText } from '../lib/transcription.js';
 
 test('isSafeCacheName accepts plain mp3 names only', () => {
   assert.equal(isSafeCacheName('feedback_draft_ready.mp3'), true);
@@ -57,4 +58,19 @@ test('validateTurnRequest rejects malformed turns', () => {
   assert.match(validateTurnRequest({ conversationPlanning: { questions }, changedIndex: 1 }), /changedIndex/);
   assert.match(validateTurnRequest({ conversationPlanning: { questions: [{ question: 'q' }] } }), /integer id/);
   assert.match(validateTurnRequest({ conversationPlanning: { questions }, changedIndex: 0, previousAnswer: 3 }), /previousAnswer/);
+});
+
+test('spokenText drops the text Whisper writes for noise', () => {
+  // Scores Whisper gave test clips: room hiss, a rustle, and spoken answers
+  const segment = (text, no_speech_prob) => ({ text, no_speech_prob });
+  assert.equal(spokenText({ text: 'Thank you for watching.', segments: [segment(' Thank you for watching.', 0.89)] }, 0.5), '');
+  assert.equal(spokenText({ text: 'You', segments: [segment(' You', 0.613)] }, 0.5), '');
+  assert.equal(spokenText({ text: 'Skip.', segments: [segment(' Skip.', 0.183)] }, 0.5), 'Skip.');
+  assert.equal(
+    spokenText({ text: 'Yes. you', segments: [segment(' Yes.', 0.131), segment(' you', 0.9)] }, 0.5),
+    'Yes.'
+  );
+  assert.equal(spokenText({ text: 'Next.', segments: [segment(' Next.', undefined)] }, 0.5), 'Next.');
+  assert.equal(spokenText({ text: ' Next.\n' }, 0.5), 'Next.');
+  assert.equal(spokenText({ text: '', segments: [] }, 0.5), '');
 });

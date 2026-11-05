@@ -213,6 +213,15 @@ function HandsFreeInterface({
     }
   };
 
+  // Submit the answer once the speaker has been quiet for finalizeDelay
+  const scheduleFinalize = () => {
+    clearFinalizeTimeout();
+    finalizeTimeoutRef.current = setTimeout(
+      () => latestRef.current.finalizeAndSubmit(),
+      config.handsFree.speech.finalizeDelay
+    );
+  };
+
   const clearReplayTimeout = () => {
     if (replayTimeoutRef.current) {
       clearTimeout(replayTimeoutRef.current);
@@ -1110,6 +1119,18 @@ function HandsFreeInterface({
     }
   };
 
+  // After a segment that held no speech, carry on as if it never started:
+  // an answer already begun is submitted as it stood (the segment's start
+  // cancelled its timer), otherwise the question replays as usual.
+  const resumeAfterNoSpeech = () => {
+    setIsProcessing(false);
+    if (segmentsRef.current.length > 0) {
+      scheduleFinalize();
+    } else if (!isModifying && !isModifyingRef.current) {
+      startReplayTimeout();
+    }
+  };
+
   // VAD callbacks while listening for answers and commands
   const handleSpeechStart = () => {
     if (process.env.NODE_ENV !== 'production') {
@@ -1141,11 +1162,8 @@ function HandsFreeInterface({
       if (process.env.NODE_ENV !== 'production') {
         console.log('Filtered out as noise by pre-VAD filter.');
       }
-      displayFeedback('Too much noise detected, please try again.', 'error'); 
-      setIsProcessing(false);
-      if (!isModifying && !isModifyingRef.current) {
-        startReplayTimeout();
-      }
+      displayFeedback('Too much noise detected, please try again.', 'error');
+      resumeAfterNoSpeech();
       return;
     }
 
@@ -1154,10 +1172,7 @@ function HandsFreeInterface({
       if (process.env.NODE_ENV !== 'production') {
         console.log('Silent segment detected after cleaning – ignoring and waiting for new input');
       }
-      setIsProcessing(false);
-      if (!isModifying && !isModifyingRef.current) {
-        startReplayTimeout();
-      }
+      resumeAfterNoSpeech();
       return;
     }
 
@@ -1227,12 +1242,7 @@ function HandsFreeInterface({
 
           displayFeedback(`"${transcription}"`, 'transcription');
 
-          clearFinalizeTimeout();
-
-          finalizeTimeoutRef.current = setTimeout(
-            () => latestRef.current.finalizeAndSubmit(),
-            config.handsFree.speech.finalizeDelay
-          );
+          scheduleFinalize();
 
           setIsProcessing(false);
           return;
@@ -1266,13 +1276,10 @@ function HandsFreeInterface({
         // Display the recognized speech in the floating feedback
         displayFeedback(`"${transcription}"`, 'transcription');
 
-        clearFinalizeTimeout();
-
-        // Set up timeout to finalize the answer
-        finalizeTimeoutRef.current = setTimeout(
-          () => latestRef.current.finalizeAndSubmit(),
-          config.handsFree.speech.finalizeDelay
-        );
+        scheduleFinalize();
+      } else {
+        // The server found no speech in the segment (see /api/transcribe)
+        resumeAfterNoSpeech();
       }
     } catch (err) {
       console.error('Transcription error:', err);

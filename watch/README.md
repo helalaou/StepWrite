@@ -41,20 +41,40 @@ membership the signature lasts a year, and you can share the app through TestFli
 
 ## Using it
 
-- Tap **Start writing** and answer each question out loud. Pause for about a second to end the
-  answer, or tap **I'm done talking**.
-- **Skip**, **Finish** and **Repeat question** work as buttons or spoken commands ("skip",
-  "finish writing", "repeat the question"). These are the same phrases the web app accepts.
-- When the text is ready, you can share it, have it read aloud or start a new one.
+Like the web app's hands-free mode, it needs neither your hands nor your eyes. Writing starts when
+the app opens: it reads the first question, taps your wrist and listens. Answer out loud and pause
+for a moment to end the answer. If nobody answers for 12 seconds, it reads the question again.
+
+Say any of the web app's commands instead of an answer:
+
+| Say | To |
+| --- | --- |
+| "previous question", "next question", "skip this question" | Move between questions |
+| "change my answer", then the new answer | Replace the current question's answer |
+| "repeat the question" | Hear the question again |
+| "pause writing", then "continue writing" | Pause and resume |
+| "show draft" | Hear the draft written so far, once there is one |
+| "finish writing" | Get the finished text, read aloud |
+| "read it again", "go back to questions", "end writing" | On the text: hear it again, change answers or finish |
+| "go to home page" | Stop writing |
+
+A click confirms each command, and the watch says what it did. On the screen, the bars at the
+bottom move blue while the watch speaks and green while it hears you. The progress dots show
+answered, skipped and remaining questions, and a **Draft** badge appears once a draft is ready.
+The watch listens once it has finished speaking, and the small buttons under each question do the
+same as the commands, including stopping a reading early. The finished text can be shared from
+the watch.
 
 ## Code
 
 | File | Role |
 | --- | --- |
 | `StepWriteApp.swift`, `ContentView.swift` | The app and its screens |
+| `Indicators.swift` | The level bars, status, progress dots and other indicators |
 | `ConversationModel.swift` | The question-and-answer loop, the same flow as the web app's hands-free mode |
 | `SpeechRecorder.swift` | Records an answer and ends it once speech stops rising above the room's noise floor |
 | `SpeechPlayer.swift` | Plays the server's voice, falling back to the watch's own voice |
+| `Cues.swift` | The click and wrist taps that confirm what happened |
 | `VoiceCommand.swift` | Recognizes spoken commands |
 | `StepWriteAPI.swift` | Calls the server |
 | `ServerSettings.swift` | The server address |

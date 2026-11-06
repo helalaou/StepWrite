@@ -6,6 +6,16 @@ export function isSafeCacheName(name) {
   return typeof name === 'string' && CACHE_NAME_PATTERN.test(name);
 }
 
+// The voices clients may choose in Settings. tts-1 speaks all of them.
+export const TTS_VOICES = ['alloy', 'ash', 'coral', 'echo', 'fable', 'nova', 'onyx', 'sage', 'shimmer'];
+
+// The voice a request asked for, or the configured one when it asked for none.
+// Returns null for a voice that isn't on the list.
+export function chooseVoice(requested, configured) {
+  if (requested === undefined || requested === null || requested === '') return configured;
+  return TTS_VOICES.includes(requested) ? requested : null;
+}
+
 // OpenAI's speech endpoint accepts at most this many characters per request.
 export const MAX_TTS_INPUT_LENGTH = 4096;
 

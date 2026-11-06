@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isSafeCacheName, splitForSpeech } from '../lib/tts.js';
+import { chooseVoice, isSafeCacheName, splitForSpeech } from '../lib/tts.js';
 import { isAllowedOrigin } from '../lib/origins.js';
 import { buildCompletionParams } from '../lib/completionParams.js';
 import { validateTurnRequest } from '../lib/validation.js';
@@ -26,6 +26,14 @@ test('splitForSpeech falls back to word and hard cuts', () => {
   assert.deepEqual(splitForSpeech('aaaa bbbb cccc', 8), ['aaaa', 'bbbb', 'cccc']);
   assert.deepEqual(splitForSpeech('abcdefghij', 4), ['abcd', 'efgh', 'ij']);
   assert.deepEqual(splitForSpeech('  short  '), ['short']);
+});
+
+test('chooseVoice falls back to the configured voice and rejects unknown ones', () => {
+  assert.equal(chooseVoice(undefined, 'nova'), 'nova');
+  assert.equal(chooseVoice('', 'nova'), 'nova');
+  assert.equal(chooseVoice('onyx', 'nova'), 'onyx');
+  assert.equal(chooseVoice('robot', 'nova'), null);
+  assert.equal(chooseVoice(['onyx'], 'nova'), null);
 });
 
 test('isAllowedOrigin allows the local client, the phone apps and ngrok tunnels only', () => {

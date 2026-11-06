@@ -14,7 +14,7 @@ import { logger } from './config.js';
 import multer from 'multer';
 import crypto from 'crypto';
 import { purgeAudioFiles } from './utils/cleanup.js';
-import { isSafeCacheName, splitForSpeech } from './lib/tts.js';
+import { chooseVoice, isSafeCacheName, splitForSpeech, TTS_VOICES } from './lib/tts.js';
 import { isAllowedOrigin } from './lib/origins.js';
 import { validateTurnRequest } from './lib/validation.js';
 import { spokenText } from './lib/transcription.js';
@@ -151,6 +151,11 @@ app.post('/api/fact-check', async (req, res) => {
   }
 });
 
+// Lets the apps' Settings check that a server address is a StepWrite server
+app.get('/api/health', (req, res) => {
+  res.json({ app: 'StepWrite', status: 'ok' });
+});
+
 // TTS endpoint
 app.post('/api/tts/generate', async (req, res) => {
   const { text, cache_as } = req.body;
@@ -160,6 +165,10 @@ app.post('/api/tts/generate', async (req, res) => {
   if (cache_as !== undefined && !isSafeCacheName(cache_as)) {
     return res.status(400).json({ error: 'cache_as must be a plain .mp3 file name' });
   }
+  const voice = chooseVoice(req.body.voice, config.audio.tts.voice);
+  if (!voice) {
+    return res.status(400).json({ error: `voice must be one of ${TTS_VOICES.join(', ')}` });
+  }
 
   try {
     // use custom filename for feedback caching or default hash-based filename
@@ -167,7 +176,7 @@ app.post('/api/tts/generate', async (req, res) => {
     if (cache_as) {
       audioFilename = cache_as;
     } else {
-      const hash = crypto.createHash('md5').update(text).digest('hex');
+      const hash = crypto.createHash('md5').update(`${voice}\n${text}`).digest('hex');
       audioFilename = `${hash}.${config.audio.tts.format}`;
     }
     
@@ -189,7 +198,7 @@ app.post('/api/tts/generate', async (req, res) => {
     const audioParts = await Promise.all(splitForSpeech(text).map(async (input) => {
       const response = await openai.audio.speech.create({
         model: config.audio.tts.model,
-        voice: config.audio.tts.voice,
+        voice,
         input,
       });
       return Buffer.from(await response.arrayBuffer());

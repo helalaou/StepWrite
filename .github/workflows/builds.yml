@@ -1,6 +1,7 @@
-# Builds every StepWrite app on each push to main and each pull request, on
-# GitHub's hosted runners (free for public repositories). See
-# docs/app-builds.md for where the builds go and how to install them.
+# Tests and builds the StepWrite server and every app on each push to main and
+# each pull request, on GitHub's hosted runners (free for public
+# repositories). See docs/app-builds.md for where the builds go and how to
+# install them.
 name: Builds
 
 on:
@@ -50,8 +51,67 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Version $base.$build from ${COMMIT::7}"
 
+  server:
+    name: Server
+    needs: version
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    env:
+      ARCHIVE: StepWrite-server-${{ needs.version.outputs.version }}.zip
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Test the server
+        working-directory: server
+        run: |
+          npm ci
+          npm test
+      # The server's files with its dependencies installed, so the folder runs
+      # as it is. Left out: the tests, and user_memories.json, which holds the
+      # developer's own details for the (off by default) memory feature.
+      - name: Package the server
+        run: |
+          git archive HEAD -- server ':!server/test' ':!server/data/user_memories.json' | tar -x
+          mv server StepWrite-server
+          npm ci --omit=dev --no-audit --no-fund --prefix StepWrite-server
+          zip -qry "$ARCHIVE" StepWrite-server
+      # Starts the server from the zip with a placeholder OpenAI key, which is
+      # enough to start, and sends it a request without text. Its own 400
+      # answer shows that it runs and serves the API; nothing reaches OpenAI.
+      - name: Check that the packaged server starts
+        run: |
+          unzip -q "$ARCHIVE" -d "$RUNNER_TEMP/unzipped"
+          cd "$RUNNER_TEMP/unzipped/StepWrite-server"
+          OPENAI_API_KEY=placeholder node server.js > "$RUNNER_TEMP/server.log" 2>&1 &
+          server=$!
+          status=000
+          for _ in {1..30}; do
+            status=$(curl -s -o "$RUNNER_TEMP/response.json" -w '%{http_code}' \
+              -H 'Content-Type: application/json' -d '{}' \
+              http://localhost:3001/api/tts/generate) && break
+            kill -0 "$server" 2> /dev/null || break  # it stopped
+            sleep 1
+          done
+          kill "$server" || true
+          cat "$RUNNER_TEMP/server.log"
+          if [[ $status != 400 ]]; then
+            echo "::error::The packaged server didn't answer as expected (HTTP $status)"
+            exit 1
+          fi
+          echo "The packaged server answered: $(cat "$RUNNER_TEMP/response.json")"
+      - id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.ARCHIVE }}
+          archive: false
+
   web:
-    name: Web client and server
+    name: Web client
     needs: version
     runs-on: ubuntu-latest
     outputs:
@@ -64,14 +124,7 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: |
-            server/package-lock.json
-            client/package-lock.json
-      - name: Test the server
-        working-directory: server
-        run: |
-          npm ci
-          npm test
+          cache-dependency-path: client/package-lock.json
       # With CI set, as it is on GitHub, the client tests run once and lint
       # warnings fail the build.
       - name: Test the client
@@ -294,7 +347,7 @@ jobs:
   # forks get only the summary, since their token can't comment.
   report:
     name: Report
-    needs: [version, web, watch, android, iphone]
+    needs: [version, server, web, watch, android, iphone]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
@@ -306,6 +359,8 @@ jobs:
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       VERSION: ${{ needs.version.outputs.version || 'unknown' }}
       COMMIT: ${{ needs.version.outputs.commit || 'unknown' }}
+      SERVER_RESULT: ${{ needs.server.result }}
+      SERVER_URL: ${{ needs.server.outputs.artifact-url }}
       WEB_RESULT: ${{ needs.web.result }}
       WEB_URL: ${{ needs.web.outputs.artifact-url }}
       ANDROID_RESULT: ${{ needs.android.result }}
@@ -336,6 +391,7 @@ jobs:
             echo
             echo '| App | Version | Build | Download |'
             echo '| --- | --- | --- | --- |'
+            row 'Server' "$SERVER_RESULT" "$SERVER_URL"
             row 'Web client' "$WEB_RESULT" "$WEB_URL"
             row 'Android (APK)' "$ANDROID_RESULT" "$ANDROID_URL"
             row 'iPhone (unsigned IPA)' "$IPHONE_RESULT" "$IPHONE_URL"
@@ -365,7 +421,7 @@ jobs:
   # newest build. It publishes only when every app built.
   release:
     name: Release
-    needs: [version, web, watch, android, iphone]
+    needs: [version, server, web, watch, android, iphone]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -393,6 +449,7 @@ jobs:
             fi
             cp "$file" "dist/$2"
           }
+          take "StepWrite-server-$VERSION.zip" StepWrite-server.zip
           take "StepWrite-web-$VERSION.zip" StepWrite-web.zip
           take "StepWrite-android-$VERSION.apk" StepWrite-android.apk
           take "StepWrite-iphone-$VERSION-unsigned.ipa" StepWrite-iphone-unsigned.ipa
@@ -407,6 +464,7 @@ jobs:
             echo
             echo '| App | Version | Download |'
             echo '| --- | --- | --- |'
+            echo "| Server | $VERSION | [StepWrite-server.zip]($download/StepWrite-server.zip) |"
             echo "| Web client | $VERSION | [StepWrite-web.zip]($download/StepWrite-web.zip) |"
             echo "| Android | $VERSION | [StepWrite-android.apk]($download/StepWrite-android.apk) |"
             echo "| iPhone | $VERSION | [StepWrite-iphone-unsigned.ipa]($download/StepWrite-iphone-unsigned.ipa) |"

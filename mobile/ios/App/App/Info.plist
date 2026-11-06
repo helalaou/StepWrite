@@ -24,6 +24,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>StepWrite listens for your spoken answers and voice commands.</string>
 	<!-- The simulator reaches the server on this Mac at http://localhost; a real phone uses HTTPS. -->
 	<key>NSAppTransportSecurity</key>
 	<dict>

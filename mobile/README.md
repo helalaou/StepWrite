@@ -99,9 +99,8 @@ SERVER_URL=https://your-server.example npm run build
    Developer Mode) and restart it when asked. Then trust your developer certificate under
    Settings › General › VPN & Device Management.
 
-With a free Apple ID, the installed app keeps working for 7 days. After that, press Run in Xcode
-again to renew it. A paid Apple Developer Program membership signs the app for a year and lets
-you share it through TestFlight.
+With a free Apple ID, the installed app keeps working for 7 days. After that, connect the phone
+and press Run in Xcode again to renew it.
 
 ### Android
 
@@ -119,9 +118,6 @@ cd android && ./gradlew assembleDebug
 The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`. Open it on the phone
 and allow installs from that source when Android asks. You can also install it over USB with
 `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
-
-For Google Play, create a signed release bundle in Android Studio: Build › Generate Signed App
-Bundle or APK.
 
 ## Microphone
 

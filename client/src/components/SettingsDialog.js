@@ -30,9 +30,8 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SettingsBrightnessIcon from '@mui/icons-material/SettingsBrightness';
-import config from '../config';
 import { useSettings } from './SettingsProvider';
-import { applyReadingSpeed, speechRequestBody } from '../utils/audioUtils';
+import { applyReadingSpeed, fetchSpeech } from '../utils/audioUtils';
 import {
   ANSWER_PAUSES,
   checkServer,
@@ -145,14 +144,7 @@ function SettingsDialog() {
     stopSample();
     setIsSampleLoading(true);
     try {
-      const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: speechRequestBody(SAMPLE_TEXT),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.audioUrl) throw new Error(data.error || `HTTP ${response.status}`);
-      const audio = applyReadingSpeed(new Audio(`${config.core.apiUrl}${data.audioUrl}`));
+      const audio = applyReadingSpeed(new Audio(await fetchSpeech(SAMPLE_TEXT)));
       sampleRef.current = audio;
       await audio.play();
     } catch (error) {

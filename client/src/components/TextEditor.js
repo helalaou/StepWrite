@@ -15,7 +15,7 @@ import axios from 'axios';
 import { keyframes } from '@mui/system';
 import { playClickSound } from '../utils/soundUtils';
 import { enterRevision } from '../utils/experimentTracking';
-import { applyReadingSpeed, encodeWav, speechRequestBody, VAD_SAMPLE_RATE } from '../utils/audioUtils';
+import { applyReadingSpeed, encodeWav, fetchSpeech, VAD_SAMPLE_RATE } from '../utils/audioUtils';
 import { matchesAnyPhrase } from '../utils/voiceCommands';
 import ExperimentEndButton from './ExperimentEndButton';
 
@@ -433,27 +433,10 @@ function TextEditor({
 
     const synthesize = async () => {
       try {
-        const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: speechRequestBody(`${config.tts.outputPrefix} ${content}`)
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (!data.audioUrl) {
-          throw new Error('No audio URL in response');
-        }
+        const url = await fetchSpeech(`${config.tts.outputPrefix} ${content}`);
         if (!isCurrent()) return;
 
         hasSynthesizedRef.current = true;
-        const url = `${config.core.apiUrl}${data.audioUrl}`;
         setAudioUrl(url);
 
         // Read the text aloud once, when the editor opens. The short delay

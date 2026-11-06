@@ -18,7 +18,7 @@ import { playClickSound } from '../utils/soundUtils';
 import { incrementCount } from '../utils/experimentTracking';
 import { buildQuestionStatus, hasDraftReady, SKIPPED_ANSWER } from '../utils/conversation';
 import { matchesAnyPhrase } from '../utils/voiceCommands';
-import { applyReadingSpeed, encodeWav, filterAndCleanAudio, speechRequestBody, VAD_SAMPLE_RATE } from '../utils/audioUtils';
+import { applyReadingSpeed, encodeWav, fetchSpeech, filterAndCleanAudio, VAD_SAMPLE_RATE } from '../utils/audioUtils';
 import { WATCH_SCREEN_QUERY } from '../utils/layout';
 import { useSettings } from './SettingsProvider';
 
@@ -283,39 +283,9 @@ function HandsFreeInterface({
         .substring(0, 30); // Limit length
       // Cached per voice, so a change of voice in Settings isn't heard in old clips
       const clipName = `feedback_${config.tts.voice}_${filename}.mp3`;
-      
-      // First, try to get cached audio
-      const cacheResponse = await fetch(`${config.core.apiUrl}/tts/${clipName}`, {
-        method: 'HEAD' // Just check if file exists
-      });
-      
-      let audioUrl;
-      
-      if (cacheResponse.ok) {
-        // Use cached version
-        audioUrl = `${config.core.apiUrl}/tts/${clipName}`;
-      } else {
-        // Generate new audio and cache it
-        const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: speechRequestBody(message, { cache_as: clipName }) // Tell server to cache with this name
-        });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (!data.audioUrl) {
-          throw new Error('No audio URL in response');
-        }
-
-        audioUrl = `${config.core.apiUrl}${data.audioUrl}`;
-      }
+      // The server keeps the clip under this name, and the page keeps it too
+      const audioUrl = await fetchSpeech(message, { cache_as: clipName });
 
       const audio = applyReadingSpeed(new Audio(audioUrl));
       

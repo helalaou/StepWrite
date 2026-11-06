@@ -1,9 +1,6 @@
 // ====== CORE APPLICATION SETTINGS ======
 // These settings are used across the entire application
 
-// ====== DEPLOYMENT MODE ====== 
-const DEPLOY_MODE = 'local'; // 'local' or 'ngrok'
-
 // ====== NGROK SETTINGS ======
 
 const NGROK = {  // if DEPLOY_MODE = 'ngrok'
@@ -16,12 +13,20 @@ const getEnvVar = (name, defaultValue) => {
   return process.env[name] || defaultValue;
 };
 
+// ====== DEPLOYMENT MODE ======
+// 'local', 'ngrok', or 'hosted' for a site that serves the server's routes at
+// its own address (netlify.toml sets REACT_APP_DEPLOY_MODE)
+const DEPLOY_MODE = getEnvVar('REACT_APP_DEPLOY_MODE', 'local');
+
 const getApiUrl = () => {
   // Set by the iPhone and Android app builds (mobile/README.md), since an
   // installed app can't reach the server on this computer's localhost.
   const serverUrl = getEnvVar('REACT_APP_SERVER_URL', '');
   if (serverUrl) {
     return serverUrl.replace(/\/+$/, '');
+  }
+  if (DEPLOY_MODE === 'hosted') {
+    return window.location.origin;
   }
   if (DEPLOY_MODE === 'ngrok') {
     return NGROK.SERVER_URL;

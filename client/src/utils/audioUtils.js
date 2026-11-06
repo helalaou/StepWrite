@@ -62,6 +62,43 @@ export const initializeAudio = async () => {
 export const speechRequestBody = (text, extra = {}) =>
   JSON.stringify({ text, voice: config.tts.voice, ...extra });
 
+// The last clips fetched, by request body, so a question read again isn't
+// fetched again. The oldest is let go once there are more.
+const speechClips = new Map();
+const SPEECH_CLIPS_KEPT = 30;
+
+/**
+ * Fetch speech from the server as audio, not as a link to a file the server
+ * keeps: on the hosted site the next request may reach another copy of the
+ * server, without that file.
+ * @param {string} text The text to speak
+ * @param {Object} extra Other fields, such as cache_as
+ * @returns {Promise<string>} A URL to play the speech from
+ */
+export const fetchSpeech = async (text, extra = {}) => {
+  const body = speechRequestBody(text, extra);
+  if (speechClips.has(body)) return speechClips.get(body);
+
+  const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+    body,
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+  }
+
+  const url = URL.createObjectURL(await response.blob());
+  speechClips.set(body, url);
+  if (speechClips.size > SPEECH_CLIPS_KEPT) {
+    const [oldestBody, oldestUrl] = speechClips.entries().next().value;
+    speechClips.delete(oldestBody);
+    URL.revokeObjectURL(oldestUrl);
+  }
+  return url;
+};
+
 /**
  * Play speech at the reading speed chosen in Settings. Browsers keep the
  * voice's pitch when the rate changes.

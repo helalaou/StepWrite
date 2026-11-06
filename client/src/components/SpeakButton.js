@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { IconButton, CircularProgress } from '@mui/material';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { keyframes } from '@mui/system';
-import config from '../config';
-import { initializeAudio, playAudio, speechRequestBody } from '../utils/audioUtils';
+import { fetchSpeech, initializeAudio, playAudio } from '../utils/audioUtils';
 
 /// Pulse animation fr playing state
 const pulseAnimation = keyframes`
@@ -87,27 +86,11 @@ function SpeakButton({ text, disabled = false, autoPlay = false, onComplete = nu
       // Initialize audio context (important for mobile)
       await initializeAudio();
 
-      const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: speechRequestBody(textToSpeak)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.audioUrl) {
-        throw new Error('No audio URL in response');
-      }
+      const url = await fetchSpeech(textToSpeak);
       if (!isCurrent()) return;
 
       const audio = await playAudio(
-        `${config.core.apiUrl}${data.audioUrl}`,
+        url,
         handleFinished,
         (error) => {
           console.error('Audio playback error:', error);

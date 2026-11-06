@@ -124,6 +124,11 @@ The interface is responsive and works in a phone browser (for example over an
   reads each question aloud, listens through the watch's microphone and reads back the finished
   text, so a text can be composed entirely from the wrist, without the iPhone. Its own Settings
   hold the voice, reading speed, listening times, wrist taps and server address.
+- **iPhone keyboard:** [`keyboard/`](keyboard/README.md) is a proof of concept of StepWrite as a
+  system feature: the **StepWrite Voice** keyboard brings the voice flow to the text field of any
+  app, such as Messages, WhatsApp or Mail. It replies to the chat it can see, your latest
+  screenshot or a pasted message, and puts the finished message in the text field. Its README
+  explains how it works within iOS's limits and what Apple could open up.
 
 GitHub Actions builds the server and every app from the code on each push to `main`, and publishes
 them on the [releases page](https://github.com/helalaou/StepWrite/releases). See
@@ -135,6 +140,10 @@ them on the [releases page](https://github.com/helalaou/StepWrite/releases). See
 
 <p align="center">
   <img src="docs/assets/watch.png" alt="The StepWrite watch app asking a question, reading the finished text aloud, and its Settings" width="760" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/keyboard-messages.png" alt="The StepWrite Voice keyboard in Messages: replying to a pasted message, asking a question, and the finished reply in the text field" width="880" />
 </p>
 
 In a smartwatch browser, the web interface switches to a compact layout for watch-sized screens.
@@ -311,6 +320,7 @@ directory is git-ignored.
 │   └── .env.template
 ├── mobile/                     iPhone and Android apps around the web client (Capacitor)
 ├── watch/                      native Apple Watch app (SwiftUI)
+├── keyboard/                   iPhone keyboard proof of concept (SwiftUI, keyboard and share extensions)
 ├── .github/                    GitHub Actions workflows and Dependabot
 ├── docs/app-builds.md          automatic builds, releases and checks
 ├── docs/deploy-netlify.md      the web app online, on Netlify's free plan

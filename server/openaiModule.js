@@ -13,9 +13,11 @@ import { buildCompletionParams } from './lib/completionParams.js';
 import { openaiCallOptions, timeLeft } from './lib/deadline.js';
 
 // Run a single-prompt chat completion with the given { model, temperature, maxTokens } config.
+// The prompts carry the user's answers and texts, so they go in a user message:
+// a system message would give that text the weight of the app's instructions.
 async function complete(modelConfig, prompt) {
   const completion = await openai.chat.completions.create(
-    buildCompletionParams(modelConfig, [{ role: 'system', content: prompt }]),
+    buildCompletionParams(modelConfig, [{ role: 'user', content: prompt }]),
     openaiCallOptions()
   );
   // Reasoning models can return null content when they exhaust the token budget.

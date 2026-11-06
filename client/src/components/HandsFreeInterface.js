@@ -121,7 +121,10 @@ const describeMicError = (error) => {
   switch (error?.name) {
     case 'NotAllowedError':
     case 'SecurityError':
-      return 'Microphone access is blocked. Allow it for this site, then try again.';
+      // window.Capacitor is injected by the iPhone and Android apps (mobile/)
+      return window.Capacitor?.isNativePlatform?.()
+        ? "Microphone access is off. Allow it for StepWrite in your phone's Settings, then try again."
+        : 'Microphone access is blocked. Allow it for this site, then try again.';
     case 'NotFoundError':
       return 'No microphone was found.';
     default:

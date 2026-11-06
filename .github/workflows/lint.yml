@@ -1,0 +1,28 @@
+# Checks the workflow files with actionlint whenever they change: their
+# syntax, expressions, action inputs and, with shellcheck, their run scripts.
+name: Lint workflows
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/**']
+  pull_request:
+    paths: ['.github/workflows/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      # The author's image, which includes shellcheck. Dependabot doesn't
+      # update docker:// images, so newer versions are at
+      # https://github.com/rhysd/actionlint/releases.
+      - uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color

@@ -1,5 +1,5 @@
 // import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router';
 import LandingPage from './components/LandingPage';
 import ChatInterface from './components/ChatInterface';
 import TextEditor from './components/TextEditor';

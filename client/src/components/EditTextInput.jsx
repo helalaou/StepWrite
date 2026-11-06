@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button, Typography } from '@mui/material';
 import WestIcon from '@mui/icons-material/West';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import VoiceInput from './VoiceInput';
 import config from '../config';
 import { playClickSound } from '../utils/soundUtils';

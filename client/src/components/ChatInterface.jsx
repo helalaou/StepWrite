@@ -3,7 +3,7 @@ import { Box, TextField, Button, CircularProgress, Typography, IconButton } from
 import { useTheme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import NavigationButton from './NavigationButton';
 import VoiceInput from './VoiceInput';
 import config from '../config';

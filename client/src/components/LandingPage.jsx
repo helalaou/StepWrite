@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import CreateIcon from '@mui/icons-material/Create';
 // import EditNoteIcon from '@mui/icons-material/EditNote'; // edit section, temporarily disabled
 import ReplyIcon from '@mui/icons-material/Reply';

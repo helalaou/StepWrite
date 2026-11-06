@@ -6,7 +6,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EditIcon from '@mui/icons-material/Edit';
 import MicIcon from '@mui/icons-material/Mic';
 import MicOffIcon from '@mui/icons-material/MicOff';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import NavigationButton from './NavigationButton';
 import SpeakButton from './SpeakButton';
 import AudioVisualizer from './AudioVisualizer';

@@ -17,6 +17,12 @@ const getEnvVar = (name, defaultValue) => {
 };
 
 const getApiUrl = () => {
+  // Set by the iPhone and Android app builds (mobile/README.md), since an
+  // installed app can't reach the server on this computer's localhost.
+  const serverUrl = getEnvVar('REACT_APP_SERVER_URL', '');
+  if (serverUrl) {
+    return serverUrl.replace(/\/+$/, '');
+  }
   if (DEPLOY_MODE === 'ngrok') {
     return NGROK.SERVER_URL;
   }

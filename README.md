@@ -182,7 +182,7 @@ All model behaviour is defined by the prompts in [`server/prompts/`](server/prom
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org) and npm (a current LTS release)
+- [Node.js](https://nodejs.org) 22 or later, with npm
 - An [OpenAI API key](https://platform.openai.com/api-keys)
 - A Chromium-based browser or Safari with microphone access. Browsers only allow microphone access
   on `localhost` or over HTTPS.

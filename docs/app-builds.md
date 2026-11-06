@@ -85,8 +85,8 @@ workflow warns when `VERSION` is behind the tag.
 
 ### Server
 
-The other apps need a running server. It needs [Node.js](https://nodejs.org), and its tests run
-on version 22. Unzip `StepWrite-server.zip`, which already includes the server's dependencies.
+The other apps need a running server. It needs [Node.js](https://nodejs.org) 22 or later.
+Unzip `StepWrite-server.zip`, which already includes the server's dependencies.
 Then, in the `StepWrite-server` folder:
 
 1. Copy `.env.template` to `.env` and put your OpenAI API key in it.

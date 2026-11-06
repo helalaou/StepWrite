@@ -1,0 +1,2 @@
+# The client build that `npm run build` copies into the native projects
+www/

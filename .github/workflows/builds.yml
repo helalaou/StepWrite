@@ -82,9 +82,11 @@ jobs:
       - name: Build the client
         working-directory: client
         run: npm run build
+      # In a StepWrite-web folder, so unzipping doesn't scatter the files
       - name: Package the client
-        working-directory: client/build
-        run: zip -qr "$GITHUB_WORKSPACE/$ARCHIVE" .
+        run: |
+          mv client/build StepWrite-web
+          zip -qr "$ARCHIVE" StepWrite-web
       - id: upload
         uses: actions/upload-artifact@v7
         with:

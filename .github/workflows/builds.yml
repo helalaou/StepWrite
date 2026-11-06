@@ -19,10 +19,14 @@ concurrency:
 permissions:
   contents: read
 
+# Each job's timeout-minutes is a few times its usual run, so a stuck step
+# fails in minutes instead of after GitHub's default of 6 hours. The macOS
+# limits also leave time to download a missing watchOS or iOS platform.
 jobs:
   version:
     name: Version
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       version: ${{ steps.version.outputs.version }}
       build: ${{ steps.version.outputs.build }}
@@ -55,6 +59,7 @@ jobs:
     name: Server
     needs: version
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     outputs:
       artifact-url: ${{ steps.upload.outputs.artifact-url }}
     env:
@@ -114,6 +119,7 @@ jobs:
     name: Web client
     needs: version
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       artifact-url: ${{ steps.upload.outputs.artifact-url }}
     env:
@@ -150,6 +156,7 @@ jobs:
     name: Apple Watch app
     needs: version
     runs-on: macos-latest
+    timeout-minutes: 45
     outputs:
       artifact-url: ${{ steps.upload.outputs.artifact-url }}
     env:
@@ -197,6 +204,7 @@ jobs:
     name: Android app
     needs: version
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     outputs:
       artifact-url: ${{ steps.upload.outputs.artifact-url }}
     env:
@@ -280,6 +288,7 @@ jobs:
     name: iPhone app
     needs: version
     runs-on: macos-latest
+    timeout-minutes: 45
     outputs:
       ipa-url: ${{ steps.upload-ipa.outputs.artifact-url }}
       simulator-url: ${{ steps.upload-simulator.outputs.artifact-url }}
@@ -350,6 +359,7 @@ jobs:
     needs: [version, server, web, watch, android, iphone]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       pull-requests: write
     env:
@@ -424,6 +434,7 @@ jobs:
     needs: [version, server, web, watch, android, iphone]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
     env:

@@ -7,6 +7,6 @@
     "update-deps": "npm update && cd client && npm update && cd ../server && npm update"
   },
   "devDependencies": {
-    "concurrently": "^8.0.0"
+    "concurrently": "^10.0.6"
   }
 }

@@ -1,0 +1,46 @@
+# Scans the code for security problems with CodeQL, which is free for public
+# repositories. Findings appear under the repository's Security > Code
+# scanning, and on the lines a pull request changes.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Weekly as well, since new CodeQL queries can find problems in code that
+  # hasn't changed
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # javascript-typescript: the server, the web client and mobile/scripts
+        # actions: these workflows
+        # java-kotlin: the Android app's Java code
+        # The Swift code (the watch app and the iPhone app's view controllers)
+        # isn't scanned: CodeQL can only read Swift by building it on macOS.
+        language: [javascript-typescript, actions, java-kotlin]
+    steps:
+      - uses: actions/checkout@v7
+      # build-mode none reads the source as it is, without building it
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

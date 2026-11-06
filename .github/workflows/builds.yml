@@ -148,13 +148,14 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: client/package-lock.json
-      # With CI set, as it is on GitHub, the client tests run once and lint
+      # With CI set, as it is on GitHub, the client tests run once. Lint
       # warnings fail the build.
-      - name: Test the client
+      - name: Test and lint the client
         working-directory: client
         run: |
           npm ci
           npm test
+          npm run lint
       - name: Build the client
         working-directory: client
         run: npm run build

@@ -10,7 +10,7 @@ const NGROK = {  // if DEPLOY_MODE = 'ngrok'
 };
 
 const getEnvVar = (name, defaultValue) => {
-  return process.env[name] || defaultValue;
+  return import.meta.env[name] || defaultValue;
 };
 
 // ====== DEPLOYMENT MODE ======

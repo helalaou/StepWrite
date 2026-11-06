@@ -44,7 +44,8 @@ them for 90 days.
 Before it builds, the Builds workflow runs:
 
 - the server's tests (`npm test` in `server/`)
-- the web client's tests (`npm test` in `client/`), where lint warnings also fail the build
+- the web client's tests and lint (`npm test` and `npm run lint` in `client/`), where lint
+  warnings also fail the build
 - the watch app's tests of its voice commands (`swift test --package-path watch/Tests`; see
   [`watch/Tests`](../watch/Tests/README.md))
 - a start-up check of the packaged server: it unzips `StepWrite-server.zip`, starts it with a

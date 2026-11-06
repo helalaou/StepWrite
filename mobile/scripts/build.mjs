@@ -35,14 +35,12 @@ if (serverUrl) {
   }
 }
 
-run('npm', ['run', 'build'], {
+// Vite builds without source maps unless asked, which keeps the apps small
+run('npm', ['run', 'build', '--', '--outDir', path.join(mobileDir, 'www'), '--emptyOutDir'], {
   cwd: clientDir,
   env: {
     ...process.env,
-    BUILD_PATH: path.join(mobileDir, 'www'),
     REACT_APP_SERVER_URL: serverUrl || '',
-    // Source maps would only make the apps bigger
-    GENERATE_SOURCEMAP: 'false',
   },
 });
 run('npx', ['cap', 'sync'], { cwd: mobileDir });

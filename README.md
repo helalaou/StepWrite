@@ -142,7 +142,7 @@ In a smartwatch browser, the web interface switches to a compact layout for watc
 ## Architecture
 
 ```
-Browser (React 18, Create React App, MUI)
+Browser (React 19, Vite, MUI)
  ├─ Voice activity detection: @ricky0123/vad-web + onnxruntime-web (loaded from jsDelivr in index.html)
  ├─ Pre-VAD noise filtering and silence checks (client/src/utils/audioUtils.js)
  ├─ Hands-free, text-only or text-and-voice input (REACT_APP_INPUT_MODE)
@@ -182,7 +182,7 @@ All model behaviour is defined by the prompts in [`server/prompts/`](server/prom
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org) 22 or later, with npm
+- [Node.js](https://nodejs.org) 22.22 or later, with npm
 - An [OpenAI API key](https://platform.openai.com/api-keys)
 - A Chromium-based browser or Safari with microphone access. Browsers only allow microphone access
   on `localhost` or over HTTPS.
@@ -288,8 +288,9 @@ directory is git-ignored.
 ## Project structure
 
 ```
-├── client/                     React app (Create React App)
-│   ├── public/                 index.html (loads the VAD scripts), icons, logo, click sound
+├── client/                     React app (Vite)
+│   ├── index.html              loads the VAD scripts
+│   ├── public/                 icons, logo, click sound
 │   └── src/
 │       ├── components/         LandingPage, HandsFreeInterface, ChatInterface, TextEditor,
 │       │                       SettingsDialog, ParticipantIdInput, ExperimentEndButton, ...

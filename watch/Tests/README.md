@@ -9,7 +9,7 @@ swift test --package-path watch/Tests
 ```
 
 This needs Xcode 16 or later, or a Swift 6 toolchain. GitHub runs the tests before every watch
-build (see [App builds](../../docs/app-builds.md)).
+build (see [App builds](../../docs/app-builds.md#tests)).
 
 `Sources/StepWrite` holds symbolic links to the app's own files, so the tests check the same code
 that the app is built from. To test another file, link it there too, from the repository root:

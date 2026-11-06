@@ -4,7 +4,7 @@
   "webDir": "www",
   "plugins": {
     "SystemBars": {
-      "style": "LIGHT"
+      "style": "DEFAULT"
     }
   }
 }

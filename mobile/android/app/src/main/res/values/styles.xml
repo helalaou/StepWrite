@@ -9,9 +9,10 @@
         <item name="colorAccent">@color/colorAccent</item>
     </style>
 
-    <!-- Light in dark mode too: the client is always white, and the system bars sit
-         on this theme's window background with dark icons (SystemBars style LIGHT). -->
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+    <!-- The system bars sit on this theme's window background, which follows the
+         system's dark mode until the client sets it to its own theme's background
+         (AppearancePlugin). -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>

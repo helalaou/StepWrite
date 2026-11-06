@@ -14,6 +14,7 @@
   <a href="https://doi.org/10.1145/3746059.3747610"><img alt="DOI" src="https://img.shields.io/badge/DOI-10.1145%2F3746059.3747610-blue.svg" /></a>
   <a href="https://arxiv.org/abs/2508.04011"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2508.04011-b31b1b.svg" /></a>
   <a href="https://www.cs.cmu.edu/~helalaou/publications/stepwrite/"><img alt="Project page" src="https://img.shields.io/badge/project-page-2b4c7e.svg" /></a>
+  <a href="https://github.com/helalaou/StepWrite/actions/workflows/builds.yml"><img alt="Builds" src="https://github.com/helalaou/StepWrite/actions/workflows/builds.yml/badge.svg" /></a>
   <img alt="React 18" src="https://img.shields.io/badge/React-18-149eca.svg" />
   <img alt="Node.js" src="https://img.shields.io/badge/Node.js-Express-339933.svg" />
 </p>
@@ -92,22 +93,51 @@ and each command has many variants in [`client/src/config.js`](client/src/config
 | Editor    | "go back to questions"                    | Return to the question flow                                   |
 | Editor    | "read it again" / "stop reading"          | Replay or stop the spoken text                                |
 
+### Settings and appearance
+
+Every screen has a gear in the top right corner that opens **Settings**. A change applies at once
+and is kept on that device (in the browser's local storage), so a phone and a computer can each
+have their own.
+
+| Section       | Settings                                                                                       |
+| ------------- | ---------------------------------------------------------------------------------------------- |
+| Appearance    | System (follows the device), Light or Dark                                                     |
+| Answering     | Hands-free, Type or speak, or Type only. In hands-free mode: how long a pause ends an answer, and how long a silence lasts before the question is asked again |
+| Reading aloud | Whether questions and the finished text are read aloud, the voice (with a sample), and the reading speed |
+| Server        | The address of the StepWrite server. A new address is used only once a StepWrite server answers there |
+
+**Reset all** returns to the defaults the client was built with
+([Client settings](#client-settings)).
+
+<p align="center">
+  <img src="docs/assets/settings.png" alt="StepWrite in dark mode on a phone: a question in hands-free mode, and the Settings pane" width="560" />
+</p>
+
 ### Mobile and smartwatch
 
 The interface is responsive and works in a phone browser (for example over an
-[ngrok HTTPS tunnel](#remote-access-with-ngrok)).
+[ngrok HTTPS tunnel](#remote-access-with-ngrok)). StepWrite also comes as apps:
+
+- **iPhone and Android:** [`mobile/`](mobile/README.md) packages the web client as an iPhone app and
+  an Android app, with the same screens, voice commands and Settings.
+- **Apple Watch:** [`watch/`](watch/README.md) is a native watchOS app for the hands-free flow. It
+  reads each question aloud, listens through the watch's microphone and reads back the finished
+  text, so a text can be composed entirely from the wrist, without the iPhone. Its own Settings
+  hold the voice, reading speed, listening times, wrist taps and server address.
+
+GitHub Actions builds the server and every app from the code on each push to `main`, and publishes
+them on the [releases page](https://github.com/helalaou/StepWrite/releases). See
+[App builds](docs/app-builds.md) for the downloads and how the builds work.
 
 <p align="center">
   <img src="docs/assets/mobile.png" alt="StepWrite question flow and editor on a phone" width="560" />
 </p>
 
-StepWrite also works in a smartwatch browser. On watch-sized screens the interface switches to a
-compact layout, and because the whole flow is driven by voice, a text can be composed entirely from
-the wrist.
-
 <p align="center">
-  <img src="docs/assets/watch.png" alt="StepWrite asking a question and transcribing an answer on a smartwatch" width="520" />
+  <img src="docs/assets/watch.png" alt="The StepWrite watch app asking a question, reading the finished text aloud, and its Settings" width="760" />
 </p>
+
+In a smartwatch browser, the web interface switches to a compact layout for watch-sized screens.
 
 ## Architecture
 
@@ -123,8 +153,11 @@ Browser (React 18, Create React App, MUI)
       ├─ POST /api/generate-initial-reply-question
       ├─ POST /api/classify/tone, /api/classify/text-type, /api/fact-check
       ├─ POST /api/draft/current, /api/control/followup
-      ├─ POST /api/transcribe                    speech-to-text (OpenAI whisper-1)
-      ├─ POST /api/tts/generate, GET /tts/*      text-to-speech (OpenAI tts-1), cached on disk
+      ├─ POST /api/transcribe                    speech-to-text (OpenAI whisper-1); audio without
+      │                                          speech returns no text
+      ├─ POST /api/tts/generate, GET /tts/*      text-to-speech (OpenAI tts-1, in the voice chosen
+      │                                          in Settings), cached on disk
+      ├─ GET  /api/health                        lets Settings check that a StepWrite server answers
       └─ POST /api/save-experiment-data          study logging (see below)
 ```
 
@@ -199,6 +232,7 @@ The client reads these optional build-time variables (for example in `client/.en
 | ---------------------------------- | ---------------------- | --------------------------------------------------------------- |
 | `REACT_APP_INPUT_MODE`             | `HANDS_FREE`           | `HANDS_FREE`, `TEXT_ONLY` or `TEXT_AND_VOICE`                   |
 | `REACT_APP_TTS_MODE`               | `ENABLED`              | `ENABLED` or `DISABLED` spoken questions and output             |
+| `REACT_APP_TTS_VOICE`              | `nova`                 | Voice for spoken questions and output (see `TTS_VOICES` in [`server/lib/tts.js`](server/lib/tts.js)) |
 | `REACT_APP_TEXT_EDITOR_TTS_PREFIX` | `The final output is:` | Phrase spoken before the final text is read aloud               |
 | `REACT_APP_COMMAND_MATCHING_MODE`  | `FUZZY`                | Voice command matching: `FUZZY`, `CONTAINS` or `EXACT_MATCH`    |
 
@@ -207,14 +241,16 @@ The client reads these optional build-time variables (for example in `client/.en
 [`server/config.js`](server/config.js) holds the model, temperature and token limit for every
 step (GPT-4o for writing, GPT-4.1 for editing, replies and tone, o3 for fact-checking and
 dependency analysis), the fact-checking loop, tone classification, the continuous-draft policy,
-the TTS voice (`nova`) and the Whisper settings. Logs are written to `server/temp/app.log`.
+the default TTS voice (`nova`, used when a request names none) and the Whisper settings. Logs are written to `server/temp/app.log`.
 
 ### Client settings
 
 [`client/src/config.js`](client/src/config.js) holds the API URL and deployment mode, the reply
 email used in the Reply flow, voice activity detection and noise thresholds, voice command
 phrases, and the continuous-draft display settings. The continuous-draft settings exist in both
-config files and should be kept in sync.
+config files and should be kept in sync. The input mode, speech, listening times and server
+address set here and in the variables above are the defaults; [Settings](#settings-and-appearance)
+changes them on each device.
 
 ### Remote access with ngrok
 
@@ -248,9 +284,10 @@ directory is git-ignored.
 │   ├── public/                 index.html (loads the VAD scripts), icons, logo, click sound
 │   └── src/
 │       ├── components/         LandingPage, HandsFreeInterface, ChatInterface, TextEditor,
-│       │                       ParticipantIdInput, ExperimentEndButton, ...
+│       │                       SettingsDialog, ParticipantIdInput, ExperimentEndButton, ...
 │       ├── hooks/              conversation, chat and editor state
-│       ├── utils/              audio filtering and sound helpers
+│       ├── utils/              audio filtering, sound helpers and settings
+│       ├── theme.js            light and dark themes
 │       └── config.js           client configuration
 ├── server/                     Express API
 │   ├── prompts/                all LLM prompts
@@ -261,6 +298,10 @@ directory is git-ignored.
 │   ├── server.js               routes
 │   ├── config.js               server configuration
 │   └── .env.template
+├── mobile/                     iPhone and Android apps around the web client (Capacitor)
+├── watch/                      native Apple Watch app (SwiftUI)
+├── .github/                    GitHub Actions workflows and Dependabot
+├── docs/app-builds.md          automatic builds, releases and checks
 ├── docs/assets/                screenshots
 ├── install.sh, run.sh, deploy.sh
 └── ngrok_config.example.yml

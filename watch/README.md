@@ -24,8 +24,9 @@ The simulator uses the Mac's microphone and speakers and reaches the server at
 
 1. **Make the server reachable over HTTPS.** A watch can't reach `localhost` on your Mac. Start
    the ngrok tunnel (see [Remote access with ngrok](../README.md#remote-access-with-ngrok)) and
-   put its server address in [`StepWrite/ServerSettings.swift`](StepWrite/ServerSettings.swift).
-   It ships with the address from `NGROK.SERVER_URL` in `client/src/config.js`.
+   put its server address in [`StepWrite/ServerSettings.swift`](StepWrite/ServerSettings.swift),
+   or enter it later under [Settings](#settings) on the watch. The app ships with the address from
+   `NGROK.SERVER_URL` in `client/src/config.js`.
 2. **Sign the app.** In Xcode, select the **StepWrite** target, open **Signing & Capabilities**
    and choose your team. Any Apple ID works. If Xcode reports that the bundle identifier
    `io.github.helalaou.stepwrite.watch` is taken, change it to one of your own.
@@ -44,6 +45,7 @@ membership the signature lasts a year, and you can share the app through TestFli
 Like the web app's hands-free mode, it needs neither your hands nor your eyes. Writing starts when
 the app opens: it reads the first question, taps your wrist and listens. Answer out loud and pause
 for a moment to end the answer. If nobody answers for 12 seconds, it reads the question again.
+[Settings](#settings) changes both times.
 
 Say any of the web app's commands instead of an answer:
 
@@ -65,11 +67,31 @@ The watch listens once it has finished speaking, and the small buttons under eac
 same as the commands, including stopping a reading early. The finished text can be shared from
 the watch.
 
+## Settings
+
+The gear opens Settings. It is on the home screen, at the top of the finished text, and on the
+paused screen (say "pause writing" or press Pause). Writing waits while Settings is open and
+carries on when you close it.
+
+| Setting | What it changes |
+| --- | --- |
+| Voice, Speed | The server voice that reads the questions and the text, and how fast it reads |
+| Send answer after | How long a pause ends an answer (1.2 seconds unless changed) |
+| Ask again after | How long a silence lasts before the question is read again (12 seconds, or never) |
+| Taps on the wrist | The taps for listening, pausing, success and errors |
+| Start when opened | Whether writing starts as soon as the app opens |
+| Server | The server's address. A new address is used only once a StepWrite server answers there |
+
+The watch keeps these until they are changed or **Reset all** is pressed. The app stays dark, like
+watchOS, which always draws the time in white.
+
 ## Code
 
 | File | Role |
 | --- | --- |
 | `StepWriteApp.swift`, `ContentView.swift` | The app and its screens |
+| `SettingsScreen.swift` | The Settings screen and its gear buttons |
+| `AppSettings.swift` | The settings and their defaults, kept on the watch |
 | `Indicators.swift` | The level bars, status, progress dots and other indicators |
 | `ConversationModel.swift` | The question-and-answer loop, the same flow as the web app's hands-free mode |
 | `SpeechRecorder.swift` | Records an answer and ends it once speech stops rising above the room's noise floor |
@@ -77,4 +99,4 @@ the watch.
 | `Cues.swift` | The click and wrist taps that confirm what happened |
 | `VoiceCommand.swift` | Recognizes spoken commands |
 | `StepWriteAPI.swift` | Calls the server |
-| `ServerSettings.swift` | The server address |
+| `ServerSettings.swift` | The server address the app is built with |

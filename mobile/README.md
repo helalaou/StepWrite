@@ -26,7 +26,7 @@ npm run build
 `npm run build` builds the web client into `mobile/www` and copies it into the `ios/` and
 `android/` projects. Run it again after every change to `client/` or `capacitor.config.json`.
 
-The server address is fixed when you build:
+The build sets the server address the apps start with:
 
 | Where the app runs | Build command | Server address the app uses |
 | --- | --- | --- |
@@ -36,7 +36,9 @@ The server address is fixed when you build:
 
 Without `SERVER_URL`, the apps use the same address as the web client (`DEPLOY_MODE` in
 [`client/src/config.js`](../client/src/config.js)). The server already accepts requests from both
-apps (see [`server/lib/origins.js`](../server/lib/origins.js)).
+apps (see [`server/lib/origins.js`](../server/lib/origins.js)). In the app, Settings (the gear in
+the top right corner) can switch to another server without a new build; it checks that a
+StepWrite server answers at the new address first.
 
 ## Run in the iPhone simulator
 
@@ -139,6 +141,11 @@ Phones get StepWrite's regular layout; the watch layout is only for watch-sized 
 apps keep the web view clear of the notch, the Dynamic Island, and the system bars. On iPhone,
 [`SafeAreaViewController.swift`](ios/App/App/SafeAreaViewController.swift) does this. On Android,
 Capacitor's SystemBars plugin does it (configured in `capacitor.config.json`).
+
+The system bars and the strips behind them follow the appearance chosen in Settings (System,
+Light or Dark). On iPhone the strips take the page's `theme-color`; on Android
+[`AppearancePlugin.java`](android/app/src/main/java/io/github/helalaou/stepwrite/AppearancePlugin.java)
+colors them. Both apps also have a dark launch screen for when the phone is in dark mode.
 
 ## Debugging
 

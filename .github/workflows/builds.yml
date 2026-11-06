@@ -466,10 +466,14 @@ jobs:
       VERSION: ${{ needs.version.outputs.version }}
       COMMIT: ${{ needs.version.outputs.commit }}
     steps:
+      # Every build is uploaded as its own file (archive: false). Without
+      # skip-decompress, the .zip builds would be unpacked here instead of
+      # kept as the files to release.
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true
+          skip-decompress: true
       - name: Name the files
         run: |
           mkdir dist

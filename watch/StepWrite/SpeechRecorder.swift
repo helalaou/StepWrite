@@ -43,21 +43,20 @@ final class SpeechRecorder {
     private let speechOnset: Duration = .milliseconds(150)
     /// Loudness this long counts as more speech; shorter spikes are noise
     private let sustainedSpeech: Duration = .milliseconds(100)
-    /// Silence this long after speech ends the answer (the web app waits 1 s)
-    private let endOfAnswerSilence: Duration = .milliseconds(1200)
     /// An answer must be loud for this long in all, so a knock or a sleeve
     /// brushing the watch isn't sent, which Whisper would turn into words such
     /// as "Thank you for watching". A one-word command still passes.
     private let minimumSpeech: Duration = .milliseconds(300)
     private let maximumAnswerLength: Duration = .seconds(90)
 
-    /// Records until the speaker pauses after speaking, or until `timeout`
-    /// passes without speech. `onHearing` is called with true when speech
-    /// starts, and with false if it turns out to be only a noise. `onLevel`
-    /// gets the input level, from 0 (silence) to 1, every 50 ms. Cancelling
-    /// the calling task stops the recording.
+    /// Records until the speaker pauses for `endOfAnswerSilence` after
+    /// speaking, or until `timeout` passes without speech. `onHearing` is
+    /// called with true when speech starts, and with false if it turns out to
+    /// be only a noise. `onLevel` gets the input level, from 0 (silence) to 1,
+    /// every 50 ms. Cancelling the calling task stops the recording.
     func record(
         timeout: Duration,
+        endOfAnswerSilence: Duration,
         onHearing: (Bool) -> Void,
         onLevel: (Float) -> Void
     ) async throws -> Recording {

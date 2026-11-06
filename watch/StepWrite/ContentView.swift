@@ -24,6 +24,14 @@ struct ContentView: View {
                 model.startOnLaunch()
             }
         }
+        .sheet(isPresented: Binding(
+            get: { model.isShowingSettings },
+            set: { isShowing in
+                if !isShowing { model.closeSettings() }
+            }
+        )) {
+            SettingsScreen()
+        }
     }
 }
 
@@ -52,6 +60,7 @@ private struct HomeScreen: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 4)
+                SettingsButton(model: model)
             }
             .frame(maxWidth: .infinity)
         }
@@ -61,6 +70,7 @@ private struct HomeScreen: View {
 /// watchOS keeps the time in the top-trailing corner and apps can't hide it.
 /// The question screen runs up under it instead, with only the progress dots
 /// in the clock's row (centered on the time), so the question gets the rest.
+/// Settings is behind Pause, which stops the voice loop first.
 private let clockRowTop: CGFloat = 20
 private let clockRowHeight: CGFloat = 12
 
@@ -217,8 +227,11 @@ private struct PausedOverlay: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                RoundButton(systemImage: "play.fill", label: "Resume", tint: .stepBlue) {
-                    model.send(.resume)
+                HStack(spacing: 6) {
+                    RoundButton(systemImage: "play.fill", label: "Resume", tint: .stepBlue) {
+                        model.send(.resume)
+                    }
+                    RoundButton(systemImage: "gearshape.fill", label: "Settings", action: model.openSettings)
                 }
                 .disabled(model.isBusy)
             }
@@ -236,6 +249,7 @@ private struct TextScreen: View {
                 VStack(alignment: .leading, spacing: 8) {
                     // In the clock's row, like the question screen's progress dots
                     HStack(spacing: 6) {
+                        SettingsGear(model: model)
                         Text(model.isDraft ? "Draft" : "Your text")
                             .font(.headline)
                             .foregroundStyle(Color.stepBlue)
@@ -313,12 +327,13 @@ private struct FailureScreen: View {
                     .foregroundStyle(.orange)
                 Text(message)
                     .font(.footnote)
-                Text("Server: \(ServerSettings.baseURL.absoluteString)")
+                Text("Server: \(AppSettings.shared.serverURL.absoluteString)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 6) {
                     RoundButton(systemImage: "arrow.clockwise", label: "Try again", tint: .stepBlue, action: model.tryAgain)
                     RoundButton(systemImage: "house.fill", label: "Home", action: model.goHome)
+                    RoundButton(systemImage: "gearshape.fill", label: "Settings", action: model.openSettings)
                 }
                 .frame(maxWidth: .infinity)
             }

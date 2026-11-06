@@ -55,13 +55,17 @@ final class ConversationModel {
     private(set) var text = ""
     private(set) var isDraft = false
     private(set) var isDraftReady = false
+    /// Settings is open, and the voice loop waits for it to close
+    private(set) var isShowingSettings = false
 
-    /// The web app reads the question again after this much silence
-    private let replayAfter: Duration = .seconds(12)
     /// How long one recording lasts while only commands are listened for
     private let commandListeningWindow: Duration = .seconds(30)
 
-    @ObservationIgnored private let api = StepWriteAPI()
+    @ObservationIgnored private let settings = AppSettings.shared
+    /// Made for each request, so a server or voice chosen in Settings applies at once
+    private var api: StepWriteAPI {
+        StepWriteAPI(baseURL: settings.serverURL, voice: settings.voice)
+    }
     @ObservationIgnored private let recorder = SpeechRecorder()
     @ObservationIgnored private let voice = SpeechPlayer()
     @ObservationIgnored private var hasLaunched = false
@@ -118,7 +122,9 @@ final class ConversationModel {
     func startOnLaunch() {
         guard !hasLaunched else { return }
         hasLaunched = true
-        start()
+        if settings.startsOnLaunch {
+            start()
+        }
     }
 
     func start() {
@@ -146,6 +152,29 @@ final class ConversationModel {
         guard let failedOperation else { return }
         screen = screenBeforeFailure
         run(failedOperation)
+    }
+
+    /// Stops the voice loop, so nothing is said or heard while Settings is open
+    func openSettings() {
+        loop?.cancel()
+        loop = nil
+        voice.stop()
+        activity = .idle
+        isShowingSettings = true
+    }
+
+    /// Picks up where Settings interrupted: the question is read again, in the
+    /// voice and at the speed just chosen
+    func closeSettings() {
+        isShowingSettings = false
+        switch screen {
+        case .questions:
+            run { self.isPaused ? .listen : .ask }
+        case .text:
+            run { .listen }
+        case .home, .failed:
+            break
+        }
     }
 
     func goHome() {
@@ -210,15 +239,19 @@ final class ConversationModel {
         activity = .listening
         try activateAudioSession()
         // As in the web app, an unanswered silence brings the question back,
-        // except while paused or while a new answer is awaited.
-        let repeatsQuestion = screen == .questions && !isPaused && !isModifying
+        // except while paused, while a new answer is awaited, or when Settings
+        // turned it off.
+        let replayAfter = screen == .questions && !isPaused && !isModifying && settings.repeatAfter > 0
+            ? Duration.seconds(settings.repeatAfter)
+            : nil
         let recording = try await recorder.record(
-            timeout: repeatsQuestion ? replayAfter : commandListeningWindow,
+            timeout: replayAfter ?? commandListeningWindow,
+            endOfAnswerSilence: .seconds(settings.answerPause),
             onHearing: { self.activity = $0 ? .hearing : .listening },
             onLevel: { self.level = $0 }
         )
         guard case .speech(let file) = recording else {
-            return repeatsQuestion ? .ask : .listen
+            return replayAfter != nil ? .ask : .listen
         }
         defer { try? FileManager.default.removeItem(at: file) }
 
@@ -448,7 +481,7 @@ final class ConversationModel {
     private func speak(_ text: String, cacheName: String? = nil) async throws {
         activity = .speaking
         try activateAudioSession()
-        try await voice.speak(text, using: api, cacheName: cacheName) { self.level = $0 }
+        try await voice.speak(text, using: api, cacheName: cacheName, rate: Float(settings.readingSpeed)) { self.level = $0 }
     }
 
     /// Shows a message and speaks it. Messages are cached on the server under
@@ -466,17 +499,18 @@ final class ConversationModel {
         if kind == .error {
             Cues.failure()
         }
-        try await speak(message, cacheName: Self.cacheName(for: message))
+        try await speak(message, cacheName: Self.cacheName(for: message, voice: settings.voice))
     }
 
-    /// The web app's file name for a spoken message: `feedback_` and the first
-    /// 30 characters of the message, lower-cased, with spaces as underscores.
-    private static func cacheName(for message: String) -> String {
+    /// The web app's file name for a spoken message: `feedback_`, the voice,
+    /// and the first 30 characters of the message, lower-cased, with spaces as
+    /// underscores.
+    private static func cacheName(for message: String, voice: String) -> String {
         let kept = message.lowercased().filter { character in
             (character.isASCII && (character.isLetter || character.isNumber)) || character.isWhitespace
         }
         let name = kept.split(whereSeparator: \.isWhitespace).joined(separator: "_")
-        return "feedback_\(name.prefix(30)).mp3"
+        return "feedback_\(voice)_\(name.prefix(30)).mp3"
     }
 
     /// Shows the error with a way to retry, and says it in the watch's own
@@ -488,7 +522,7 @@ final class ConversationModel {
         isModifying = false
         screen = .failed(error.localizedDescription)
         Cues.failure()
-        try? await voice.speak(error.localizedDescription, using: nil)
+        try? await voice.speak(error.localizedDescription, using: nil, rate: Float(settings.readingSpeed))
     }
 
     private func activateAudioSession() throws {

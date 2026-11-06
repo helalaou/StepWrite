@@ -1,6 +1,7 @@
 import Foundation
 
-/// Where the StepWrite server runs.
+/// Where this build's StepWrite server runs. Settings on the watch can name
+/// another (AppSettings.serverURL).
 enum ServerSettings {
 #if targetEnvironment(simulator)
     /// The simulator shares the Mac's network, so it reaches the server started

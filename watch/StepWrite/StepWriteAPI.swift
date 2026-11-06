@@ -75,6 +75,8 @@ struct StepWriteAPI {
     }
 
     var baseURL = ServerSettings.baseURL
+    /// The server's voice for `speech`; nil is the server's own choice
+    var voice: String?
 
     private static let session: URLSession = {
         let configuration = URLSessionConfiguration.default
@@ -158,19 +160,31 @@ struct StepWriteAPI {
     func speech(for text: String, cacheName: String? = nil) async throws -> Data {
         struct Request: Encodable {
             let text: String
+            let voice: String?
             let cache_as: String?
         }
         struct Response: Decodable {
             let audioUrl: String
         }
 
-        let body = Request(text: text, cache_as: cacheName)
+        let body = Request(text: text, voice: voice, cache_as: cacheName)
         let response: Response = try await decoded(try jsonRequest("api/tts/generate", body: body))
         // audioUrl is a path on the server, such as /tts/<hash>.mp3
         guard let audioURL = URL(string: response.audioUrl, relativeTo: baseURL) else {
             throw APIError.unexpectedResponse
         }
         return try await data(for: URLRequest(url: audioURL))
+    }
+
+    /// Whether a StepWrite server answers at `baseURL`, for checking an address in Settings
+    func isStepWriteServer() async -> Bool {
+        struct Health: Decodable {
+            let app: String
+        }
+        var request = urlRequest("api/health")
+        request.timeoutInterval = 8
+        let health: Health? = try? await decoded(request)
+        return health?.app == "StepWrite"
     }
 
     private func urlRequest(_ path: String) -> URLRequest {

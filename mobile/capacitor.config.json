@@ -1,5 +1,10 @@
 {
   "appId": "io.github.helalaou.stepwrite",
   "appName": "StepWrite",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "SystemBars": {
+      "style": "LIGHT"
+    }
+  }
 }

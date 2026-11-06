@@ -133,3 +133,133 @@ jobs:
         with:
           path: ${{ env.ARCHIVE }}
           archive: false
+
+  # Writes each app's version and build result to the run summary and, on a
+  # pull request, to one comment that every run updates. Pull requests from
+  # forks get only the summary, since their token can't comment.
+  report:
+    name: Report
+    needs: [version, web, watch]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      DOCS_URL: ${{ github.server_url }}/${{ github.repository }}/blob/main/docs/app-builds.md
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      VERSION: ${{ needs.version.outputs.version || 'unknown' }}
+      COMMIT: ${{ needs.version.outputs.commit || 'unknown' }}
+      WEB_RESULT: ${{ needs.web.result }}
+      WEB_URL: ${{ needs.web.outputs.artifact-url }}
+      WATCH_RESULT: ${{ needs.watch.result }}
+      WATCH_URL: ${{ needs.watch.outputs.artifact-url }}
+    steps:
+      - name: Write the report
+        run: |
+          row() {  # app, job result, download URL
+            local status link=''
+            case $2 in
+              success) status='✅ Built'; [[ -n $3 ]] && link="[Download]($3)" ;;
+              failure) status='❌ Failed' ;;
+              cancelled) status='⏹️ Cancelled' ;;
+              *) status='⏭️ Skipped' ;;
+            esac
+            echo "| $1 | $VERSION | $status | $link |"
+          }
+          {
+            echo '<!-- stepwrite-builds -->'
+            echo '### StepWrite builds'
+            echo
+            echo "Version **$VERSION**, built from \`$COMMIT\` ([run]($RUN_URL))."
+            echo
+            echo '| App | Version | Build | Download |'
+            echo '| --- | --- | --- | --- |'
+            row 'Web client' "$WEB_RESULT" "$WEB_URL"
+            row 'Apple Watch (simulator)' "$WATCH_RESULT" "$WATCH_URL"
+            echo
+            echo "Downloads need a GitHub sign-in. To install them, see [App builds]($DOCS_URL)."
+          } > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment on the pull request
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          id=$(gh api --paginate "repos/$GH_REPO/issues/$PR/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("<!-- stepwrite-builds -->"))) | .id' \
+            | head -n 1)
+          if [[ -n $id ]]; then
+            gh api --method PATCH "repos/$GH_REPO/issues/comments/$id" -F body=@report.md > /dev/null
+          else
+            gh api "repos/$GH_REPO/issues/$PR/comments" -F body=@report.md > /dev/null
+          fi
+
+  # Each push to main replaces the builds on the "latest" release, whose file
+  # names never change, so links such as
+  # releases/latest/download/StepWrite-watch-simulator.zip always give the
+  # newest build. It publishes only when every app built.
+  release:
+    name: Release
+    needs: [version, web, watch]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      DOCS_URL: ${{ github.server_url }}/${{ github.repository }}/blob/main/docs/app-builds.md
+      VERSION: ${{ needs.version.outputs.version }}
+      COMMIT: ${{ needs.version.outputs.commit }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Name the files
+        run: |
+          mkdir dist
+          take() {  # built file, release file name
+            local file
+            file=$(find artifacts -type f -name "$1" | head -n 1)
+            if [[ -z $file ]]; then
+              echo "::error::No build named $1"
+              exit 1
+            fi
+            cp "$file" "dist/$2"
+          }
+          take "StepWrite-web-$VERSION.zip" StepWrite-web.zip
+          take "StepWrite-watch-simulator-$VERSION.zip" StepWrite-watch-simulator.zip
+          ls -l dist
+      - name: Write the release notes
+        run: |
+          download="$GITHUB_SERVER_URL/$GH_REPO/releases/download/latest"
+          {
+            echo "StepWrite **$VERSION**, built from [\`$COMMIT\`]($GITHUB_SERVER_URL/$GH_REPO/commit/$GITHUB_SHA) on main."
+            echo
+            echo '| App | Version | Download |'
+            echo '| --- | --- | --- |'
+            echo "| Web client | $VERSION | [StepWrite-web.zip]($download/StepWrite-web.zip) |"
+            echo "| Apple Watch (simulator) | $VERSION | [StepWrite-watch-simulator.zip]($download/StepWrite-watch-simulator.zip) |"
+            echo
+            echo "Every app installs for free. See [App builds]($DOCS_URL)."
+          } > notes.md
+      # Moving the tag keeps the release, so watchers aren't notified on every
+      # push. If GitHub refuses the move (the workflow token may not move a tag
+      # across changes to workflow files), the release is made again instead.
+      - name: Publish
+        run: |
+          title="StepWrite $VERSION"
+          if gh release view latest > /dev/null 2>&1 &&
+            gh api --method PATCH "repos/$GH_REPO/git/refs/tags/latest" \
+              -f sha="$GITHUB_SHA" -F force=true > /dev/null; then
+            gh release edit latest --title "$title" --notes-file notes.md --latest
+            gh release upload latest dist/* --clobber
+          else
+            gh release delete latest --cleanup-tag --yes 2> /dev/null || true
+            gh api --method DELETE "repos/$GH_REPO/git/refs/tags/latest" 2> /dev/null || true
+            gh release create latest dist/* --target "$GITHUB_SHA" \
+              --title "$title" --notes-file notes.md --latest
+          fi

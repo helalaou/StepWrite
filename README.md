@@ -161,7 +161,7 @@ Browser (React 18, Create React App, MUI)
       └─ POST /api/save-experiment-data          study logging (see below)
 ```
 
-The server ([`server/server.js`](server/server.js), [`server/openaiModule.js`](server/openaiModule.js))
+The server ([`server/app.js`](server/app.js), [`server/openaiModule.js`](server/openaiModule.js))
 keeps no conversation state: the client sends the full *conversation planning* object (the list
 of questions and answers plus a `followup_needed` flag) with every request.
 
@@ -252,6 +252,14 @@ config files and should be kept in sync. The input mode, speech, listening times
 address set here and in the variables above are the defaults; [Settings](#settings-and-appearance)
 changes them on each device.
 
+### The web app online
+
+The web app can run online on Netlify's free plan, built from this repository on each push to
+`main`, so people can try StepWrite in a browser with nothing to install. The client and the
+server share one address, such as `https://stepwrite.netlify.app`, and the OpenAI key stays a
+secret on Netlify. [The web app online](docs/deploy-netlify.md) covers the setup, the limits that
+keep a public site's OpenAI spending in check, and what the free plan covers.
+
 ### Remote access with ngrok
 
 To use StepWrite from a phone, expose both ports over HTTPS. Set `DEPLOY_MODE = 'ngrok'` and the
@@ -294,15 +302,19 @@ directory is git-ignored.
 │   ├── memory/                 optional user profile context
 │   ├── data/                   user_memories.json (used only when memory is enabled)
 │   ├── utils/                  logging and temp-file cleanup
+│   ├── netlify/                the function that runs the server on Netlify
 │   ├── openaiModule.js         OpenAI calls, fact-checking and dependency analysis
-│   ├── server.js               routes
+│   ├── app.js                  routes
+│   ├── server.js               starts the server on port 3001
 │   ├── config.js               server configuration
 │   └── .env.template
 ├── mobile/                     iPhone and Android apps around the web client (Capacitor)
 ├── watch/                      native Apple Watch app (SwiftUI)
 ├── .github/                    GitHub Actions workflows and Dependabot
 ├── docs/app-builds.md          automatic builds, releases and checks
+├── docs/deploy-netlify.md      the web app online, on Netlify's free plan
 ├── docs/assets/                screenshots
+├── netlify.toml                the online site's build settings
 ├── install.sh, run.sh, deploy.sh
 └── ngrok_config.example.yml
 ```

@@ -30,3 +30,6 @@ xcuserdata/
 *.swp
 *.swo
 *~
+
+# Local Netlify folder
+.netlify

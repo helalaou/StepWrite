@@ -1,0 +1,26 @@
+# The public web app: the client as a static site, and the server as one
+# function (server/netlify/functions/api.mjs) at the same address.
+# Setup, limits and costs: docs/deploy-netlify.md
+
+[build]
+  command = "npm ci --prefix server --omit=dev --no-audit --no-fund && npm ci --prefix client --no-audit --no-fund && npm run build --prefix client"
+  publish = "client/build"
+  # Each deploy uses credits from the free plan's 300 a month, so only main is
+  # built, and only when the web app changed.
+  ignore = "sh server/netlify/ignore-build.sh"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # The client calls the server's routes at the site's own address
+  REACT_APP_DEPLOY_MODE = "hosted"
+
+[functions]
+  # Inside server/, so the function finds the server's packages in
+  # server/node_modules
+  directory = "server/netlify/functions"
+
+# The app's own routes, such as /write and /reply, are pages of the client
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

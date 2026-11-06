@@ -93,11 +93,12 @@ jobs:
           npm ci
           npm test
       # The server's files with its dependencies installed, so the folder runs
-      # as it is. Left out: the tests, and user_memories.json, which holds the
-      # developer's own details for the (off by default) memory feature.
+      # as it is. Left out: the tests, the Netlify function (docs/deploy-netlify.md),
+      # and user_memories.json, which holds the developer's own details for the
+      # (off by default) memory feature.
       - name: Package the server
         run: |
-          git archive HEAD -- server ':!server/test' ':!server/data/user_memories.json' | tar -x
+          git archive HEAD -- server ':!server/test' ':!server/netlify' ':!server/data/user_memories.json' | tar -x
           mv server StepWrite-server
           npm ci --omit=dev --no-audit --no-fund --prefix StepWrite-server
           zip -qry "$ARCHIVE" StepWrite-server

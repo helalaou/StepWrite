@@ -1,12 +1,13 @@
-# Tests and builds the StepWrite server and every app on each push to main and
-# each pull request, on GitHub's hosted runners (free for public
-# repositories). See docs/app-builds.md for where the builds go and how to
-# install them.
+# Tests and builds the StepWrite server and every app on each push to main,
+# each version tag (v1.2.0, for example) and each pull request, on GitHub's
+# hosted runners (free for public repositories). See docs/app-builds.md for
+# where the builds go and how to install them.
 name: Builds
 
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -38,6 +39,8 @@ jobs:
           fetch-depth: 0
       # VERSION holds major.minor, and the commit count is the patch number
       # and the build number, so every build has its own increasing version.
+      # A version tag names the version instead: v1.2.0 builds 1.2.0. The
+      # build number is still the commit count, so it keeps rising.
       - id: version
         env:
           COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -48,12 +51,25 @@ jobs:
             exit 1
           fi
           build=$(git rev-list --count HEAD)
+          version=$base.$build
+          if [[ $GITHUB_REF_TYPE == tag ]]; then
+            if [[ ! $GITHUB_REF_NAME =~ ^v(([0-9]+\.[0-9]+)\.[0-9]+)$ ]]; then
+              echo "::error::Version tags look like v1.2.0, not '$GITHUB_REF_NAME'"
+              exit 1
+            fi
+            version=${BASH_REMATCH[1]}
+            tagged=${BASH_REMATCH[2]}
+            newer=$(printf '%s\n' "$base" "$tagged" | sort -V | tail -n 1)
+            if [[ $tagged != "$base" && $newer == "$tagged" ]]; then
+              echo "::warning file=VERSION::VERSION is $base, so builds of main after $GITHUB_REF_NAME will be numbered $base.<build>, below $version. Set VERSION to $tagged."
+            fi
+          fi
           {
-            echo "version=$base.$build"
+            echo "version=$version"
             echo "build=$build"
             echo "commit=${COMMIT::7}"
           } >> "$GITHUB_OUTPUT"
-          echo "Version $base.$build from ${COMMIT::7}"
+          echo "Version $version (build $build) from ${COMMIT::7}"
 
   server:
     name: Server
@@ -425,14 +441,20 @@ jobs:
             gh api "repos/$GH_REPO/issues/$PR/comments" -F body=@report.md > /dev/null
           fi
 
-  # Each push to main replaces the builds on the "latest" release, whose file
-  # names never change, so links such as
-  # releases/latest/download/StepWrite-watch-simulator.zip always give the
-  # newest build. It publishes only when every app built.
+  # Publishes the builds, only when every one of them succeeded:
+  # - Each push to main replaces the files of the "latest" prerelease, so
+  #   releases/download/latest/StepWrite-android.apk, for example, is always
+  #   the newest build of main.
+  # - Each version tag gets a release of its own, which GitHub marks as the
+  #   latest release, so releases/latest/download/StepWrite-android.apk is
+  #   always the newest version.
+  # The file names never change, so those links keep working.
   release:
     name: Release
     needs: [version, server, web, watch, android, iphone]
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: >-
+      github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -469,9 +491,17 @@ jobs:
           ls -l dist
       - name: Write the release notes
         run: |
-          download="$GITHUB_SERVER_URL/$GH_REPO/releases/download/latest"
+          releases="$GITHUB_SERVER_URL/$GH_REPO/releases"
+          commit="[\`$COMMIT\`]($GITHUB_SERVER_URL/$GH_REPO/commit/$GITHUB_SHA)"
+          if [[ $GITHUB_REF_TYPE == tag ]]; then
+            download="$releases/download/$GITHUB_REF_NAME"
+            intro="StepWrite **$VERSION**, built from $commit."
+          else
+            download="$releases/download/latest"
+            intro="The newest build of main: StepWrite **$VERSION**, built from $commit. For the newest version, see the [latest release]($releases/latest)."
+          fi
           {
-            echo "StepWrite **$VERSION**, built from [\`$COMMIT\`]($GITHUB_SERVER_URL/$GH_REPO/commit/$GITHUB_SHA) on main."
+            echo "$intro"
             echo
             echo '| App | Version | Download |'
             echo '| --- | --- | --- |'
@@ -487,17 +517,32 @@ jobs:
       # Moving the tag keeps the release, so watchers aren't notified on every
       # push. If GitHub refuses the move (the workflow token may not move a tag
       # across changes to workflow files), the release is made again instead.
-      - name: Publish
+      # It stays a prerelease, so it never replaces a version as the latest.
+      - name: Publish the newest build of main
+        if: github.ref == 'refs/heads/main'
         run: |
-          title="StepWrite $VERSION"
+          title="StepWrite $VERSION (newest build of main)"
           if gh release view latest > /dev/null 2>&1 &&
             gh api --method PATCH "repos/$GH_REPO/git/refs/tags/latest" \
               -f sha="$GITHUB_SHA" -F force=true > /dev/null; then
-            gh release edit latest --title "$title" --notes-file notes.md --latest
+            gh release edit latest --title "$title" --notes-file notes.md \
+              --prerelease --latest=false
             gh release upload latest dist/* --clobber
           else
             gh release delete latest --cleanup-tag --yes 2> /dev/null || true
             gh api --method DELETE "repos/$GH_REPO/git/refs/tags/latest" 2> /dev/null || true
             gh release create latest dist/* --target "$GITHUB_SHA" \
-              --title "$title" --notes-file notes.md --latest
+              --title "$title" --notes-file notes.md --prerelease --latest=false
+          fi
+      # The notes list the builds, then GitHub's list of the changes since the
+      # previous version. A release someone already made for the tag keeps its
+      # title and notes and gets the files.
+      - name: Publish the version
+        if: github.ref_type == 'tag'
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
+              --title "StepWrite $VERSION" --notes-file notes.md --generate-notes --latest
           fi

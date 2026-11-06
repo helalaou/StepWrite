@@ -369,6 +369,50 @@ jobs:
           path: ${{ env.ARCHIVE }}
           archive: false
 
+  # The StepWrite Voice keyboard proof of concept (keyboard/README.md): the app
+  # with its keyboard and share extensions
+  keyboard:
+    name: iPhone keyboard
+    needs: version
+    runs-on: macos-latest
+    timeout-minutes: 45
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      BUILD: ${{ needs.version.outputs.build }}
+      ARCHIVE: StepWrite-keyboard-simulator-${{ needs.version.outputs.version }}.zip
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install the iOS platform if it is missing
+        run: |
+          xcodebuild -version
+          if ! xcrun simctl list runtimes | grep -q '^iOS'; then
+            xcodebuild -downloadPlatform iOS
+          fi
+      # Unsigned, like the watch app: installing on a phone needs the
+      # developer's own Apple ID in Xcode. The device build checks that it
+      # compiles for a real iPhone; the simulator build is the download.
+      - name: Build for iPhone and the iOS simulator
+        run: |
+          args=(
+            -project keyboard/StepWriteKeyboard.xcodeproj -scheme StepWriteKeyboard
+            -configuration Release -derivedDataPath build/keyboard -quiet
+            CODE_SIGNING_ALLOWED=NO
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD"
+          )
+          xcodebuild build "${args[@]}" -destination generic/platform=iOS
+          xcodebuild build "${args[@]}" -destination 'generic/platform=iOS Simulator'
+      - name: Package the simulator app
+        run: >-
+          ditto -c -k --keepParent --norsrc --noextattr
+          build/keyboard/Build/Products/Release-iphonesimulator/StepWriteKeyboard.app "$ARCHIVE"
+      - id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.ARCHIVE }}
+          archive: false
+
   # Writes each app's version and build result to the run summary and, on a
   # pull request, to one comment that every run updates. Pull requests from
   # forks get only the summary, since their token can't comment.

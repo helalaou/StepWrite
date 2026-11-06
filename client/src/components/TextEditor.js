@@ -35,6 +35,9 @@ const pulseAnimation = keyframes`
   }
 `;
 
+// The font size on screens narrower or shorter than 500px
+const SMALL_SCREEN_FONT_SIZE = 0.9;
+
 function TextEditor({ 
   initialContent, 
   onBack, 
@@ -69,6 +72,14 @@ function TextEditor({
   // initializing afterwards is destroyed instead of keeping the mic open.
   const vadGenerationRef = useRef(0);
 
+  // The VAD's callbacks call the latest onBack through a ref. App makes a new
+  // onBack each time it renders, which happens on every keystroke here, and
+  // depending on it would restart the microphone each time.
+  const onBackRef = useRef(onBack);
+  useEffect(() => {
+    onBackRef.current = onBack;
+  });
+
   // Add isHandsFree check
   const isHandsFree = config.input.mode === 'HANDS_FREE';
 
@@ -89,13 +100,18 @@ function TextEditor({
     enterRevision();
   }, []);
 
+  // Small screens start with a smaller font unless it was changed here. Once
+  // the font is that size there is nothing to save: saving it again would
+  // hand back new preferences and run this effect again, without end.
   useEffect(() => {
     const handleResize = () => {
-      if ((window.innerWidth < 500 || window.innerHeight < 500) && fontSize === editorPreferences.fontSize) {
-        setFontSize(0.9);
+      if ((window.innerWidth < 500 || window.innerHeight < 500)
+        && fontSize === editorPreferences.fontSize
+        && fontSize !== SMALL_SCREEN_FONT_SIZE) {
+        setFontSize(SMALL_SCREEN_FONT_SIZE);
         onPreferencesChange({
           ...editorPreferences,
-          fontSize: 0.9
+          fontSize: SMALL_SCREEN_FONT_SIZE
         });
       }
     };
@@ -295,7 +311,7 @@ function TextEditor({
 
                 if (toQuestionsCommand) {
                   console.log('Navigation command detected, going back to questions');
-                  onBack();
+                  onBackRef.current();
                   return;
                 }
 
@@ -361,7 +377,7 @@ function TextEditor({
       console.error('Error starting VAD:', error);
       setIsEnabled(false);
     }
-  }, [isEnabled, safeDestroyVAD, onBack]);
+  }, [isEnabled, safeDestroyVAD]);
 
   const toggleMic = useCallback(() => {
     if (isEnabled) {

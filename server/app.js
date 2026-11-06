@@ -220,7 +220,13 @@ app.post('/api/tts/generate', async (req, res) => {
       audioFilename = `${hash}.${config.audio.tts.format}`;
     }
 
-    const audioPath = path.join(config.audio.tts.tempDir, audioFilename);
+    // cache_as was checked above. Checking the resolved path as well keeps
+    // every file call below inside the TTS directory.
+    const ttsDir = path.resolve(config.audio.tts.tempDir);
+    const audioPath = path.resolve(ttsDir, audioFilename);
+    if (!audioPath.startsWith(ttsDir + path.sep)) {
+      return res.status(400).json({ error: 'cache_as must be a plain .mp3 file name' });
+    }
 
     // Check if audio file is already cached
     if (config.audio.tts.cacheEnabled && fs.existsSync(audioPath)) {
@@ -410,7 +416,11 @@ app.post('/api/save-experiment-data', async (req, res) => {
     const sanitizedId = participantId.replace(/[^a-zA-Z0-9-_]/g, '_');
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filename = `${sanitizedId}_${mode}_${timestamp}_experiment.txt`;
-    const filepath = path.join(config.experiment.outputDir, filename);
+    const experimentDir = path.resolve(config.experiment.outputDir);
+    const filepath = path.resolve(experimentDir, filename);
+    if (!filepath.startsWith(experimentDir + path.sep)) {
+      return res.status(400).json({ error: 'Invalid participant ID' });
+    }
 
     // Format time values
     const writingTimeStr = writingTime ? `${Math.floor(writingTime / 60)}m ${writingTime % 60}s (${writingTime}s total)` : 'not tracked';

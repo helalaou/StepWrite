@@ -1,0 +1,135 @@
+# Builds every StepWrite app on each push to main and each pull request, on
+# GitHub's hosted runners (free for public repositories). See
+# docs/app-builds.md for where the builds go and how to install them.
+name: Builds
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to a pull request replaces the run in progress; runs on main
+# finish in order.
+concurrency:
+  group: builds-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      build: ${{ steps.version.outputs.build }}
+      commit: ${{ steps.version.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The build number counts every commit, so it needs the full history
+          fetch-depth: 0
+      # VERSION holds major.minor, and the commit count is the patch number
+      # and the build number, so every build has its own increasing version.
+      - id: version
+        env:
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          base=$(tr -d '[:space:]' < VERSION)
+          if [[ ! $base =~ ^[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=VERSION::VERSION must be major.minor, such as 1.0, not '$base'"
+            exit 1
+          fi
+          build=$(git rev-list --count HEAD)
+          {
+            echo "version=$base.$build"
+            echo "build=$build"
+            echo "commit=${COMMIT::7}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Version $base.$build from ${COMMIT::7}"
+
+  web:
+    name: Web client and server
+    needs: version
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    env:
+      ARCHIVE: StepWrite-web-${{ needs.version.outputs.version }}.zip
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+      - name: Test the server
+        working-directory: server
+        run: |
+          npm ci
+          npm test
+      # With CI set, as it is on GitHub, the client tests run once and lint
+      # warnings fail the build.
+      - name: Test the client
+        working-directory: client
+        run: |
+          npm ci
+          npm test
+      - name: Build the client
+        working-directory: client
+        run: npm run build
+      - name: Package the client
+        working-directory: client/build
+        run: zip -qr "$GITHUB_WORKSPACE/$ARCHIVE" .
+      - id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.ARCHIVE }}
+          archive: false
+
+  watch:
+    name: Apple Watch app
+    needs: version
+    runs-on: macos-latest
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      BUILD: ${{ needs.version.outputs.build }}
+      ARCHIVE: StepWrite-watch-simulator-${{ needs.version.outputs.version }}.zip
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install the watchOS platform if it is missing
+        run: |
+          xcodebuild -version
+          if ! xcrun simctl list runtimes | grep -q '^watchOS'; then
+            xcodebuild -downloadPlatform watchOS
+          fi
+      # Unsigned: installing on a watch needs the developer's own Apple ID in
+      # Xcode, which a shared runner doesn't have. The device build checks that
+      # the app compiles for a real watch; the simulator build is the download.
+      - name: Build for Apple Watch and the watchOS simulator
+        run: |
+          args=(
+            -project watch/StepWrite.xcodeproj -scheme StepWrite
+            -configuration Release -derivedDataPath build/watch -quiet
+            CODE_SIGNING_ALLOWED=NO
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD"
+          )
+          xcodebuild build "${args[@]}" -destination generic/platform=watchOS
+          xcodebuild build "${args[@]}" -destination 'generic/platform=watchOS Simulator'
+      # Without extended attributes, which would unzip as stray ._ files
+      # anywhere but in Finder
+      - name: Package the simulator app
+        run: >-
+          ditto -c -k --keepParent --norsrc --noextattr
+          build/watch/Build/Products/Release-watchsimulator/StepWrite.app "$ARCHIVE"
+      - id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.ARCHIVE }}
+          archive: false

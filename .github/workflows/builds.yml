@@ -111,6 +111,10 @@ jobs:
           if ! xcrun simctl list runtimes | grep -q '^watchOS'; then
             xcodebuild -downloadPlatform watchOS
           fi
+      # On the Mac itself, since the code they test is plain Swift (see
+      # watch/Tests/README.md)
+      - name: Test the voice commands
+        run: swift test --package-path watch/Tests
       # Unsigned: installing on a watch needs the developer's own Apple ID in
       # Xcode, which a shared runner doesn't have. The device build checks that
       # the app compiles for a real watch; the simulator build is the download.

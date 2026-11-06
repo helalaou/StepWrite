@@ -1,0 +1,575 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C0AC5858C8C0A0C088080386 /* VoiceCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BC667AF95B0F3C56F7745F4 /* VoiceCommand.swift */; };
+		08E26E4ED0225842D6E5760F /* click.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 3A6C98D3CEBA6102B64E8FED /* click.mp3 */; };
+		A308F248A7BA82ED86605561 /* KeyboardExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9FC0C1D2E55B22549A609651 /* KeyboardExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2EB8122F74EB3700607975AA /* ShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 04A15B309EDC9A429995DEA3 /* ShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C1E45DC17263C3098483217F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7BD5FBB54790C52D85287578 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 31CDE560F8EC72EE62BC22E9;
+			remoteInfo = KeyboardExtension;
+		};
+		6ACDE0D2C38E70DDC2F34997 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7BD5FBB54790C52D85287578 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DD7942647A76CA05C3592741;
+			remoteInfo = ShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2D4C669BC2F7093C1A8A2216 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A308F248A7BA82ED86605561 /* KeyboardExtension.appex in Embed Foundation Extensions */,
+				2EB8122F74EB3700607975AA /* ShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A81CAED4E85E099A263C5DB7 /* StepWriteKeyboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StepWriteKeyboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9FC0C1D2E55B22549A609651 /* KeyboardExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		04A15B309EDC9A429995DEA3 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		418AC8801D8DAE7A9AC091E6 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+		48A29D3C21BBC454675BA4B0 /* App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = App-Info.plist; sourceTree = "<group>"; };
+		E0CAAAA6014CE72BB0F7CD48 /* Keyboard-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Keyboard-Info.plist; sourceTree = "<group>"; };
+		6012E03A0E9F598EB287720E /* Share-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Share-Info.plist; sourceTree = "<group>"; };
+		BBA485C7ADD3EDB1B68A0405 /* StepWrite.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = StepWrite.entitlements; sourceTree = "<group>"; };
+		6BC667AF95B0F3C56F7745F4 /* VoiceCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceCommand.swift; sourceTree = "<group>"; };
+		3A6C98D3CEBA6102B64E8FED /* click.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = click.mp3; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		968E2D3B6362CCB02F70BD58 /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = App;
+			sourceTree = "<group>";
+		};
+		D24291202DD4ECDC0DB852DD /* Keyboard */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Keyboard;
+			sourceTree = "<group>";
+		};
+		038F80A0A957414A52A2973B /* Share */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Share;
+			sourceTree = "<group>";
+		};
+		707BD8770620C2CA979FF527 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		326F8FD999A755643EC29BBD /* ScreenReading */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ScreenReading;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		158F6CA6E90C796A81807E9E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9DB0B9F8F2D8299458B8D03D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5214B07945BC22EA776C6C0B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		8EDF2DE997F8E90CDD5B4976 = {
+			isa = PBXGroup;
+			children = (
+				968E2D3B6362CCB02F70BD58 /* App */,
+				D24291202DD4ECDC0DB852DD /* Keyboard */,
+				038F80A0A957414A52A2973B /* Share */,
+				707BD8770620C2CA979FF527 /* Shared */,
+				326F8FD999A755643EC29BBD /* ScreenReading */,
+				EF4B3ECC88819D0E895ACB9E /* Config */,
+				D540B883AB853148C886168B /* Watch app */,
+				BC7E92778009A5BB2979BF05 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EF4B3ECC88819D0E895ACB9E /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				418AC8801D8DAE7A9AC091E6 /* Base.xcconfig */,
+				48A29D3C21BBC454675BA4B0 /* App-Info.plist */,
+				E0CAAAA6014CE72BB0F7CD48 /* Keyboard-Info.plist */,
+				6012E03A0E9F598EB287720E /* Share-Info.plist */,
+				BBA485C7ADD3EDB1B68A0405 /* StepWrite.entitlements */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		D540B883AB853148C886168B /* Watch app */ = {
+			isa = PBXGroup;
+			children = (
+				6BC667AF95B0F3C56F7745F4 /* VoiceCommand.swift */,
+				3A6C98D3CEBA6102B64E8FED /* click.mp3 */,
+			);
+			name = "Watch app";
+			path = ../watch/StepWrite;
+			sourceTree = "<group>";
+		};
+		BC7E92778009A5BB2979BF05 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A81CAED4E85E099A263C5DB7 /* StepWriteKeyboard.app */,
+				9FC0C1D2E55B22549A609651 /* KeyboardExtension.appex */,
+				04A15B309EDC9A429995DEA3 /* ShareExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA6F524823F52DFECEDB371C /* StepWriteKeyboard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 01404562514B1313449F39C7 /* Build configuration list for PBXNativeTarget "StepWriteKeyboard" */;
+			buildPhases = (
+				8819CD471C15EC17017EC146 /* Sources */,
+				158F6CA6E90C796A81807E9E /* Frameworks */,
+				8E727EA0AD641BBC15D349BA /* Resources */,
+				2D4C669BC2F7093C1A8A2216 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2F13CD17C0C87FE831B29D6C /* PBXTargetDependency */,
+				8959E362AE725C50D68466DA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				968E2D3B6362CCB02F70BD58 /* App */,
+				707BD8770620C2CA979FF527 /* Shared */,
+				326F8FD999A755643EC29BBD /* ScreenReading */,
+			);
+			name = StepWriteKeyboard;
+			packageProductDependencies = (
+			);
+			productName = StepWriteKeyboard;
+			productReference = A81CAED4E85E099A263C5DB7 /* StepWriteKeyboard.app */;
+			productType = "com.apple.product-type.application";
+		};
+		31CDE560F8EC72EE62BC22E9 /* KeyboardExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E85FB2D76F68F8B206661265 /* Build configuration list for PBXNativeTarget "KeyboardExtension" */;
+			buildPhases = (
+				939671360B0FD9E81B796609 /* Sources */,
+				9DB0B9F8F2D8299458B8D03D /* Frameworks */,
+				C8984C14A36F16A7EDC43154 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D24291202DD4ECDC0DB852DD /* Keyboard */,
+				707BD8770620C2CA979FF527 /* Shared */,
+			);
+			name = KeyboardExtension;
+			packageProductDependencies = (
+			);
+			productName = KeyboardExtension;
+			productReference = 9FC0C1D2E55B22549A609651 /* KeyboardExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		DD7942647A76CA05C3592741 /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 36E069FD6D7230C554FB8244 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				4FDAD27AB45C3DDAF5678DC7 /* Sources */,
+				5214B07945BC22EA776C6C0B /* Frameworks */,
+				74FC463F96E943AA61015C78 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				038F80A0A957414A52A2973B /* Share */,
+				707BD8770620C2CA979FF527 /* Shared */,
+				326F8FD999A755643EC29BBD /* ScreenReading */,
+			);
+			name = ShareExtension;
+			packageProductDependencies = (
+			);
+			productName = ShareExtension;
+			productReference = 04A15B309EDC9A429995DEA3 /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7BD5FBB54790C52D85287578 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2720;
+				LastUpgradeCheck = 2720;
+				TargetAttributes = {
+					AA6F524823F52DFECEDB371C = {
+						CreatedOnToolsVersion = 27.2;
+					};
+					31CDE560F8EC72EE62BC22E9 = {
+						CreatedOnToolsVersion = 27.2;
+					};
+					DD7942647A76CA05C3592741 = {
+						CreatedOnToolsVersion = 27.2;
+					};
+				};
+			};
+			buildConfigurationList = 911E613473A290258B74467E /* Build configuration list for PBXProject "StepWriteKeyboard" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 8EDF2DE997F8E90CDD5B4976;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = BC7E92778009A5BB2979BF05 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA6F524823F52DFECEDB371C /* StepWriteKeyboard */,
+				31CDE560F8EC72EE62BC22E9 /* KeyboardExtension */,
+				DD7942647A76CA05C3592741 /* ShareExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8E727EA0AD641BBC15D349BA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				08E26E4ED0225842D6E5760F /* click.mp3 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C8984C14A36F16A7EDC43154 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		74FC463F96E943AA61015C78 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8819CD471C15EC17017EC146 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0AC5858C8C0A0C088080386 /* VoiceCommand.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		939671360B0FD9E81B796609 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4FDAD27AB45C3DDAF5678DC7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2F13CD17C0C87FE831B29D6C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 31CDE560F8EC72EE62BC22E9 /* KeyboardExtension */;
+			targetProxy = C1E45DC17263C3098483217F /* PBXContainerItemProxy */;
+		};
+		8959E362AE725C50D68466DA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DD7942647A76CA05C3592741 /* ShareExtension */;
+			targetProxy = 6ACDE0D2C38E70DDC2F34997 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A2BCDCE27E154A44811037C6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 418AC8801D8DAE7A9AC091E6 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		6F3294BE160E247369CD6334 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 418AC8801D8DAE7A9AC091E6 /* Base.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0CD6B821D66EBA9C82F5DA82 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/StepWrite.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(KEYBOARD_NAME)";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StepWrite listens to your spoken answers while you are in a chat, and turns them into a message.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StepWrite reads your latest screenshot of a chat, to know what you are replying to.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D6B258D11F9F6229BC43EE9A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/StepWrite.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/App-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(KEYBOARD_NAME)";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "StepWrite listens to your spoken answers while you are in a chat, and turns them into a message.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "StepWrite reads your latest screenshot of a chat, to know what you are replying to.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		DB85C564630D378B8FF686FF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/StepWrite.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Keyboard-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(KEYBOARD_NAME)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).input";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		BBE78D3650B6590DF4F359A0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/StepWrite.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Keyboard-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(KEYBOARD_NAME)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).input";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F1D1F775CD3B90E341B5CDDB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/StepWrite.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Share-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(KEYBOARD_NAME)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).share";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		5AF19EBD0FB771472C5F6248 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/StepWrite.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Config/Share-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "$(KEYBOARD_NAME)";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID_PREFIX).share";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		911E613473A290258B74467E /* Build configuration list for PBXProject "StepWriteKeyboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A2BCDCE27E154A44811037C6 /* Debug */,
+				6F3294BE160E247369CD6334 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		01404562514B1313449F39C7 /* Build configuration list for PBXNativeTarget "StepWriteKeyboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0CD6B821D66EBA9C82F5DA82 /* Debug */,
+				D6B258D11F9F6229BC43EE9A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E85FB2D76F68F8B206661265 /* Build configuration list for PBXNativeTarget "KeyboardExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DB85C564630D378B8FF686FF /* Debug */,
+				BBE78D3650B6590DF4F359A0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		36E069FD6D7230C554FB8244 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F1D1F775CD3B90E341B5CDDB /* Debug */,
+				5AF19EBD0FB771472C5F6248 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7BD5FBB54790C52D85287578 /* Project object */;
+}

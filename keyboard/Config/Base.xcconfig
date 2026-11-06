@@ -1,0 +1,22 @@
+// The keyboard's name and identifiers, shared by the app and both extensions.
+// The Info.plist files pass them to the code, so a change here is all a
+// rename takes.
+
+// The name in the keyboard list, on the home screen and in the share sheet
+KEYBOARD_NAME = StepWrite Voice
+
+// Bundle identifiers start with this. To install with your own Apple ID when
+// Xcode says the identifier is taken, change it to one of your own, such as
+// com.yourname.stepwrite.keyboard.
+BUNDLE_ID_PREFIX = io.github.helalaou.stepwrite.keyboard
+
+// The App Group the app and its extensions share files through
+APP_GROUP = group.$(BUNDLE_ID_PREFIX)
+
+// The link the keyboard opens the app with: stepwrite-voice://request
+URL_SCHEME = stepwrite-voice
+
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+SWIFT_VERSION = 5.0

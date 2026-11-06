@@ -159,15 +159,32 @@ Capacitor's SystemBars plugin does it (configured in `capacitor.config.json`).
 
 ## App versions
 
-Each app's version lives in its native project. Raise both numbers for every release, because
-the App Store and Google Play reject an upload whose build number was used before.
+Each app has a version shown to users and a build number. The native projects hold the
+defaults, and any build can override them, which is how CI stamps each build.
 
-| App | Version shown to users | Build number | File |
+| App | Version shown to users | Build number | Defaults in |
 | --- | --- | --- | --- |
 | iPhone | `MARKETING_VERSION` | `CURRENT_PROJECT_VERSION` | [`ios/App/App.xcodeproj/project.pbxproj`](ios/App/App.xcodeproj/project.pbxproj) |
-| Android | `versionName` | `versionCode` | [`android/app/build.gradle`](android/app/build.gradle) |
+| Android | `versionName` | `versionCode` | [`android/app/build.gradle`](android/app/build.gradle) (1.0 and 1) |
 
-To read them from the repository root:
+To stamp a build, pass the numbers on the command line. For Android, run this in `android/`
+(the environment variables `ORG_GRADLE_PROJECT_versionName` and `ORG_GRADLE_PROJECT_versionCode`
+work too):
+
+```bash
+./gradlew assembleRelease -PversionName=1.0.260 -PversionCode=260
+```
+
+For iPhone, run this in `ios/App` (this example builds without signing):
+
+```bash
+xcodebuild build -project App.xcodeproj -scheme App -configuration Release -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO MARKETING_VERSION=1.0.260 CURRENT_PROJECT_VERSION=260
+```
+
+Keep the build number rising. Android refuses to install an APK over one with a higher
+`versionCode`.
+
+To read the defaults from the repository root:
 
 ```bash
 grep -m1 MARKETING_VERSION mobile/ios/App/App.xcodeproj/project.pbxproj

@@ -156,7 +156,8 @@ Capacitor's SystemBars plugin does it (configured in `capacitor.config.json`).
 ## App versions
 
 Each app has a version shown to users and a build number. The native projects hold the
-defaults, and any build can override them, which is how CI stamps each build.
+defaults, and any build can override them, which is how CI stamps each build. CI's numbers come
+from [`VERSION`](../VERSION) and the commit count (see [App builds](../docs/app-builds.md#versions)).
 
 | App | Version shown to users | Build number | Defaults in |
 | --- | --- | --- | --- |

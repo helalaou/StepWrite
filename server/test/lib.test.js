@@ -28,8 +28,12 @@ test('splitForSpeech falls back to word and hard cuts', () => {
   assert.deepEqual(splitForSpeech('  short  '), ['short']);
 });
 
-test('isAllowedOrigin allows the local client and ngrok tunnels only', () => {
+test('isAllowedOrigin allows the local client, the phone apps and ngrok tunnels only', () => {
   assert.equal(isAllowedOrigin('http://localhost:3000', 3000), true);
+  assert.equal(isAllowedOrigin('capacitor://localhost', 3000), true);
+  assert.equal(isAllowedOrigin('https://localhost', 3000), true);
+  assert.equal(isAllowedOrigin('https://localhost:8443', 3000), false);
+  assert.equal(isAllowedOrigin('capacitor://evil.com', 3000), false);
   assert.equal(isAllowedOrigin('https://stepwrite.ngrok.io', 3000), true);
   assert.equal(isAllowedOrigin('https://abc.ngrok-free.app', 3000), true);
   assert.equal(isAllowedOrigin('http://localhost:4000', 3000), false);

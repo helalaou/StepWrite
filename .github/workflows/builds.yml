@@ -136,12 +136,161 @@ jobs:
           path: ${{ env.ARCHIVE }}
           archive: false
 
+  android:
+    name: Android app
+    needs: version
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      BUILD: ${{ needs.version.outputs.build }}
+      APK: StepWrite-android-${{ needs.version.outputs.version }}.apk
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            mobile/package-lock.json
+      # Capacitor 8's Android library is compiled for Java 21
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      # The repository variable STEPWRITE_SERVER_URL, when set, is the server
+      # the app calls. Otherwise it uses the web client's address.
+      - name: Build the web client into the app
+        env:
+          SERVER_URL: ${{ vars.STEPWRITE_SERVER_URL }}
+        run: |
+          npm ci --prefix client
+          npm ci --prefix mobile
+          npm run build --prefix mobile
+      # Signed with the key in the repository's secrets, when there is one,
+      # so each new APK installs over the last. Without it, a key made for
+      # this run signs the APK: it still installs, but over no earlier build.
+      - name: Get a signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          keystore="$RUNNER_TEMP/release.jks"
+          if [[ -n $KEYSTORE_BASE64 ]]; then
+            base64 --decode <<< "$KEYSTORE_BASE64" > "$keystore"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret, so this APK is signed with a one-off key and won't install over earlier builds. See docs/app-builds.md."
+            KEYSTORE_PASSWORD=$(openssl rand -hex 16)
+            echo "::add-mask::$KEYSTORE_PASSWORD"
+            KEY_ALIAS=stepwrite
+            KEY_PASSWORD=$KEYSTORE_PASSWORD
+            keytool -genkeypair -keystore "$keystore" -storetype PKCS12 \
+              -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              -dname 'CN=StepWrite one-off build key'
+          fi
+          {
+            echo "SIGNING_STORE_FILE=$keystore"
+            echo "SIGNING_STORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "SIGNING_KEY_ALIAS=$KEY_ALIAS"
+            echo "SIGNING_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+      # The android.injected.signing properties are the ones Android Studio
+      # passes when it builds a signed APK, so build.gradle needs no keys.
+      - name: Build the APK
+        working-directory: mobile/android
+        run: >-
+          ./gradlew assembleRelease --no-daemon
+          -PversionCode="$BUILD" -PversionName="$VERSION"
+          -Pandroid.injected.signing.store.file="$SIGNING_STORE_FILE"
+          -Pandroid.injected.signing.store.password="$SIGNING_STORE_PASSWORD"
+          -Pandroid.injected.signing.key.alias="$SIGNING_KEY_ALIAS"
+          -Pandroid.injected.signing.key.password="$SIGNING_KEY_PASSWORD"
+      - name: Name the APK
+        run: cp mobile/android/app/build/outputs/apk/release/app-release.apk "$APK"
+      - id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.APK }}
+          archive: false
+
+  iphone:
+    name: iPhone app
+    needs: version
+    runs-on: macos-latest
+    outputs:
+      ipa-url: ${{ steps.upload-ipa.outputs.artifact-url }}
+      simulator-url: ${{ steps.upload-simulator.outputs.artifact-url }}
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      BUILD: ${{ needs.version.outputs.build }}
+      IPA: StepWrite-iphone-${{ needs.version.outputs.version }}-unsigned.ipa
+      ARCHIVE: StepWrite-iphone-simulator-${{ needs.version.outputs.version }}.zip
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            mobile/package-lock.json
+      - name: Build the web client into the app
+        env:
+          SERVER_URL: ${{ vars.STEPWRITE_SERVER_URL }}
+        run: |
+          npm ci --prefix client
+          npm ci --prefix mobile
+          npm run build --prefix mobile
+      - name: Install the iOS platform if it is missing
+        run: |
+          xcodebuild -version
+          if ! xcrun simctl list runtimes | grep -q '^iOS'; then
+            xcodebuild -downloadPlatform iOS
+          fi
+      # Unsigned, like the watch app: AltStore, SideStore or Xcode signs it
+      # with the installer's own Apple ID.
+      - name: Build for iPhone and the iOS simulator
+        run: |
+          args=(
+            -project mobile/ios/App/App.xcodeproj -scheme App
+            -configuration Release -derivedDataPath build/iphone -quiet
+            CODE_SIGNING_ALLOWED=NO
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD"
+          )
+          xcodebuild build "${args[@]}" -destination generic/platform=iOS
+          xcodebuild build "${args[@]}" -destination 'generic/platform=iOS Simulator'
+      # An IPA is a zip with the app in a Payload folder
+      - name: Package the apps
+        run: |
+          products=build/iphone/Build/Products
+          mkdir -p ipa/Payload
+          cp -R "$products/Release-iphoneos/App.app" ipa/Payload/
+          (cd ipa && zip -qry "../$IPA" Payload)
+          ditto -c -k --keepParent --norsrc --noextattr \
+            "$products/Release-iphonesimulator/App.app" "$ARCHIVE"
+      - id: upload-ipa
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.IPA }}
+          archive: false
+      - id: upload-simulator
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ env.ARCHIVE }}
+          archive: false
+
   # Writes each app's version and build result to the run summary and, on a
   # pull request, to one comment that every run updates. Pull requests from
   # forks get only the summary, since their token can't comment.
   report:
     name: Report
-    needs: [version, web, watch]
+    needs: [version, web, watch, android, iphone]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
@@ -155,6 +304,11 @@ jobs:
       COMMIT: ${{ needs.version.outputs.commit || 'unknown' }}
       WEB_RESULT: ${{ needs.web.result }}
       WEB_URL: ${{ needs.web.outputs.artifact-url }}
+      ANDROID_RESULT: ${{ needs.android.result }}
+      ANDROID_URL: ${{ needs.android.outputs.artifact-url }}
+      IPHONE_RESULT: ${{ needs.iphone.result }}
+      IPHONE_URL: ${{ needs.iphone.outputs.ipa-url }}
+      IPHONE_SIMULATOR_URL: ${{ needs.iphone.outputs.simulator-url }}
       WATCH_RESULT: ${{ needs.watch.result }}
       WATCH_URL: ${{ needs.watch.outputs.artifact-url }}
     steps:
@@ -179,6 +333,9 @@ jobs:
             echo '| App | Version | Build | Download |'
             echo '| --- | --- | --- | --- |'
             row 'Web client' "$WEB_RESULT" "$WEB_URL"
+            row 'Android (APK)' "$ANDROID_RESULT" "$ANDROID_URL"
+            row 'iPhone (unsigned IPA)' "$IPHONE_RESULT" "$IPHONE_URL"
+            row 'iPhone (simulator)' "$IPHONE_RESULT" "$IPHONE_SIMULATOR_URL"
             row 'Apple Watch (simulator)' "$WATCH_RESULT" "$WATCH_URL"
             echo
             echo "Downloads need a GitHub sign-in. To install them, see [App builds]($DOCS_URL)."
@@ -204,7 +361,7 @@ jobs:
   # newest build. It publishes only when every app built.
   release:
     name: Release
-    needs: [version, web, watch]
+    needs: [version, web, watch, android, iphone]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -233,6 +390,9 @@ jobs:
             cp "$file" "dist/$2"
           }
           take "StepWrite-web-$VERSION.zip" StepWrite-web.zip
+          take "StepWrite-android-$VERSION.apk" StepWrite-android.apk
+          take "StepWrite-iphone-$VERSION-unsigned.ipa" StepWrite-iphone-unsigned.ipa
+          take "StepWrite-iphone-simulator-$VERSION.zip" StepWrite-iphone-simulator.zip
           take "StepWrite-watch-simulator-$VERSION.zip" StepWrite-watch-simulator.zip
           ls -l dist
       - name: Write the release notes
@@ -244,6 +404,9 @@ jobs:
             echo '| App | Version | Download |'
             echo '| --- | --- | --- |'
             echo "| Web client | $VERSION | [StepWrite-web.zip]($download/StepWrite-web.zip) |"
+            echo "| Android | $VERSION | [StepWrite-android.apk]($download/StepWrite-android.apk) |"
+            echo "| iPhone | $VERSION | [StepWrite-iphone-unsigned.ipa]($download/StepWrite-iphone-unsigned.ipa) |"
+            echo "| iPhone (simulator) | $VERSION | [StepWrite-iphone-simulator.zip]($download/StepWrite-iphone-simulator.zip) |"
             echo "| Apple Watch (simulator) | $VERSION | [StepWrite-watch-simulator.zip]($download/StepWrite-watch-simulator.zip) |"
             echo
             echo "Every app installs for free. See [App builds]($DOCS_URL)."

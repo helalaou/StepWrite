@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 // Resolve everything against the server directory so the server behaves the
 // same whether it is started from server/ or from the repository root.
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(SERVER_DIR, '.env') });
+dotenv.config({ path: path.join(SERVER_DIR, '.env'), quiet: true });
 
 const config = {
   server: {

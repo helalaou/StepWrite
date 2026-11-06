@@ -39,6 +39,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+// Express 5 leaves req.body undefined when a request has no JSON body; the
+// routes below expect an object, as in Express 4.
+app.use((req, res, next) => {
+  req.body ??= {};
+  next();
+});
 
 // Configure multer for memory storage
 const upload = multer({
@@ -424,7 +430,7 @@ ${finalOutput}`;
 app.listen(config.server.port, () => {
   logger.info(`${config.app.name} server v${config.app.version} running at http://localhost:${config.server.port}`);
   logger.info('Registered routes:');
-  app._router.stack.forEach((r) => {
+  app.router.stack.forEach((r) => {
     if (r.route && r.route.path) {
       logger.info(r.route.path);
     }

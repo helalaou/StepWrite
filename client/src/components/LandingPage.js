@@ -40,7 +40,7 @@ function LandingPage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: 'background.paper',
+          bgcolor: 'background.default',
           transition: 'all 0.3s ease',
           cursor: 'pointer',
           padding: '20px',
@@ -93,7 +93,7 @@ function LandingPage() {
       </Box>
 
       {/* Divider */}
-      <Box sx={{ width: '2px', bgcolor: 'grey.300', height: '100%' }} />
+      <Box sx={{ width: '2px', bgcolor: 'divider', height: '100%' }} />
 
       {/* Reply Section (formerly Write with Context) */}
       <Box 
@@ -103,7 +103,7 @@ function LandingPage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: 'background.paper',
+          bgcolor: 'background.default',
           transition: 'all 0.3s ease',
           cursor: 'pointer',
           padding: '20px',
@@ -125,14 +125,14 @@ function LandingPage() {
           fontSize: '5rem', 
           mb: 3,
           transition: 'all 0.3s ease',
-          color: '#1b5e20',
+          color: 'var(--sw-green-deep)',
         }} />
         <Typography 
           variant="h2" 
           sx={{ 
             fontSize: { xs: '2.5rem', sm: '3.5rem' },
             fontWeight: 'bold',
-            color: '#1b5e20',
+            color: 'var(--sw-green-deep)',
             transition: 'all 0.3s ease',
             mb: 3,
             textAlign: 'center',
@@ -156,7 +156,7 @@ function LandingPage() {
       </Box>
 
       {/* Temporarily disabled Edit section
-      <Box sx={{ width: '2px', bgcolor: 'grey.300', height: '100%' }} />
+      <Box sx={{ width: '2px', bgcolor: 'divider', height: '100%' }} />
 
       <Box 
         sx={{ 
@@ -165,7 +165,7 @@ function LandingPage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          bgcolor: 'background.paper',
+          bgcolor: 'background.default',
           transition: 'all 0.3s ease',
           cursor: 'pointer',
           padding: '20px',

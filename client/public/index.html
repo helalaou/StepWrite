@@ -14,6 +14,16 @@
       content="StepWrite"
     />
     <title>StepWrite</title>
+    <script>
+      // The saved theme, set before the app loads so a dark page doesn't open
+      // white. SettingsProvider keeps both up to date after that.
+      try {
+        var theme = (JSON.parse(localStorage.getItem('stepwrite-settings')) || {}).theme;
+        var dark = theme === 'dark' || (theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#121212' : '#ffffff';
+      } catch (error) {}
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.22/dist/bundle.min.js"></script>
   </head>

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Box, TextField, Button, CircularProgress, Typography, IconButton } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useNavigate } from 'react-router-dom';
 import NavigationButton from './NavigationButton';
 import VoiceInput from './VoiceInput';
 import config from '../config';
+import { logoSrc } from '../theme';
 import SpeakButton from './SpeakButton';
 import ClearIcon from '@mui/icons-material/Clear';
 import { playClickSound } from '../utils/soundUtils';
@@ -29,6 +31,7 @@ function ChatInterface({
   mode,
 }) {
   const navigate = useNavigate();
+  const theme = useTheme();
 
   // Navigation control variables
   const navControls = {
@@ -90,7 +93,7 @@ function ChatInterface({
         : currentQuestionIndex === currentQuestion.questions.length - 1
     )
       ? 'transparent'
-      : `rgba(255, 255, 255, ${navControls.hover.base})`,
+      : `rgba(var(--sw-surface-rgb), ${navControls.hover.base})`,
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     backdropFilter: 'blur(8px)',
     '&:hover': {
@@ -99,7 +102,7 @@ function ChatInterface({
           : currentQuestionIndex === currentQuestion.questions.length - 1
       )
         ? 'transparent'
-        : `rgba(255, 255, 255, ${navControls.hover.intensity})`,
+        : `rgba(var(--sw-surface-rgb), ${navControls.hover.intensity})`,
     },
   });
 
@@ -451,7 +454,7 @@ function ChatInterface({
       {/* Logo at top left */}
       <Box
         component="img"
-        src="/images/logo.png"
+        src={logoSrc(theme.palette.mode)}
         alt="StepWrite Logo"
         sx={{
           position: 'absolute',
@@ -717,7 +720,7 @@ function ChatInterface({
                         color: theme => theme.palette.primary.main,
                         '&:hover': {
                           opacity: 1,
-                          backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                          backgroundColor: 'rgba(var(--sw-ink-rgb), 0.04)'
                         },
                         '& .MuiSvgIcon-root': {
                           fontSize: { xs: '1.1rem', sm: '1.3rem' },

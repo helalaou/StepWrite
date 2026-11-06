@@ -1,6 +1,7 @@
 /**
  * Audio utility functions for consistent audio handling across all devices
  */
+import config from '../config';
 
 // Audio context singleton to ensure we reuse the same context
 let audioContextInstance = null;
@@ -53,6 +54,26 @@ export const initializeAudio = async () => {
 };
 
 /**
+ * Request body for the server's speech endpoint, in the voice chosen in Settings
+ * @param {string} text The text to speak
+ * @param {Object} extra Other fields, such as cache_as
+ * @returns {string} The JSON body
+ */
+export const speechRequestBody = (text, extra = {}) =>
+  JSON.stringify({ text, voice: config.tts.voice, ...extra });
+
+/**
+ * Play speech at the reading speed chosen in Settings. Browsers keep the
+ * voice's pitch when the rate changes.
+ * @param {HTMLAudioElement} audio The speech to play
+ * @returns {HTMLAudioElement} The same element
+ */
+export const applyReadingSpeed = (audio) => {
+  audio.playbackRate = config.tts.readingSpeed;
+  return audio;
+};
+
+/**
  * Play audio with mobile-friendly error handling
  * @param {string} url The URL of the audio to play
  * @param {Function} onEnded Callback when audio playback ends
@@ -65,7 +86,7 @@ export const playAudio = async (url, onEnded = () => {}, onError = () => {}) => 
     // Ensure audio is initialized
     await initializeAudio();
     
-    const audio = new Audio(url);
+    const audio = applyReadingSpeed(new Audio(url));
     
     // Set up event listeners
     audio.addEventListener('ended', () => {

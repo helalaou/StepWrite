@@ -50,6 +50,7 @@ const config = {
       factCheck: '/api/fact-check',
       tts: '/api/tts/generate',
       transcribe: '/api/transcribe',
+      health: '/api/health',
       initialReplyQuestion: '/api/generate-initial-reply-question',
       saveExperimentData: '/api/save-experiment-data'
     },
@@ -87,6 +88,8 @@ Professor Williams`
     mode: getEnvVar('REACT_APP_TTS_MODE', 'ENABLED'),  // 'ENABLED' | 'DISABLED'
     outputPrefix: getEnvVar('REACT_APP_TEXT_EDITOR_TTS_PREFIX', 'The final output is:'), // Prefix text before playing the output to the user
     editorDebounceMs: 1000, // Pause in typing before the editor re-synthesizes its text
+    voice: getEnvVar('REACT_APP_TTS_VOICE', 'nova'), // One of the voices the server allows (server/lib/tts.js)
+    readingSpeed: 1, // Playback rate of all speech; 1 is the voice's own pace
   },
 
   // ====== VOICE INPUT MODES ======

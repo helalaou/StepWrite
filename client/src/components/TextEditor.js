@@ -15,7 +15,7 @@ import axios from 'axios';
 import { keyframes } from '@mui/system';
 import { playClickSound } from '../utils/soundUtils';
 import { enterRevision } from '../utils/experimentTracking';
-import { encodeWav, VAD_SAMPLE_RATE } from '../utils/audioUtils';
+import { applyReadingSpeed, encodeWav, speechRequestBody, VAD_SAMPLE_RATE } from '../utils/audioUtils';
 import { matchesAnyPhrase } from '../utils/voiceCommands';
 import ExperimentEndButton from './ExperimentEndButton';
 
@@ -423,7 +423,7 @@ function TextEditor({
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify({ text: `${config.tts.outputPrefix} ${content}` })
+          body: speechRequestBody(`${config.tts.outputPrefix} ${content}`)
         });
 
         if (!response.ok) {
@@ -470,7 +470,7 @@ function TextEditor({
       }
 
       // Create new audio element
-      const audio = new Audio(url);
+      const audio = applyReadingSpeed(new Audio(url));
       audioRef.current = audio;
       
       // Play sound on button click
@@ -648,6 +648,12 @@ function TextEditor({
         display: 'flex',
         flexDirection: 'column',
         padding: { xs: '10px', sm: '20px' },
+        // Below the Settings gear in the top right corner (SettingsButton) where
+        // the text box reaches the edges; wider screens center it clear of the gear
+        paddingTop: {
+          xs: 'calc(max(12px, env(safe-area-inset-top)) + 48px)',
+          lg: '20px',
+        },
         paddingLeft: { xs: '5px', sm: '30px', md: '40px' },
         paddingRight: { xs: '5px', sm: '30px', md: '40px' },
         maxWidth: { xs: '100%', sm: '100%', md: '1200px' },
@@ -707,7 +713,7 @@ function TextEditor({
         alignItems: 'center',
         justifyContent: 'center',
         gap: { xs: 1, sm: 2 },
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backgroundColor: 'rgba(var(--sw-surface-rgb), 0.95)',
         padding: { xs: '4px', sm: '4px 8px' },
         borderRadius: '4px 4px 0 0',
         boxShadow: '0 -2px 8px rgba(0,0,0,0.15)',

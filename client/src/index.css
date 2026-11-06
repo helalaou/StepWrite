@@ -1,3 +1,43 @@
+/* Colors the MUI theme (src/theme.js) doesn't cover. The *-rgb values are
+   r, g, b lists for rgba(var(--sw-blue-rgb), 0.1) and the like. */
+:root {
+  color-scheme: light;
+  --sw-surface: #ffffff;
+  --sw-surface-raised: #f5f5f5;
+  --sw-ink-rgb: 0, 0, 0;            /* text, lines and shading */
+  --sw-surface-rgb: 255, 255, 255;  /* see-through panels */
+  --sw-raised-rgb: 240, 240, 240;
+  --sw-border: #cccccc;
+  --sw-blue: #1976d2;
+  --sw-blue-rgb: 25, 118, 210;
+  --sw-green: #2e7d32;
+  --sw-green-deep: #1b5e20;
+  --sw-green-rgb: 46, 125, 50;
+  --sw-red: #d32f2f;
+  --sw-red-rgb: 211, 47, 47;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --sw-surface: #121212;
+  --sw-surface-raised: #1c1c1c;
+  --sw-ink-rgb: 255, 255, 255;
+  --sw-surface-rgb: 28, 28, 28;
+  --sw-raised-rgb: 44, 44, 44;
+  --sw-border: #3a3a3a;
+  --sw-blue: #64b5f6;
+  --sw-blue-rgb: 100, 181, 246;
+  --sw-green: #66bb6a;
+  --sw-green-deep: #81c784;
+  --sw-green-rgb: 102, 187, 106;
+  --sw-red: #ef5350;
+  --sw-red-rgb: 239, 83, 80;
+}
+
+html {
+  background-color: var(--sw-surface);
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

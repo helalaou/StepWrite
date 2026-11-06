@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { Box, Button, Typography, IconButton, Paper, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import EditIcon from '@mui/icons-material/Edit';
@@ -10,24 +11,27 @@ import NavigationButton from './NavigationButton';
 import SpeakButton from './SpeakButton';
 import AudioVisualizer from './AudioVisualizer';
 import config from '../config';
+import { logoSrc } from '../theme';
 import axios from 'axios';
 import { keyframes } from '@emotion/react';
 import { playClickSound } from '../utils/soundUtils';
 import { incrementCount } from '../utils/experimentTracking';
 import { buildQuestionStatus, hasDraftReady, SKIPPED_ANSWER } from '../utils/conversation';
 import { matchesAnyPhrase } from '../utils/voiceCommands';
-import { encodeWav, filterAndCleanAudio, VAD_SAMPLE_RATE } from '../utils/audioUtils';
+import { applyReadingSpeed, encodeWav, filterAndCleanAudio, speechRequestBody, VAD_SAMPLE_RATE } from '../utils/audioUtils';
+import { WATCH_SCREEN_QUERY } from '../utils/layout';
+import { useSettings } from './SettingsProvider';
 
 // Animations
 const pulseAnimation = keyframes`
   0% {
-    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.4);
+    box-shadow: 0 0 0 0 rgba(var(--sw-blue-rgb), 0.4);
   }
   70% {
-    box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);
+    box-shadow: 0 0 0 10px rgba(var(--sw-blue-rgb), 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+    box-shadow: 0 0 0 0 rgba(var(--sw-blue-rgb), 0);
   }
 `;
 
@@ -55,16 +59,16 @@ const floatInAnimation = keyframes`
 
 const previewPulseAnimation = keyframes`
   0% {
-    border-color: #1976d2;
-    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.4);
+    border-color: var(--sw-blue);
+    box-shadow: 0 0 0 0 rgba(var(--sw-blue-rgb), 0.4);
   }
   70% {
-    border-color: #1976d2;
-    box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);
+    border-color: var(--sw-blue);
+    box-shadow: 0 0 0 10px rgba(var(--sw-blue-rgb), 0);
   }
   100% {
-    border-color: #1976d2;
-    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+    border-color: var(--sw-blue);
+    box-shadow: 0 0 0 0 rgba(var(--sw-blue-rgb), 0);
   }
 `;
 
@@ -81,13 +85,13 @@ const slideInFromRightAnimation = keyframes`
 
 const replaceAnimation = keyframes`
   0% {
-    background-color: rgba(25, 118, 210, 0.05);
+    background-color: rgba(var(--sw-blue-rgb), 0.05);
   }
   50% {
-    background-color: rgba(25, 118, 210, 0.15);
+    background-color: rgba(var(--sw-blue-rgb), 0.15);
   }
   100% {
-    background-color: rgba(25, 118, 210, 0.05);
+    background-color: rgba(var(--sw-blue-rgb), 0.05);
   }
 `;
 
@@ -105,12 +109,6 @@ const VAD_OPTIONS = {
   runtimeLogLevel: 3,
   runtimeVerboseLevel: 0,
 };
-
-// Watch browsers lay pages out at most about 320px wide and under 400px tall
-// (an Apple Watch Series 12, 46mm, reports 320x382). Phones that narrow, such
-// as the many Android phones that are 360px wide, are far taller, so the
-// height check keeps them on the regular layout and its navigation buttons.
-const WATCH_SCREEN_QUERY = '(max-width:360px) and (max-height:420px)';
 
 // What to tell the user when MicVAD could not start listening
 const describeMicError = (error) => {
@@ -150,6 +148,8 @@ function HandsFreeInterface({
   const isWatch = useMediaQuery(WATCH_SCREEN_QUERY);
 
   const navigate = useNavigate();
+  const theme = useTheme();
+  const { isSettingsOpen } = useSettings();
 
   // UI state indicators
   const [isProcessing, setIsProcessing] = useState(false);
@@ -281,9 +281,11 @@ function HandsFreeInterface({
         .replace(/[^a-z0-9\s]/g, '') // Remove special characters
         .replace(/\s+/g, '_') // Replace spaces with underscores
         .substring(0, 30); // Limit length
+      // Cached per voice, so a change of voice in Settings isn't heard in old clips
+      const clipName = `feedback_${config.tts.voice}_${filename}.mp3`;
       
       // First, try to get cached audio
-      const cacheResponse = await fetch(`${config.core.apiUrl}/tts/feedback_${filename}.mp3`, {
+      const cacheResponse = await fetch(`${config.core.apiUrl}/tts/${clipName}`, {
         method: 'HEAD' // Just check if file exists
       });
       
@@ -291,7 +293,7 @@ function HandsFreeInterface({
       
       if (cacheResponse.ok) {
         // Use cached version
-        audioUrl = `${config.core.apiUrl}/tts/feedback_${filename}.mp3`;
+        audioUrl = `${config.core.apiUrl}/tts/${clipName}`;
       } else {
         // Generate new audio and cache it
         const response = await fetch(`${config.core.apiUrl}${config.core.endpoints.tts}`, {
@@ -300,10 +302,7 @@ function HandsFreeInterface({
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          body: JSON.stringify({ 
-            text: message,
-            cache_as: `feedback_${filename}.mp3` // Tell server to cache with this name
-          })
+          body: speechRequestBody(message, { cache_as: clipName }) // Tell server to cache with this name
         });
 
         if (!response.ok) {
@@ -318,7 +317,7 @@ function HandsFreeInterface({
         audioUrl = `${config.core.apiUrl}${data.audioUrl}`;
       }
 
-      const audio = new Audio(audioUrl);
+      const audio = applyReadingSpeed(new Audio(audioUrl));
       
       // Set lower volume for feedback sounds so they don't interfere with main TTS
       audio.volume = 0.7;
@@ -374,7 +373,7 @@ function HandsFreeInterface({
         ? currentQuestionIndex === 0
         : currentQuestionIndex === currentQuestion.questions.length - 1)
         ? 'transparent'
-        : `rgba(255, 255, 255, ${navControls.hover.base})`,
+        : `rgba(var(--sw-surface-rgb), ${navControls.hover.base})`,
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     backdropFilter: 'blur(8px)',
     '&:hover': {
@@ -383,7 +382,7 @@ function HandsFreeInterface({
           ? currentQuestionIndex === 0
           : currentQuestionIndex === currentQuestion.questions.length - 1)
           ? 'transparent'
-          : `rgba(255, 255, 255, ${navControls.hover.intensity})`
+          : `rgba(var(--sw-surface-rgb), ${navControls.hover.intensity})`
     }
   });
 
@@ -1359,6 +1358,21 @@ function HandsFreeInterface({
     }
   };
 
+  // Listening stops while Settings is open, so nothing said there becomes an
+  // answer or a command. When it closes, the question waits a full quiet
+  // period before it is asked again.
+  const suspendListening = () => {
+    clearFinalizeTimeout();
+    clearReplayTimeout();
+    stopVad();
+  };
+
+  const resumeListening = () => {
+    updateSpeechDetectionTime();
+    startRecording();
+    startReplayTimeout();
+  };
+
   const retryMicrophone = () => {
     setMicError(null);
     startRecording();
@@ -1377,8 +1391,21 @@ function HandsFreeInterface({
       handleVADMisfire,
       handlePausedSpeechStart,
       handlePausedSpeechEnd,
+      suspendListening,
+      resumeListening,
     };
   });
+
+  const wasSettingsOpenRef = useRef(false);
+  useEffect(() => {
+    if (isSettingsOpen) {
+      wasSettingsOpenRef.current = true;
+      latestRef.current.suspendListening();
+    } else if (wasSettingsOpenRef.current) {
+      wasSettingsOpenRef.current = false;
+      latestRef.current.resumeListening();
+    }
+  }, [isSettingsOpen]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1450,7 +1477,7 @@ function HandsFreeInterface({
       {/* Logo at top left */}
       <Box
         component="img"
-        src="/images/logo.png"
+        src={logoSrc(theme.palette.mode)}
         alt="StepWrite Logo"
         sx={{
           display: isWatch ? 'none' : 'block',
@@ -1467,20 +1494,20 @@ function HandsFreeInterface({
         }}
       />
 
-      {/* Draft indicator */}
+      {/* Draft indicator, left of the Settings gear and level with it */}
       {config.continuousDrafts.enabled && 
        config.continuousDrafts.showDraftIndicator && 
        isDraftReady && (
         <Box
           sx={{
             position: 'absolute',
-            top: '20px',
-            right: '20px',
+            top: isWatch ? '9px' : 'calc(max(12px, env(safe-area-inset-top)) + 2px)',
+            right: isWatch ? '38px' : 'calc(max(12px, env(safe-area-inset-right)) + 52px)',
             backgroundColor: '#4caf50',
             color: 'white',
-            padding: '8px 16px',
+            padding: isWatch ? '2px 8px' : '8px 16px',
             borderRadius: '20px',
-            fontSize: '0.875rem',
+            fontSize: isWatch ? '0.7rem' : '0.875rem',
             fontWeight: 'bold',
             zIndex: 10,
             display: 'flex',
@@ -1532,7 +1559,7 @@ function HandsFreeInterface({
         >
           <Box
             sx={{
-              backgroundColor: 'white',
+              backgroundColor: 'background.paper',
               borderRadius: 2,
               p: 4,
               maxWidth: '80%',
@@ -1563,15 +1590,15 @@ function HandsFreeInterface({
                   '100%': { transform: 'scale(1)' }
                 },
                 '@keyframes activeListening': {
-                  '0%': { transform: 'scale(1)', color: '#1976d2' },
-                  '50%': { transform: 'scale(1.2)', color: '#2e7d32' },
-                  '100%': { transform: 'scale(1)', color: '#1976d2' }
+                  '0%': { transform: 'scale(1)', color: 'var(--sw-blue)' },
+                  '50%': { transform: 'scale(1.2)', color: 'var(--sw-green)' },
+                  '100%': { transform: 'scale(1)', color: 'var(--sw-blue)' }
                 }
               }}
             >
               <MicIcon sx={{
                 fontSize: 60,
-                color: isSpeechActive ? '#2e7d32' : '#1976d2',
+                color: isSpeechActive ? 'var(--sw-green)' : 'var(--sw-blue)',
                 transition: 'color 0.3s ease'
               }} />
             </Box>
@@ -1588,26 +1615,26 @@ function HandsFreeInterface({
                 p: 2,
                 borderRadius: 1,
                 backgroundColor: isSpeechActive
-                  ? 'rgba(46, 125, 50, 0.15)'
-                  : 'rgba(25, 118, 210, 0.1)',
+                  ? 'rgba(var(--sw-green-rgb), 0.15)'
+                  : 'rgba(var(--sw-blue-rgb), 0.1)',
                 border: isSpeechActive
-                  ? '1px solid rgba(46, 125, 50, 0.3)'
-                  : '1px solid rgba(25, 118, 210, 0.2)',
+                  ? '1px solid rgba(var(--sw-green-rgb), 0.3)'
+                  : '1px solid rgba(var(--sw-blue-rgb), 0.2)',
                 transition: 'all 0.3s ease',
                 animation: isSpeechActive
                   ? 'listeningPulse 1.5s infinite ease-in-out'
                   : 'none',
                 '@keyframes listeningPulse': {
-                  '0%': { backgroundColor: 'rgba(46, 125, 50, 0.1)', boxShadow: '0 0 0 0 rgba(46, 125, 50, 0.2)' },
-                  '50%': { backgroundColor: 'rgba(46, 125, 50, 0.25)', boxShadow: '0 0 0 10px rgba(46, 125, 50, 0)' },
-                  '100%': { backgroundColor: 'rgba(46, 125, 50, 0.1)', boxShadow: '0 0 0 0 rgba(46, 125, 50, 0)' }
+                  '0%': { backgroundColor: 'rgba(var(--sw-green-rgb), 0.1)', boxShadow: '0 0 0 0 rgba(var(--sw-green-rgb), 0.2)' },
+                  '50%': { backgroundColor: 'rgba(var(--sw-green-rgb), 0.25)', boxShadow: '0 0 0 10px rgba(var(--sw-green-rgb), 0)' },
+                  '100%': { backgroundColor: 'rgba(var(--sw-green-rgb), 0.1)', boxShadow: '0 0 0 0 rgba(var(--sw-green-rgb), 0)' }
                 }
               }}
             >
               <Typography
                 variant="body2"
                 sx={{
-                  color: isSpeechActive ? '#2e7d32' : '#1976d2',
+                  color: isSpeechActive ? 'var(--sw-green)' : 'var(--sw-blue)',
                   fontWeight: isSpeechActive ? 600 : 400,
                   display: 'flex',
                   alignItems: 'center',
@@ -1620,7 +1647,7 @@ function HandsFreeInterface({
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      backgroundColor: '#2e7d32',
+                      backgroundColor: 'var(--sw-green)',
                       display: 'inline-block',
                       animation: 'blink 1s infinite'
                     }} />
@@ -1721,7 +1748,7 @@ function HandsFreeInterface({
             mt: isWatch ? 1 : 4,
             p: isWatch ? 0.5 : 2,
             position: 'relative',
-            backgroundColor: isModifying ? '#fff' : 'rgba(0, 0, 0, 0.04)',
+            backgroundColor: isModifying ? 'background.paper' : 'rgba(var(--sw-ink-rgb), 0.04)',
             transition: 'all 0.3s ease',
             animation: isPreviewMode
               ? `${previewPulseAnimation} 1s ease-in-out`
@@ -1729,10 +1756,10 @@ function HandsFreeInterface({
                 ? `${pulseAnimation} 2s infinite`
                 : 'none',
             border: isPreviewMode
-              ? '2px solid #1976d2'
+              ? '2px solid var(--sw-blue)'
               : isModifying
-                ? '2px solid #1976d2'
-                : '1px solid rgba(0, 0, 0, 0.12)',
+                ? '2px solid var(--sw-blue)'
+                : '1px solid rgba(var(--sw-ink-rgb), 0.12)',
             minHeight: isWatch ? '72px' : '100px',
             display: 'flex',
             flexDirection: 'column',
@@ -1774,8 +1801,8 @@ function HandsFreeInterface({
               lineHeight: 1.6,
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
-              backgroundColor: isPreviewMode ? 'rgba(25, 118, 210, 0.08)' :
-                isModifying && questionStatus[currentQuestionIndex]?.answer ? 'rgba(0, 0, 0, 0.03)' : 'transparent',
+              backgroundColor: isPreviewMode ? 'rgba(var(--sw-blue-rgb), 0.08)' :
+                isModifying && questionStatus[currentQuestionIndex]?.answer ? 'rgba(var(--sw-ink-rgb), 0.03)' : 'transparent',
               borderRadius: 1,
               textDecoration: isModifying && questionStatus[currentQuestionIndex]?.answer ? 'line-through' : 'none',
               opacity: isModifying && questionStatus[currentQuestionIndex]?.answer ? 0.7 : 1,
@@ -1797,21 +1824,21 @@ function HandsFreeInterface({
               gap: 1,
               padding: '4px 8px',
               borderRadius: 8,
-              backgroundColor: micError || isPaused ? 'rgba(211, 47, 47, 0.1)' :
-                isSpeechActive ? 'rgba(46, 125, 50, 0.1)' :
-                  'rgba(0, 0, 0, 0.05)',
+              backgroundColor: micError || isPaused ? 'rgba(var(--sw-red-rgb), 0.1)' :
+                isSpeechActive ? 'rgba(var(--sw-green-rgb), 0.1)' :
+                  'rgba(var(--sw-ink-rgb), 0.05)',
               transition: 'all 0.3s ease',
             }}
           >
             {micError ? (
-              <MicOffIcon sx={{ fontSize: 18, color: '#d32f2f' }} />
+              <MicOffIcon sx={{ fontSize: 18, color: 'var(--sw-red)' }} />
             ) : (
               <MicIcon
                 sx={{
                   fontSize: 18,
-                  color: isPaused ? '#d32f2f' :
-                    isSpeechActive ? '#2e7d32' :
-                      'rgba(0, 0, 0, 0.4)',
+                  color: isPaused ? 'var(--sw-red)' :
+                    isSpeechActive ? 'var(--sw-green)' :
+                      'rgba(var(--sw-ink-rgb), 0.4)',
                   animation: isSpeechActive && !isPaused ? 'pulse 1.5s infinite ease-in-out' : 'none',
                 }}
               />
@@ -1819,9 +1846,9 @@ function HandsFreeInterface({
             <Typography
               variant="caption"
               sx={{
-                color: micError || isPaused ? '#d32f2f' :
-                  isSpeechActive ? '#2e7d32' :
-                    'rgba(0, 0, 0, 0.6)',
+                color: micError || isPaused ? 'var(--sw-red)' :
+                  isSpeechActive ? 'var(--sw-green)' :
+                    'rgba(var(--sw-ink-rgb), 0.6)',
                 fontWeight: 500,
               }}
             >
@@ -1844,9 +1871,9 @@ function HandsFreeInterface({
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
-                backgroundColor: 'rgba(46, 125, 50, 0.05)',
+                backgroundColor: 'rgba(var(--sw-green-rgb), 0.05)',
                 borderRadius: 1,
-                borderLeft: '3px solid #2e7d32',
+                borderLeft: '3px solid var(--sw-green)',
                 animation: `${slideInFromRightAnimation} 0.3s ease-out`,
                 mt: 1,
               }}
@@ -1862,10 +1889,10 @@ function HandsFreeInterface({
               sx={{
                 mt: 2,
                 p: 1,
-                backgroundColor: 'rgba(25, 118, 210, 0.08)',
+                backgroundColor: 'rgba(var(--sw-blue-rgb), 0.08)',
                 borderRadius: 1,
                 animation: `${replaceAnimation} 1.5s ease-in-out, ${fadeInAnimation} 0.3s ease-out`,
-                border: '1px solid rgba(25, 118, 210, 0.2)',
+                border: '1px solid rgba(var(--sw-blue-rgb), 0.2)',
                 fontWeight: 500,
               }}
             >
@@ -1937,15 +1964,15 @@ const RecognitionFeedback = ({ text, isVisible, type = 'default', compact = fals
   const getBackgroundColor = () => {
     switch (type) {
       case 'transcription':
-        return 'rgba(240, 240, 240, 0.95)';
+        return 'rgba(var(--sw-raised-rgb), 0.95)';
       case 'command':
-        return 'rgba(25, 118, 210, 0.1)';
+        return 'rgba(var(--sw-blue-rgb), 0.1)';
       case 'success':
-        return 'rgba(46, 125, 50, 0.1)';
+        return 'rgba(var(--sw-green-rgb), 0.1)';
       case 'error':
-        return 'rgba(211, 47, 47, 0.1)';
+        return 'rgba(var(--sw-red-rgb), 0.1)';
       default:
-        return 'rgba(255, 255, 255, 0.95)';
+        return 'rgba(var(--sw-surface-rgb), 0.95)';
     }
   };
 
@@ -1990,10 +2017,10 @@ const RecognitionFeedback = ({ text, isVisible, type = 'default', compact = fals
           animation: `${floatInAnimation} 0.3s ease-out`,
           maxWidth: '90vw',
           margin: '0 auto',
-          borderLeft: type === 'transcription' ? '3px solid rgba(0, 0, 0, 0.12)' :
-            type === 'command' ? '3px solid #1976d2' :
-              type === 'success' ? '3px solid #2e7d32' :
-                type === 'error' ? '3px solid #d32f2f' : 'none',
+          borderLeft: type === 'transcription' ? '3px solid rgba(var(--sw-ink-rgb), 0.12)' :
+            type === 'command' ? '3px solid var(--sw-blue)' :
+              type === 'success' ? '3px solid var(--sw-green)' :
+                type === 'error' ? '3px solid var(--sw-red)' : 'none',
         }}
       >
         <Typography

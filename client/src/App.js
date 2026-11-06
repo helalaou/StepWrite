@@ -9,6 +9,9 @@ import { useChatLogic } from './hooks/useChatLogic';
 // import SplitScreenEdit from './components/SplitScreenEdit';
 import HandsFreeInterface from './components/HandsFreeInterface';
 import ParticipantIdInput from './components/ParticipantIdInput';
+import SettingsButton from './components/SettingsButton';
+import SettingsDialog from './components/SettingsDialog';
+import { useSettings } from './components/SettingsProvider';
 import config from './config';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
@@ -48,7 +51,9 @@ function ConversationFlow({ mode }) {
     setEditorHistory
   } = useChatLogic(mode);
 
-  const isHandsFree = config.input.mode === 'HANDS_FREE';
+  // Read so that a change of input mode in Settings re-renders the flow
+  const { settings } = useSettings();
+  const isHandsFree = settings.inputMode === 'HANDS_FREE';
 
   // Reply mode: set the message being replied to as context and fetch the first question
   useEffect(() => {
@@ -211,6 +216,8 @@ function EditFlow() {
 function App() {
   return (
     <Router>
+      <SettingsButton />
+      <SettingsDialog />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/write" element={<ConversationFlow key="write" mode="write" />} />

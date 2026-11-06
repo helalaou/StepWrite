@@ -1,4 +1,5 @@
 import logger from './utils/logger.js';
+import { TEMP_DIR } from './utils/tempDir.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -8,6 +9,9 @@ import { fileURLToPath } from 'url';
 // same whether it is started from server/ or from the repository root.
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(SERVER_DIR, '.env'), quiet: true });
+
+// Set by the public site's function (server/netlify/functions/api.mjs)
+const HOSTED = process.env.STEPWRITE_HOSTED === 'true';
 
 const config = {
   server: {
@@ -20,10 +24,20 @@ const config = {
     name: 'StepWrite',
     version: '1.0.0',
   },
-  // Experiment tracking settings
+  // Limits for the public site, which anyone can use with its owner's OpenAI
+  // key. Netlify stops a function after 60 seconds, so every request answers
+  // within the budget, and each visitor's requests per hour are capped.
+  hosted: HOSTED && {
+    requestBudgetMs: 50000,
+    requestsPerHour: {
+      writing: 120, // questions, drafts and the finished text
+      speech: 400, // reading aloud and transcribing answers
+    },
+  },
+  // Experiment tracking settings. The public site keeps no visitor data.
   experiment: {
-    enabled: true,
-    outputDir: path.join(SERVER_DIR, 'temp', 'experiment_data'),
+    enabled: !HOSTED,
+    outputDir: path.join(TEMP_DIR, 'experiment_data'),
   },
   openai: {
     timeout: 70000, // 70 seconds
@@ -83,6 +97,9 @@ const config = {
     factChecking: {
       enabled: true,
       maxAttempts: 5,
+      // With less than this left in a request's deadline (the hosted site's
+      // budget), no further check is started: it and its correction would not finish.
+      minTimeMs: 25000,
       check: {
         model: 'o3-2025-04-16',
       },
@@ -167,7 +184,7 @@ const config = {
       model: 'tts-1',
       voice: 'nova', // you can find all the supported voices here: https://platform.openai.com/docs/guides/text-to-speech/voices
       format: 'mp3',
-      tempDir: path.join(SERVER_DIR, 'temp', 'tts'),
+      tempDir: path.join(TEMP_DIR, 'tts'),
       cacheEnabled: true,
       cleanupInterval: 3600000, // 1 hour in milliseconds
     },

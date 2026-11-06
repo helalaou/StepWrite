@@ -5,6 +5,7 @@ import { isAllowedOrigin } from '../lib/origins.js';
 import { buildCompletionParams } from '../lib/completionParams.js';
 import { validateTurnRequest } from '../lib/validation.js';
 import { spokenText } from '../lib/transcription.js';
+import { openaiCallOptions, timeLeft, withDeadline } from '../lib/deadline.js';
 
 test('isSafeCacheName accepts plain mp3 names only', () => {
   assert.equal(isSafeCacheName('feedback_draft_ready.mp3'), true);
@@ -85,4 +86,23 @@ test('spokenText drops the text Whisper writes for noise', () => {
   assert.equal(spokenText({ text: 'Next.', segments: [segment(' Next.', undefined)] }, 0.5), 'Next.');
   assert.equal(spokenText({ text: ' Next.\n' }, 0.5), 'Next.');
   assert.equal(spokenText({ text: '', segments: [] }, 0.5), '');
+});
+
+test('a deadline limits the OpenAI calls made within it', async () => {
+  assert.equal(timeLeft(), Infinity);
+  assert.equal(openaiCallOptions(), undefined, 'no limit outside a deadline');
+
+  await withDeadline(10000, async () => {
+    await new Promise(resolve => setTimeout(resolve, 5));
+    const left = timeLeft();
+    assert.ok(left > 9000 && left < 10000, 'the deadline holds across awaits');
+    const options = openaiCallOptions();
+    assert.equal(options.maxRetries, 0);
+    assert.ok(options.timeout < left, 'keeps time back to send the response');
+  });
+
+  await withDeadline(1000, async () => {
+    assert.throws(() => openaiCallOptions(), /No time left/);
+  });
+  assert.equal(timeLeft(), Infinity, 'ends with the request');
 });

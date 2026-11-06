@@ -10,11 +10,13 @@ import memoryManager from './memory/memoryManager.js';
 import { dependencyAnalysisPrompt } from './prompts/dependencyAnalysisPrompt.js';
 import { openai } from './lib/openaiClient.js';
 import { buildCompletionParams } from './lib/completionParams.js';
+import { openaiCallOptions, timeLeft } from './lib/deadline.js';
 
 // Run a single-prompt chat completion with the given { model, temperature, maxTokens } config.
 async function complete(modelConfig, prompt) {
   const completion = await openai.chat.completions.create(
-    buildCompletionParams(modelConfig, [{ role: 'system', content: prompt }])
+    buildCompletionParams(modelConfig, [{ role: 'system', content: prompt }]),
+    openaiCallOptions()
   );
   // Reasoning models can return null content when they exhaust the token budget.
   return (completion.choices[0].message.content ?? '').trim();
@@ -489,27 +491,43 @@ async function generateOutputWithFactCheck(conversationPlanning, toneClassificat
     ? await generateReplyOutput(context, conversationPlanning, toneClassification)
     : await generateWriteOutput(conversationPlanning, toneClassification);
 
-  const { maxAttempts } = config.openai.factChecking;
+  const { maxAttempts, minTimeMs } = config.openai.factChecking;
+  // Within a request's deadline (the hosted site), the text written so far is
+  // returned once there is no longer time to check it and correct it.
+  const outOfTime = (attempt) => {
+    if (timeLeft() >= minTimeMs) return false;
+    logger.warn(`Fact checking stopped after ${attempt - 1} attempt(s): too little time left in the request`);
+    return true;
+  };
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (outOfTime(attempt)) return output;
+
     logger.section(`FACT CHECK ATTEMPT ${attempt}/${maxAttempts}`, {
       currentOutput: output
     });
 
-    const checkResult = await performFactCheck(qaFormat, output, repliedText);
+    try {
+      const checkResult = await performFactCheck(qaFormat, output, repliedText);
 
-    // A failing verdict that names no issues gives the corrector nothing to fix.
-    if (checkResult.passed || checkResult.issues.length === 0) {
-      logger.section('FACT CHECK PASSED', { finalOutput: output });
-      return output;
+      // A failing verdict that names no issues gives the corrector nothing to fix.
+      if (checkResult.passed || checkResult.issues.length === 0) {
+        logger.section('FACT CHECK PASSED', { finalOutput: output });
+        return output;
+      }
+
+      logger.section('FACT CHECK FAILED', {
+        issuesFound: checkResult.issues.length,
+        issues: checkResult.issues
+      });
+
+      output = await generateCorrection(qaFormat, output, checkResult.issues, toneClassification, repliedText);
+      logger.section('CORRECTION RESULT', { correctedOutput: output });
+    } catch (error) {
+      // A call cut short by the deadline
+      if (outOfTime(attempt + 1)) return output;
+      throw error;
     }
-
-    logger.section('FACT CHECK FAILED', {
-      issuesFound: checkResult.issues.length,
-      issues: checkResult.issues
-    });
-
-    output = await generateCorrection(qaFormat, output, checkResult.issues, toneClassification, repliedText);
-    logger.section('CORRECTION RESULT', { correctedOutput: output });
   }
 
   logger.warn(`Maximum fact check attempts (${maxAttempts}) reached; returning the last correction`);

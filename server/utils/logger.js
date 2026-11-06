@@ -1,19 +1,10 @@
 import winston from 'winston';
 import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
 import util from 'util';
 import stripAnsi from 'strip-ansi';
+import { TEMP_DIR } from './tempDir.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const tempDir = path.join(__dirname, '..', 'temp');
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir);
-}
-
-const logFile = path.join(tempDir, 'app.log');
+const logFile = path.join(TEMP_DIR, 'app.log');
 
 // Default config values
 const defaultConfig = {

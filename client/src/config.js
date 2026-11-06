@@ -88,7 +88,7 @@ Professor Williams`
   },
 
   // ====== TEXT-TO-SPEECH SETTINGS ======
-  // Used in: SpeakButton.js, TextEditor.js
+  // Used in: SpeakButton.jsx, TextEditor.jsx
   tts: {
     mode: getEnvVar('REACT_APP_TTS_MODE', 'ENABLED'),  // 'ENABLED' | 'DISABLED'
     outputPrefix: getEnvVar('REACT_APP_TEXT_EDITOR_TTS_PREFIX', 'The final output is:'), // Prefix text before playing the output to the user
@@ -101,7 +101,7 @@ Professor Williams`
   // Settings for different voice input modes
 
   // 1. HANDS-FREE MODE SETTINGS
-  // Used in: HandsFreeInterface.js, TextEditor.js (for voice commands)
+  // Used in: HandsFreeInterface.jsx, TextEditor.jsx (for voice commands)
   handsFree: {
     // Voice Activity Detection and Audio Processing settings
     vad: {
@@ -474,7 +474,7 @@ Professor Williams`
   },
 
   // 2. TEXT_AND_VOICE MODE SETTINGS
-  // Used in: VoiceInput.js for hybrid text/voice input
+  // Used in: VoiceInput.jsx for hybrid text/voice input
   voiceInput: {
     // Audio recording settings
     recording: {

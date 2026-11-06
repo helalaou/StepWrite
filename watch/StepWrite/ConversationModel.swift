@@ -2,7 +2,7 @@ import AVFoundation
 import Observation
 
 /// Runs a writing session the way the web app's hands-free mode does
-/// (client/src/components/HandsFreeInterface.js): read a question aloud, listen
+/// (client/src/components/HandsFreeInterface.jsx): read a question aloud, listen
 /// for the answer or a voice command, send answers to the server, and read the
 /// finished text aloud. Nothing needs a tap; the buttons send the same commands
 /// a user can say.
